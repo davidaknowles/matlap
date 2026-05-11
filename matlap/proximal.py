@@ -61,21 +61,42 @@ def _svt(Z: jax.Array, threshold: jax.Array) -> jax.Array:
 
 
 @jax.jit
-def _grad_and_loss(
+def _fista_step(
     X: jax.Array,
+    X_prev: jax.Array,
     Y: jax.Array,
     prec: jax.Array,
-) -> tuple[jax.Array, jax.Array]:
-    """Gradient and value of 0.5 * sum_{obs} (X - Y)^2 / s^2."""
-    resid = jnp.where(jnp.isfinite(Y), X - Y, 0.0)
-    grad = prec * resid
-    loss = 0.5 * jnp.sum(prec * resid ** 2)
-    return grad, loss
+    step: jax.Array,
+    lambda_val: jax.Array,
+    momentum: jax.Array,
+) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
+    """One complete FISTA step.
 
+    Returns (X_new, t_new, obj, rel_change) where obj is the full objective
+    value and rel_change = ||X_new - X||_F / max(||X_new||_F, 1).
 
-@jax.jit
-def _nuclear_norm(X: jax.Array) -> jax.Array:
-    return jnp.linalg.svd(X, compute_uv=False).sum()
+    Fusing all scalar outputs into a single JIT call means only one
+    host-device sync per iteration, keeping GPU pipelines full.
+    """
+    t_new = 0.5 * (1.0 + jnp.sqrt(1.0 + 4.0 * momentum ** 2))
+    Y_fista = X + ((momentum - 1.0) / t_new) * (X - X_prev)
+
+    resid_f = jnp.where(jnp.isfinite(Y), Y_fista - Y, 0.0)
+    grad = prec * resid_f
+    Z = Y_fista - step * grad
+
+    X_new = _svt(Z, step * lambda_val)
+
+    resid_n = jnp.where(jnp.isfinite(Y), X_new - Y, 0.0)
+    loss_smooth = 0.5 * jnp.sum(prec * resid_n ** 2)
+    nuc = jnp.linalg.svd(X_new, compute_uv=False).sum()
+    obj = loss_smooth + lambda_val * nuc
+
+    dx = jnp.linalg.norm(X_new - X, ord='fro')
+    x_nrm = jnp.linalg.norm(X_new, ord='fro')
+    rel_change = dx / jnp.maximum(x_nrm, 1.0)
+
+    return X_new, t_new, obj, rel_change
 
 
 # ---------------------------------------------------------------------------
@@ -127,31 +148,25 @@ def proximal_gradient(
 
     loss_trace: list[float] = []
     converged = False
+    step_arr = jnp.asarray(step, dtype=jnp.float32)
+    lambda_arr = jnp.asarray(lambda_val, dtype=jnp.float32)
+    mom_arr = jnp.asarray(momentum, dtype=jnp.float32)
 
     for _ in range(max_iter):
-        t_new = 0.5 * (1.0 + (1.0 + 4.0 * momentum ** 2) ** 0.5)
-        Y_fista = X + ((momentum - 1.0) / t_new) * (X - X_prev)
-
-        grad, _ = _grad_and_loss(Y_fista, Y, prec)
-        Z = Y_fista - step * grad
-        X_new = _svt(Z, step * lambda_val)
-
-        _, loss_smooth = _grad_and_loss(X_new, Y, prec)
-        obj = float(loss_smooth) + lambda_val * float(_nuclear_norm(X_new))
-        loss_trace.append(obj)
-
-        dx = float(jnp.linalg.norm(X_new - X, ord='fro'))
-        x_nrm = float(jnp.linalg.norm(X_new, ord='fro'))
-        if dx / max(x_nrm, 1.0) < tol:
-            X_prev = X
-            X = X_new
-            momentum = t_new
-            converged = True
-            break
+        X_new, t_arr, obj, rel_change = _fista_step(
+            X, X_prev, Y, prec, step_arr, lambda_arr, mom_arr,
+        )
+        # Single host-device sync for both scalars
+        obj_val, rel_val = jax.device_get((obj, rel_change))
+        loss_trace.append(float(obj_val))
 
         X_prev = X
         X = X_new
-        momentum = t_new
+        mom_arr = t_arr
+
+        if float(rel_val) < tol:
+            converged = True
+            break
 
     return ProximalResult(
         X=X,
