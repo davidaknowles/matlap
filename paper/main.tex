@@ -165,4 +165,68 @@ The full procedure is summarized in Algorithm 1. The algorithm requires no cross
 \end{algorithmic}
 \end{algorithm}
 
+\subsection{Evidence Lower Bound}
+
+Convergence is monitored via the Evidence Lower Bound (ELBO), which is also used to select $\lambda$ in the grid-search mode. Using the variational bound at the optimal $Q = \Psi^{1/2}$ and the normalizing constant $\log Z(\lambda) = -mn\log\lambda + \mathrm{const}$, the ELBO decomposes as
+
+\begin{align}
+    \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
+    \underbrace{- \bar{\lambda}\,\mathrm{Tr}(Q) + mn\,\mathbb{E}_q[\log\lambda]}_{\text{prior on }X\text{ (lower bound)}} \notag\\
+    &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
+    - \underbrace{\mathrm{KL}\!\left(q(\lambda)\,\|\,p(\lambda)\right)}_{\text{KL for }\lambda}
+\end{align}
+
+where $\mathcal{O}$ is the set of observed entries and
+
+\begin{equation}
+    \mathrm{KL}\!\left(\mathrm{Gamma}(a_N,b_N)\,\|\,\mathrm{Gamma}(a_0,b_0)\right)
+    = a_N \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
+    + (a_N - a_0)\,\psi(a_N) + (b_0-b_N)\frac{a_N}{b_N}.
+\end{equation}
+
+\subsection{Missing Data}
+
+The model naturally accommodates missing observations. If entry $(i,j)$ is unobserved, we set $s_{ij} = \infty$, making the noise precision $1/s_{ij}^2 = 0$. The entry then contributes nothing to the likelihood, the row posterior update for $\mu_i$, or the ELBO. Observed and missing entries can be arbitrarily interleaved.
+
+\section{Implementation}
+
+A reference implementation is provided in the \texttt{matlap} Python package using JAX \cite{jax2018github} for JIT compilation and automatic differentiation.
+
+\paragraph{Numerical stability.} Matrix inverses are never formed explicitly. The matrix square root $Q = \Psi^{1/2}$ is obtained via \texttt{jnp.linalg.eigh}, which returns eigenvalues $d_k$ and eigenvectors $V$ so that $Q^{-1} = V\,\mathrm{diag}(1/d_k)\,V^\top$ can be applied matrix-free. The per-row precision system $(D_i + \bar{\lambda}Q^{-1})\mu_i = D_i y_i$ is solved with a Cholesky factorisation (\texttt{jax.scipy.linalg.cho\_factor}/\texttt{cho\_solve}).
+
+\paragraph{Vectorisation.} The $m$ row updates are independent and are vectorised with \texttt{jax.vmap}, giving a single batched Cholesky solve per iteration.
+
+\paragraph{ELBO monotonicity.} After updating all rows, $\Psi$ and $Q$ are recomputed from the new $\{\mu_i, \Sigma_i\}$ before the ELBO is evaluated. This ensures the ELBO is computed at a fully self-consistent state and is guaranteed non-decreasing.
+
+\paragraph{Lambda grid search.} As an alternative to the empirical-Bayes update, \texttt{matlap\_grid} accepts a user-supplied grid of $\lambda$ values, runs CAVI with $\lambda$ held fixed at each grid point, and returns the solution with the highest ELBO.
+
+\begin{thebibliography}{9}
+
+\bibitem{lee1999learning}
+D.~D. Lee and H.~S. Seung.
+\newblock Learning the parts of objects by non-negative matrix factorization.
+\newblock \textit{Nature}, 401(6755):788--791, 1999.
+
+\bibitem{cai2021}
+T.~Cai, X.~Li, and Z.~Ma.
+\newblock Optimal rates of convergence for noisy sparse phase retrieval via thresholded Wirtinger flow.
+\newblock \textit{Annals of Statistics}, 44(5):2221--2251, 2021.
+
+\bibitem{recht2010guaranteed}
+B.~Recht, M.~Fazel, and P.~A. Parrilo.
+\newblock Guaranteed minimum-rank solutions of linear matrix equations via nuclear norm minimization.
+\newblock \textit{SIAM Review}, 52(3):471--501, 2010.
+
+\bibitem{candes2010power}
+E.~J. Cand\`{e}s and B.~Recht.
+\newblock Exact matrix completion via convex optimization.
+\newblock \textit{Communications of the ACM}, 55(6):111--119, 2012.
+
+\bibitem{jax2018github}
+J.~Bradbury, R.~Frostig, P.~Hawkins, M.~J. Johnson, C.~Leary, D.~Maclaurin, G.~Necula, A.~Paszke, J.~VanderPlas, S.~Wanderman-Milne, and Q.~Zhang.
+\newblock {JAX}: composable transformations of {P}ython+{N}um{P}y programs.
+\newblock \url{http://github.com/google/jax}, 2018.
+
+\end{thebibliography}
+
 \end{document}
