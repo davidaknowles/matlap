@@ -116,10 +116,89 @@ Each CAVI iteration performs three closed-form updates:
 `jnp.linalg.inv` is never called; `Q⁻¹` is applied implicitly through its eigendecomposition.  
 The ELBO is guaranteed non-decreasing: Q and λ are refreshed from the updated Ψ before the ELBO is computed.
 
+## Comparator methods
+
+### Nuclear-norm proximal gradient (`proximal_gradient` / `proximal_cv`)
+
+Solves the penalised problem min_X 0.5 Σ_{obs} (Y_ij − X_ij)² / s_ij² + λ ‖X‖_* via FISTA (accelerated proximal gradient).  The proximal operator of λ ‖·‖_* is singular value soft-thresholding.
+
+```python
+from matlap.proximal import proximal_gradient, proximal_cv
+import jax.numpy as jnp
+
+# Fixed lambda
+r = proximal_gradient(Y, S, lambda_val=1.0)
+print(r.X)           # denoised estimate (m, n)
+print(r.converged)
+
+# Lambda selected by 5-fold entry-wise CV
+grid = jnp.logspace(-1, 2, 15)
+best_lam, r = proximal_cv(Y, S, grid, n_folds=5)
+print(best_lam, r.X)
+```
+
+### General cross-validation (`cv_lambda`)
+
+`cv_lambda` works with **any** fitting function that accepts `(Y, S, lambda_val, **kwargs)`:
+
+```python
+from matlap.cv import cv_lambda
+from matlap.vi import fit_vi
+
+grid = [0.1, 0.5, 1.0, 5.0]
+
+def my_fit(Y, S, lam):
+    return fit_vi(Y, S, lambda_val=lam, guide_type="diagonal")
+
+best_lam, result = cv_lambda(Y, S, grid, my_fit, n_folds=5)
+```
+
+`cv_lambda` splits observed entries (where `S < inf`) into K folds, evaluates held-out MSE for each (λ, fold), selects the best λ, and refits on all training entries.  The `get_mu` argument (optional) extracts the prediction from the result object; if omitted, `.mu` or `.X` is detected automatically.
+
+### Numpyro SVI (`fit_vi`)
+
+Fits the same Matrix Laplace model as CAVI via gradient-based SVI using Numpyro.  Three variational families are available:
+
+| `guide_type` | Variational family | Parameters |
+|---|---|---|
+| `'diagonal'` | Fully-factorised Gaussian | O(mn) |
+| `'row_mvn'` | Product of row MVNs | O(mn + mn²/2) |
+| `'matrix_normal'` | Matrix Normal | O(mn + m²/2 + n²/2) |
+
+```python
+from matlap.vi import fit_vi
+
+# Auto lambda (LogNormal hyperprior)
+r = fit_vi(Y, S, guide_type="diagonal", n_steps=5000, lr=1e-3)
+print(r.mu)           # E_q[X], shape (m, n)
+print(r.lambda_bar)   # E_q[lambda]
+
+# Fixed lambda
+r = fit_vi(Y, S, lambda_val=2.0, guide_type="matrix_normal")
+```
+
+**Returns** `VIResult`:
+
+| Field | Description |
+|---|---|
+| `mu` | Posterior mean E_q[X], shape (m, n) |
+| `lambda_bar` | E_q[λ] |
+| `elbo_trace` | ELBO per SVI step (negated loss) |
+| `converged` | Whether ELBO plateau was reached |
+| `n_iter` | Number of SVI steps executed |
+
+### Benchmark
+
+```bash
+python scripts/benchmark.py --seeds 5 --rows 50 --cols 20
+```
+
+Simulates a rank-3 matrix, masks ~20% of entries as a test set, fits all six methods, and prints a RMSE / runtime table averaged over multiple seeds.
+
 ## Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-21 tests covering matrix-sqrt correctness, ELBO monotonicity, low-rank recovery, missing-data handling, convergence flags, and grid-search logic.
+51 tests covering matrix-sqrt correctness, ELBO monotonicity, low-rank recovery, missing-data handling, convergence flags, grid-search, proximal gradient optimality, CV correctness, and all three SVI guide types.
