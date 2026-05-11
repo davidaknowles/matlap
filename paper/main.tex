@@ -200,6 +200,76 @@ A reference implementation is provided in the \texttt{matlap} Python package usi
 
 \paragraph{Lambda grid search.} As an alternative to the empirical-Bayes update, \texttt{matlap\_grid} accepts a user-supplied grid of $\lambda$ values, runs CAVI with $\lambda$ held fixed at each grid point, and returns the solution with the highest ELBO.
 
+\section{Scalable Extensions}
+\label{sec:scalable}
+
+The full CAVI algorithm stores the $m$ row covariance matrices $\{\Sigma_i\}$ explicitly, requiring $O(mn^2)$ memory—approximately 40 GB for a $10{,}000 \times 1{,}000$ matrix in 32-bit precision. We describe two families of extensions that reduce this to $O(mnr)$ or $O(mn)$ while preserving the key algorithmic properties.
+
+\subsection{Low-Rank CAVI via the Woodbury Identity}
+
+\label{sec:lowrank-cavi}
+
+We restrict the variational family to a rank-$r$ \emph{factor subspace}. Instead of maintaining free row covariances $\Sigma_i \in \mathbb{S}_{++}^n$, we fix a shared loading matrix $V_r \in \mathbb{R}^{n \times r}$ with orthonormal columns and parameterise $x_i = V_r z_i$ where $z_i \in \mathbb{R}^r$. The variational posterior is
+\begin{equation}
+    q(z_i) = \mathcal{N}(z_i \mid \hat{z}_i,\; A_r^{(i)-1}), \qquad x_i = V_r z_i,
+\end{equation}
+so that the implied row posterior is $\mathcal{N}(\mu_i, \Sigma_i)$ with $\mu_i = V_r \hat{z}_i$ and $\Sigma_i = V_r A_r^{(i)-1} V_r^\top$.
+
+\paragraph{Per-row update.}
+Let $p_i \in \mathbb{R}^n$ be the vector of observed precisions for row $i$ (i.e.\ $p_{ij} = 1/s_{ij}^2$ for observed entries, $0$ for missing). The $r \times r$ factor precision and factor mean are:
+\begin{align}
+    A_r^{(i)} &= \mathrm{diag}\!\left(\bar{\lambda}/d_r\right) + V_r^\top \mathrm{diag}(p_i) V_r, \\
+    \hat{z}_i  &= A_r^{(i)-1} \left(V_r^\top (p_i \odot y_i)\right),
+\end{align}
+where $d_r$ are the eigenvalues from the current $Q$ update (so $Q^{-1} = V_r\,\mathrm{diag}(1/d_r)\,V_r^\top$). Each $A_r^{(i)}$ is $r \times r$, so the Cholesky solve costs $O(nr + r^3)$ per row and $O(mnr)$ over all rows—an $n/r$-fold reduction from the full $O(mn^3)$.
+
+\paragraph{Q update in factor space.}
+We accumulate the expected second moment restricted to the factor subspace:
+\begin{equation}
+    \Psi_r = \sum_{i=1}^m \left(\hat{z}_i \hat{z}_i^\top + A_r^{(i)-1}\right) \in \mathbb{S}_{++}^r.
+\end{equation}
+The eigendecomposition $\Psi_r = W_r\,\mathrm{diag}(d_r)\,W_r^\top$ gives the matrix square root $Q_r = W_r\,\mathrm{diag}(\sqrt{d_r})\,W_r^\top$, and the loading matrix is rotated: $V_r \leftarrow V_r W_r$. With this convention the $Q$ update diagonal is $d_r$, $\mathrm{Tr}(Q) = \sum_k \sqrt{d_{r,k}}$, and the ELBO entropy for row $i$ is $\frac{1}{2}\log|A_r^{(i)-1}| = -\frac{1}{2}\log|A_r^{(i)}|$.
+
+\paragraph{Initialization.}
+$V_r$ is initialized via a randomized SVD (see Section~\ref{sec:rsvd}) of the observed data matrix, projecting $Y$ onto its top-$r$ right singular vectors.
+
+\paragraph{Memory and complexity.}
+The algorithm stores $\hat{z}_i \in \mathbb{R}^r$ and $A_r^{(i)} \in \mathbb{R}^{r \times r}$ per row, giving $O(mr^2 + nr)$ storage instead of $O(mn^2)$. At $m=10{,}000$, $n=1{,}000$, $r=50$ this is approximately 44 MB versus 40 GB.
+
+\paragraph{ELBO in factor space.}
+Because $x_i$ lives in the column space of $V_r$, the entropy of $q(x_i)$ is computed in the $r$-dimensional factor space: $H[q(z_i)] = \tfrac{1}{2}\log|A_r^{(i)-1}| + \tfrac{r}{2}(1+\log 2\pi)$. The $\lambda$ update uses $mn$ replaced by $mr$ in the Gamma shape parameter update.
+
+\subsection{Randomized SVD for Approximate Nuclear Norm in SVI}
+\label{sec:rsvd}
+
+For the gradient-based SVI comparators, the bottleneck is computing $\|X\|_* = \sum_i \sigma_i(X)$ via full SVD at each gradient step, costing $O(mn \min(m,n))$. We replace this with a rank-$r$ randomized SVD approximation:
+\begin{equation}
+    \|X\|_* \approx \sum_{k=1}^r \hat{\sigma}_k(X),
+\end{equation}
+where $\hat{\sigma}_1 \geq \dots \geq \hat{\sigma}_r$ are the top-$r$ singular values estimated by power-iteration randomized SVD \cite{halko2011finding}. The method forms a sketch $Y_\Omega = (XX^\top)^q X\Omega$ for a Gaussian random matrix $\Omega \in \mathbb{R}^{n \times (r+p)}$ with $p$ oversampling columns, then extracts approximate singular values from the resulting small matrix.
+
+To enable gradient-based optimization, we implement the approximation with a \texttt{jax.custom\_vjp} rule. The forward pass returns $\sum_k \hat{\sigma}_k$; the backward pass propagates the gradient $g \mapsto g \hat{U}_r \hat{V}_r^\top$, which is the standard nuclear norm subgradient restricted to the top-$r$ component and satisfies $\|\nabla\|_{\mathrm{op}} \leq 1$. This reduces the per-step cost from $O(mn^2)$ to $O(mnr)$ for matrices with $n \leq m$.
+
+\subsection{Scalable Variational Guides for SVI}
+
+Two additional guide families reduce the SVI memory footprint to $O(mn)$ while capturing structured posterior correlations:
+
+\paragraph{Shared column-factor guide (\texttt{matrix\_factor}).}
+A single factor matrix $F \in \mathbb{R}^{n \times k}$ is shared across all $m$ rows:
+\begin{equation}
+    q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F F^\top + \mathrm{diag}(\psi_i)\right),
+\end{equation}
+where $\psi_i \in \mathbb{R}^n$ is a per-row diagonal. This captures shared column-space correlations (as in matrix normal approximations) at $O(mn + nk)$ parameter cost—the same asymptotic order as a fully-factorised guide.
+
+\paragraph{Per-row low-rank guide (\texttt{row\_lowrank}).}
+Each row $i$ has its own low-rank factor $F_i \in \mathbb{R}^{n \times k}$:
+\begin{equation}
+    q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F_i F_i^\top + \mathrm{diag}(\psi_i)\right).
+\end{equation}
+At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, versus 40 GB for full row-MVN covariances.
+
+Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariateNormal} distribution and combined with the rSVD nuclear norm approximation, reducing per-step cost to $O(mnr)$.
+
 \begin{thebibliography}{9}
 
 \bibitem{lee1999learning}
@@ -221,6 +291,11 @@ B.~Recht, M.~Fazel, and P.~A. Parrilo.
 E.~J. Cand\`{e}s and B.~Recht.
 \newblock Exact matrix completion via convex optimization.
 \newblock \textit{Communications of the ACM}, 55(6):111--119, 2012.
+
+\bibitem{halko2011finding}
+N.~Halko, P.~G. Martinsson, and J.~A. Tropp.
+\newblock Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions.
+\newblock \textit{SIAM Review}, 53(2):217--288, 2011.
 
 \bibitem{jax2018github}
 J.~Bradbury, R.~Frostig, P.~Hawkins, M.~J. Johnson, C.~Leary, D.~Maclaurin, G.~Necula, A.~Paszke, J.~VanderPlas, S.~Wanderman-Milne, and Q.~Zhang.
