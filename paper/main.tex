@@ -1,0 +1,168 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo} % Palatino font
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\geometry{a4paper, margin=1.2in}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=green!50!black,
+    urlcolor=blue!60!black
+}
+
+\title{Bayesian Matrix Denoising:\\ Variational Inference for the Matrix Laplace Prior\\ via Gaussian Scale Mixtures}
+\author{David A Knowles}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present a Bayesian approach to low-rank matrix estimation under a heteroscedastic noise model. By utilizing a novel matrix Laplace distribution we encourage low-rank structure directly on the matrix $X$ without resorting to a non-convex factorization. To overcome the non-differentiability and non-separability of the prior, we exploit its variational representation as a Gaussian Scale Mixture. This auxiliary variable formulation allows us to develop a Coordinate Ascent Variational Inference (CAVI) algorithm that is strictly convex in all sub-updates, naturally estimates the global regularization parameter, and avoids the Neyman-Scott paradox by explicitly incorporating posterior uncertainty.
+\end{abstract}
+
+
+
+\section{Introduction}
+
+Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from collaborative filtering to genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization (NMF), independent component analysis (ICA), and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices $X = UV^T$. Non-convexity has practical consequences beyond mere theoretical unease: different random initializations routinely converge to qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \cite{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no mechanism for selecting the rank of the solution.
+
+Convex relaxations offer a principled escape from local minima. The nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing $X$ \cite{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. The practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme. 
+
+We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{Matrix Laplace} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
+
+\section{Characterization of the Matrix Laplace Prior}
+
+Let $X \in \mathbb{R}^{m \times n}$ be a random matrix. The Matrix Laplace Prior is a matrix-variate generalization of the standard Laplace (or exponential) distribution, defined by the probability density function:
+\begin{equation}
+    p(X \mid \lambda) = \frac{1}{Z(\lambda)} \exp\big(-\lambda \|X\|_*\big)
+\end{equation}
+where $\|X\|_* = \sum_{i=1}^{\min(m,n)} \sigma_i(X)$ is the nuclear norm.
+
+%\subsection{Mean and Covariance}
+%Because the nuclear norm is absolutely homogeneous ($\|-X\|_* = \|X\|_*$) and the density is symmetric around the origin, the expectation of $X$ is exactly the zero matrix: $\mathbb{E}[X] = 0_{m \times n}$.
+
+%Furthermore, because $\|X\|_*$ is invariant under left- and right-orthogonal transformations ($p(UXV^T) = p(X)$ for orthogonal $U, V$), the entries of $X$ are mutually uncorrelated. The covariance matrix of $\text{vec}(X)$ is spherical:
+%\begin{equation}
+%    \text{Cov}(\text{vec}(X)) = \frac{C_{m,n}}{\lambda^2} I_{mn}
+%\end{equation}
+%where $C_{m,n}$ is a dimensional constant.
+
+\subsection{Marginal Distribution of the Nuclear Norm}
+Transforming to generalized polar coordinates where the radius is $R = \|X\|_*$, the volume of the nuclear norm ball grows as $R^{mn}$. The surface area measure therefore scales as $R^{mn-1}$. Integrating out the directional components, the marginal density of the nuclear norm itself follows a Gamma distribution,
+\begin{equation}
+    \|X\|_* \sim \text{Gamma}(mn, \lambda).
+\end{equation}
+This yields the moments $\mathbb{E}[\|X\|_*] = \frac{mn}{\lambda}$ and $\text{Var}(\|X\|_*) = \frac{mn}{\lambda^2}$.
+
+\subsection{The Normalizing Constant}
+Using the Gamma integral, the normalizing constant $Z(\lambda)$ scales with the volume of the unit nuclear norm ball $B_*$,
+\begin{equation}
+    Z(\lambda) = \int_{\mathbb{R}^{m \times n}} \exp(-\lambda \|X\|_*) \, dX = \text{Vol}(B_*) \frac{(mn)!}{\lambda^{mn}}
+\end{equation}
+Thus, $Z(\lambda) \propto \lambda^{-mn}$. This explicit scaling is critical for treating $\lambda$ as a fully Bayesian random variable.
+
+\subsection{Joint Density of Singular Values}
+Assuming $m \ge n$, the change of variables to the Singular Value Decomposition (SVD) yields the joint density of the non-zero singular values $\sigma_1 > \sigma_2 > \dots > \sigma_n > 0$:
+\begin{equation}
+    p(\sigma_1, \dots, \sigma_n) \propto \prod_{i=1}^n \underbrace{ \sigma_i^{m-n} e^{-\lambda \sigma_i}}_{\propto \, \mathrm{Gamma}(\sigma_i,m-n+1,\,\lambda)} \cdot \underbrace{\prod_{1 \le i < j \le n} (\sigma_i^2 - \sigma_j^2)}_{\text{repulsion term}}
+\end{equation}
+This characterizes the singular values as a 1D Coulomb gas subject to a logarithmic pairwise repulsion. 
+
+\section{The Heteroscedastic Low-Rank Model}
+
+We consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ and a corresponding matrix of known standard errors $S \in \mathbb{R}^{m \times n}$, where $s_{ij}$ is the uncertainty associated with $Y_{ij}$. 
+
+The likelihood of the latent true matrix $X$ is elementwise normal:
+\begin{equation}
+    p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
+\end{equation}
+
+\section{Variational Inference}
+
+To avoid the slow convergence of Markov Chain Monte Carlo (MCMC) while preserving the convexity lost by the common $X = UV^T$ factorization, we utilize a variational representation of the nuclear norm. For any matrix $X$, the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
+\begin{equation}
+    \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
+\end{equation}
+
+Three natural choices for the variational family $q(X)$ arise from the symmetric structure of the nuclear norm.
+
+\textbf{Row factorization.} Let $q(X) = \prod_{i=1}^m \mathcal{N}(x_i \mid \mu_i, \Sigma_i)$, where $x_i \in \mathbb{R}^n$ is the $i$-th row of $X$. The expected second moment is
+\begin{equation}
+    \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m \left( \mu_i \mu_i^T + \Sigma_i \right) \in \mathbb{S}_{++}^n,
+\end{equation}
+which pairs directly with the $Q \in \mathbb{S}_{++}^n$ auxiliary variable above. When optimizing the Evidence Lower Bound (ELBO), we must evaluate $\mathbb{E}_{q}[-\lambda \|X\|_*]$. Substituting the variational representation and applying Jensen's inequality gives the tractable lower bound:
+\begin{equation}
+    \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \mathbb{E}_q[\lambda]\, \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \mathbb{E}_q[\lambda]\, \mathrm{Tr}(Q).
+\end{equation}
+This requires $O(n^3)$ matrix operations per iteration.
+
+\textbf{Column factorization.} We could in principle factorize $q(X)$ over columns instead of rows, but this is equivalent to the row factorization by simply transposing the input data. 
+
+\section{Coordinate Ascent Variational Inference (CAVI)}
+
+We place a Gamma hyperprior on the regularization parameter: $\lambda \sim \text{Gamma}(a_0, b_0)$. We iteratively update the variational distributions to maximize the ELBO.
+
+\subsection{Update for Auxiliary Matrix $Q$}
+Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root of $\Psi$:
+\begin{equation}
+    Q^* = \Psi^{1/2} = \left( \sum_{i=1}^m \mu_i \mu_i^T + \Sigma_i \right)^{1/2}
+\end{equation}
+
+\subsection{Update for Variational Posterior $q(X)$}
+Given $Q$ and $\bar{\lambda} = \mathbb{E}_q[\lambda]$, the log-posterior for each row $x_i$ is a multivariate Gaussian. Let $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ be the known noise variance matrix for row $i$. The optimal variational updates are:
+\begin{align}
+    \Sigma_i &= \left( S_i^{-1} + \bar{\lambda} Q^{-1} \right)^{-1} \\
+    \mu_i &= \Sigma_i \left( S_i^{-1} y_i \right)
+\end{align}
+Notice how the auxiliary matrix $Q$ induces correlation across the columns of $X$, even if the noise $S_i$ is diagonal.
+
+\subsection{Update for Hyperparameter Posterior $q(\lambda)$}
+Because $Z(\lambda) \propto \lambda^{-mn}$, the log-prior contributes $mn \log \lambda$. Combined with the Gamma prior and the variational bound on the nuclear norm, the optimal $q(\lambda)$ is $\text{Gamma}(a_N, b_N)$. 
+Notably, the scale update simplifies beautifully because $\text{Tr}(\Psi Q^{-1}) + \text{Tr}(Q) = \text{Tr}(\Psi \Psi^{-1/2}) + \text{Tr}(\Psi^{1/2}) = 2\text{Tr}(\Psi^{1/2})$.
+\begin{align}
+    a_N &= a_0 + mn \\
+    b_N &= b_0 + \text{Tr}(\Psi^{1/2})
+\end{align}
+The expected value is updated as $\bar{\lambda} = \frac{a_N}{b_N}$. 
+
+\subsection{Algorithm}
+The full procedure is summarized in Algorithm 1. The algorithm requires no cross-validation, naturally discovers the effective rank of the matrix by heavily penalizing negligible principal components, and consists entirely of smooth, strictly convex sub-problems.
+
+\begin{algorithm}[H]
+\caption{CAVI for Bayesian Low-Rank Matrix Denoising}
+\begin{algorithmic}[1]
+\Require Data $Y \in \mathbb{R}^{m \times n}$, Variances $S \in \mathbb{R}^{m \times n}$, Prior $a_0, b_0$.
+\State Initialize $\mu_i = y_i$ and $\Sigma_i = I_n$ for $i=1,\dots,m$.
+\State Initialize $\bar{\lambda} = \frac{mn}{\|Y\|_*}$.
+\Repeat
+    \State \textbf{1. Estimate uncentered expected covariance:}
+    \State \quad $\Psi \gets \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$
+    \State \textbf{2. Update auxiliary matrix:}
+    \State \quad $Q \gets \Psi^{1/2}$
+    \State \textbf{3. Update regularization parameter posterior:}
+    \State \quad $a_N \gets a_0 + mn$
+    \State \quad $b_N \gets b_0 + \text{Tr}(Q)$
+    \State \quad $\bar{\lambda} \gets \frac{a_N}{b_N}$
+    \State \textbf{4. Update latent matrix posterior row-by-row:}
+    \For{$i = 1, \dots, m$}
+        \State $S_i \gets \text{diag}(s_{i1}^2, \dots, s_{in}^2)$
+        \State $\Sigma_i \gets \left( S_i^{-1} + \bar{\lambda} Q^{-1} \right)^{-1}$
+        \State $\mu_i \gets \Sigma_i S_i^{-1} y_i$
+    \EndFor
+\Until{ELBO converges}
+\Ensure Posterior mean $M = [\mu_1, \dots, \mu_m]^T$, uncertainties $\{\Sigma_i\}_{i=1}^m$, expected penalty $\bar{\lambda}$.
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}
