@@ -1,0 +1,101 @@
+"""
+ELBO computation for matlap CAVI.
+
+The Evidence Lower Bound is used both for convergence monitoring (must be
+non-decreasing) and for comparing models with different fixed lambda values
+in the grid-search mode.
+"""
+
+import jax
+import jax.numpy as jnp
+import jax.scipy.special as jss
+
+
+@jax.jit
+def compute_elbo(
+    Y: jax.Array,
+    S2: jax.Array,
+    mus: jax.Array,
+    sigmas: jax.Array,
+    log_det_sigmas: jax.Array,
+    q_sqrt_vals: jax.Array,
+    lambda_bar: jax.Array,
+    a_N: jax.Array,
+    b_N: jax.Array,
+    a0: float,
+    b0: float,
+) -> jax.Array:
+    """Compute the ELBO for the CAVI model.
+
+    ELBO = E_q[log p(Y|X)]           (log-likelihood)
+         + E_q[log p(X|lambda)]       (prior; variational lower bound at optimal Q)
+         + E_q[log p(lambda)]         (hyperprior)
+         - E_q[log q(X)]              (entropy of q(X))
+         - E_q[log q(lambda)]         (entropy of q(lambda))
+
+    Args:
+        Y:               observations, shape (m, n); NaN where missing
+        S2:              observation variances, shape (m, n); inf where missing
+        mus:             posterior means, shape (m, n)
+        sigmas:          posterior covariances, shape (m, n, n)
+        log_det_sigmas:  log|Sigma_i| for each row, shape (m,)
+        q_sqrt_vals:     sqrt eigenvalues of Psi (= eigenvalues of Q), shape (n,)
+        lambda_bar:      E_q[lambda] = a_N / b_N, scalar
+        a_N:             Gamma posterior shape, scalar
+        b_N:             Gamma posterior rate, scalar
+        a0:              Gamma prior shape, scalar
+        b0:              Gamma prior rate, scalar
+
+    Returns:
+        Scalar ELBO value.
+    """
+    m, n = Y.shape
+
+    # ------------------------------------------------------------------ #
+    # 1. Log-likelihood: E_q[log p(Y|X)]                                  #
+    #    = -1/2 * sum_{i,j:obs} [(y_ij - mu_ij)^2 / s_ij^2               #
+    #                             + Sigma_i[j,j] / s_ij^2                 #
+    #                             + log(2*pi*s_ij^2)]                     #
+    # ------------------------------------------------------------------ #
+    obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)  # (m, n)
+    prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
+
+    resid2 = (Y - mus) ** 2  # (m, n)
+    sigma_diag = jnp.diagonal(sigmas, axis1=1, axis2=2)  # (m, n)
+
+    ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
+    ll -= 0.5 * jnp.sum(jnp.where(obs_mask, jnp.log(2.0 * jnp.pi * S2), 0.0))
+
+    # ------------------------------------------------------------------ #
+    # 2. Prior on X (variational lower bound at optimal Q):               #
+    #    E_q[log p(X|lambda)] >= -lambda_bar * Tr(Q) + mn * E_q[log lam] #
+    #    Tr(Q) = sum(q_sqrt_vals)                                         #
+    #    E_q[log lambda] = psi(a_N) - log(b_N)                           #
+    # ------------------------------------------------------------------ #
+    trace_Q = jnp.sum(q_sqrt_vals)
+    e_log_lam = jss.digamma(a_N) - jnp.log(b_N)
+    prior_X = -lambda_bar * trace_Q + m * n * e_log_lam
+
+    # ------------------------------------------------------------------ #
+    # 3. Entropy of q(X) = sum_i H[N(mu_i, Sigma_i)]                     #
+    #    = 1/2 * sum_i [log|Sigma_i| + n*(1 + log(2*pi))]                #
+    # ------------------------------------------------------------------ #
+    entropy_X = 0.5 * (jnp.sum(log_det_sigmas) + m * n * (1.0 + jnp.log(2.0 * jnp.pi)))
+
+    # ------------------------------------------------------------------ #
+    # 4. Lambda terms: E_q[log p(lambda)] - E_q[log q(lambda)]           #
+    #    = -KL(q(lambda) || p(lambda))                                   #
+    #    KL(Gamma(a_N, b_N) || Gamma(a0, b0))                           #
+    #      = a_N*log(b_N) - a0*log(b0) - lgamma(a_N) + lgamma(a0)      #
+    #        + (a_N - a0)*(psi(a_N) - log(b_N))                         #
+    #        + (b0 - b_N)*(a_N/b_N)                                     #
+    # ------------------------------------------------------------------ #
+    kl_lam = (
+        a_N * jnp.log(b_N) - a0 * jnp.log(b0)
+        - jss.gammaln(a_N) + jss.gammaln(a0)
+        + (a_N - a0) * e_log_lam
+        + (b0 - b_N) * lambda_bar
+    )
+    neg_kl_lam = -kl_lam
+
+    return ll + prior_X + entropy_X + neg_kl_lam

@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: matlap
+Version: 0.1.0
+Summary: Bayesian matrix denoising via CAVI with a Matrix Laplace prior
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: jax>=0.4
+Requires-Dist: jaxlib>=0.4
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
