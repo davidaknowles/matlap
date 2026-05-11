@@ -30,6 +30,8 @@ import numpyro.distributions as dist
 from numpyro.infer import SVI, Trace_ELBO
 import optax
 
+from .linalg import approx_nuclear_norm
+
 
 # ---------------------------------------------------------------------------
 # Result type
@@ -60,10 +62,14 @@ class VIResult:
 # ---------------------------------------------------------------------------
 
 
-def _model(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0):
+def _model(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
     """Numpyro generative model for matrix denoising.
 
     X is sampled as a (m, n) event so all three guides can match it directly.
+
+    Args:
+        approx_rank: If > 0, use randomized SVD with this rank to approximate
+            the nuclear norm.  Speeds up large-scale runs; set to 0 for exact.
     """
     mn = m * n
 
@@ -79,8 +85,12 @@ def _model(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0):
     )
 
     # Matrix Laplace prior: log p(X|lambda) = -lambda*||X||_* + mn*log(lambda)
-    sv = jnp.linalg.svd(X, compute_uv=False)
-    numpyro.factor("nuclear_prior", -lam * sv.sum() + mn * jnp.log(lam))
+    if approx_rank > 0:
+        nuclear = approx_nuclear_norm(X, approx_rank)
+    else:
+        sv = jnp.linalg.svd(X, compute_uv=False)
+        nuclear = sv.sum()
+    numpyro.factor("nuclear_prior", -lam * nuclear + mn * jnp.log(lam))
 
     # Likelihood on observed entries only
     X_flat = X.reshape(-1)
@@ -111,7 +121,7 @@ def _lambda_params(lambda_val):
 def _make_diagonal_guide():
     """Fully factorised q(X_ij) = N(mu_ij, exp(log_sigma_ij)^2)."""
 
-    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0):
+    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
         mu = numpyro.param("mu", jnp.zeros((m, n)))
         log_sigma = numpyro.param("log_sigma", jnp.full((m, n), -1.0))
         numpyro.sample(
@@ -130,7 +140,7 @@ def _make_row_mvn_guide():
     an event axis to match the (m, n) event shape of X in the model.
     """
 
-    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0):
+    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
         mu = numpyro.param("mu", jnp.zeros((m, n)))
         L = numpyro.param(
             "L",
@@ -155,7 +165,7 @@ def _make_matrix_normal_guide():
     O(m^2 + n^2) covariance parameters.
     """
 
-    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0):
+    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
         M = numpyro.param("M", jnp.zeros((m, n)))
         L_U = numpyro.param(
             "L_U",
@@ -174,11 +184,77 @@ def _make_matrix_normal_guide():
     return guide
 
 
-_GUIDE_FACTORIES = {
-    "diagonal": _make_diagonal_guide,
-    "row_mvn": _make_row_mvn_guide,
-    "matrix_normal": _make_matrix_normal_guide,
-}
+def _make_row_lowrank_guide(rank: int):
+    """Per-row low-rank Gaussian guide.
+
+    q(X) = prod_i LowRankMVN(mu_i, F_i F_i^T + diag(d_i))
+    where F_i has shape (n, rank).  Memory O(mnr) ≈ 600 MB at r=15 for 10k×1k.
+    """
+
+    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
+        mu = numpyro.param("mu", jnp.zeros((m, n)))
+        cov_factor = numpyro.param(
+            "cov_factor",
+            jnp.zeros((m, n, rank)),
+        )
+        cov_diag = numpyro.param(
+            "cov_diag",
+            jnp.ones((m, n)),
+            constraint=dist.constraints.positive,
+        )
+        numpyro.sample(
+            "X",
+            dist.LowRankMultivariateNormal(mu, cov_factor, cov_diag).to_event(1),
+        )
+        _lambda_params(lambda_val)
+
+    return guide
+
+
+def _make_matrix_factor_guide(rank: int):
+    """Shared-column-factor Gaussian guide.
+
+    q(X) = prod_i LowRankMVN(mu_i, F F^T + diag(d_i))
+    where F (shape n×rank) is shared across all rows.
+    Memory O(mn + nk) ≈ O(mn) — same as diagonal but captures column space.
+    """
+
+    def guide(Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank=0):
+        mu = numpyro.param("mu", jnp.zeros((m, n)))
+        cov_factor = numpyro.param(
+            "cov_factor",
+            jnp.zeros((n, rank)),
+        )
+        cov_diag = numpyro.param(
+            "cov_diag",
+            jnp.ones((m, n)),
+            constraint=dist.constraints.positive,
+        )
+        # cov_factor[None] broadcasts (1, n, rank) → (m, n, rank)
+        numpyro.sample(
+            "X",
+            dist.LowRankMultivariateNormal(mu, cov_factor[None], cov_diag).to_event(1),
+        )
+        _lambda_params(lambda_val)
+
+    return guide
+
+
+def _make_guide(guide_type: str, guide_rank: int):
+    """Create a guide function by type and (optional) rank."""
+    if guide_type == "diagonal":
+        return _make_diagonal_guide()
+    elif guide_type == "row_mvn":
+        return _make_row_mvn_guide()
+    elif guide_type == "matrix_normal":
+        return _make_matrix_normal_guide()
+    elif guide_type == "row_lowrank":
+        return _make_row_lowrank_guide(guide_rank)
+    elif guide_type == "matrix_factor":
+        return _make_matrix_factor_guide(guide_rank)
+    else:
+        valid = ["diagonal", "row_mvn", "matrix_normal", "row_lowrank", "matrix_factor"]
+        raise ValueError(f"guide_type must be one of {valid}; got {guide_type!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +275,8 @@ def fit_vi(
     tol: float = 1e-5,
     record_every: int = 50,
     verbose: bool = False,
+    guide_rank: int = 15,
+    approx_rank: int = 0,
 ) -> VIResult:
     """Fit Bayesian matrix denoising via Numpyro SVI.
 
@@ -206,33 +284,34 @@ def fit_vi(
     ``matlap.core``, but optimises the ELBO with Adam rather than
     coordinate ascent.
 
-    Three variational families for q(X):
+    Variational families for q(X):
 
-    * ``'diagonal'``:       q(X_ij) = N(mu_ij, sigma_ij^2)   O(mn) params
-    * ``'row_mvn'``:        q(X) = prod_i MVN(mu_i, L_i L_i^T)  O(mn^2) params
-    * ``'matrix_normal'``:  q(X) = MN(M, L_U L_U^T, L_V L_V^T)  O(m^2+n^2) params
+    * ``'diagonal'``:       q(X_ij) = N(mu_ij, sigma_ij^2)                O(mn) params
+    * ``'row_mvn'``:        q(X) = prod_i MVN(mu_i, L_i L_i^T)            O(mn²) params
+    * ``'matrix_normal'``:  q(X) = MN(M, L_U L_U^T, L_V L_V^T)           O(m²+n²) params
+    * ``'row_lowrank'``:    q(X) = prod_i LRMVN(mu_i, F_i F_i^T+diag(d)) O(mnr) params
+    * ``'matrix_factor'``:  q(X) = prod_i LRMVN(mu_i, FF^T+diag(d_i))    O(mn+nr) params
 
     Args:
         Y:            Observed matrix, shape (m, n).
         S:            Known standard errors; ``jnp.inf`` where missing.
         lambda_val:   Fix lambda to this value.  ``None`` places a
                       Gamma(a0, b0) hyperprior and estimates lambda.
-        guide_type:   ``'diagonal'``, ``'row_mvn'``, or ``'matrix_normal'``.
+        guide_type:   One of ``'diagonal'``, ``'row_mvn'``, ``'matrix_normal'``,
+                      ``'row_lowrank'``, ``'matrix_factor'``.
         a0, b0:       Gamma hyperprior parameters for lambda.
         n_steps:      Number of Adam SVI steps.
         lr:           Adam learning rate.
         tol:          Relative ELBO convergence tolerance.
         record_every: Record ELBO every this many steps.
         verbose:      Print ELBO periodically.
+        guide_rank:   Rank for ``'row_lowrank'`` and ``'matrix_factor'`` guides.
+        approx_rank:  If > 0, use randomized SVD with this rank to approximate
+                      the nuclear norm in the model (speeds up large-scale runs).
 
     Returns:
         VIResult with posterior mean and diagnostics.
     """
-    if guide_type not in _GUIDE_FACTORIES:
-        raise ValueError(
-            f"guide_type must be one of {list(_GUIDE_FACTORIES)}; got {guide_type!r}"
-        )
-
     Y = jnp.asarray(Y, dtype=jnp.float32)
     S = jnp.asarray(S, dtype=jnp.float32)
     S2 = S ** 2
@@ -243,8 +322,8 @@ def fit_vi(
     Y_flat = Y.reshape(-1)
     S2_flat = S2.reshape(-1)
 
-    guide = _GUIDE_FACTORIES[guide_type]()
-    model_args = (Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0)
+    guide = _make_guide(guide_type, guide_rank)
+    model_args = (Y_flat, obs_idx, S2_flat, m, n, lambda_val, a0, b0, approx_rank)
 
     optimizer = numpyro.optim.optax_to_numpyro(optax.adam(lr))
     svi = SVI(_model, guide, optimizer, loss=Trace_ELBO())
