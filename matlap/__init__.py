@@ -1,8 +1,10 @@
 """matlap: Bayesian matrix denoising via CAVI with a Matrix Laplace prior."""
 
 from .core import (
-    CAVIResult, BatchedCAVIResult, GridResult, LowRankCAVIResult, LowRankGridResult,
-    matlap, matlap_batched, matlap_grid, matlap_grid_lowrank, matlap_lowrank,
+    CAVIResult, BatchedCAVIResult, GridResult,
+    LowRankCAVIResult, LowRankGridResult, LowRankIsotropicResult,
+    matlap, matlap_batched, matlap_grid, matlap_grid_lowrank,
+    matlap_lowrank, matlap_lowrank_isotropic,
 )
 from .proximal import ProximalResult, proximal_cv, proximal_gradient
 from .vi import VIResult, fit_vi
@@ -15,11 +17,13 @@ __all__ = [
     "matlap_grid",
     "matlap_grid_lowrank",
     "matlap_lowrank",
+    "matlap_lowrank_isotropic",
     "CAVIResult",
     "BatchedCAVIResult",
     "GridResult",
     "LowRankCAVIResult",
     "LowRankGridResult",
+    "LowRankIsotropicResult",
     # Proximal gradient
     "proximal_gradient",
     "proximal_cv",

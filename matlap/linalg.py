@@ -6,10 +6,12 @@ and Cholesky decomposition for solving linear systems.
 
 Low-rank utilities
 ------------------
-``rsvd``                 -- randomized truncated SVD via power iteration
-``approx_nuclear_norm``  -- differentiable approximate nuclear norm (rSVD)
-``update_row_lowrank``   -- O(nr) Woodbury row update for low-rank CAVI
-``update_rows_lowrank``  -- vmapped + JIT version of ``update_row_lowrank``
+``rsvd``                         -- randomized truncated SVD via power iteration
+``approx_nuclear_norm``          -- differentiable approximate nuclear norm (rSVD)
+``update_row_lowrank``           -- O(nr²) Woodbury row update for low-rank CAVI
+``update_rows_lowrank``          -- vmapped + JIT version
+``update_row_lowrank_isotropic`` -- O(nr²) Woodbury update, low-rank-plus-isotropic prior
+``update_rows_lowrank_isotropic``-- vmapped + JIT version
 """
 
 import functools
@@ -271,6 +273,92 @@ def update_row_lowrank(
 # Vmapped + JIT version for all rows simultaneously
 update_rows_lowrank = jax.jit(
     jax.vmap(update_row_lowrank, in_axes=(0, 0, None, None, None))
+)
+
+
+def update_row_lowrank_isotropic(
+    y_i: jax.Array,
+    s2_i: jax.Array,
+    V_r: jax.Array,
+    d_r: jax.Array,
+    lambda_bar: jax.Array,
+    gamma: jax.Array,
+) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+    """Woodbury row update for the low-rank-plus-isotropic CAVI model.
+
+    Prior precision: V_r diag(λ̄/d_r) V_r^T + γI (isotropic off-subspace term).
+    Computes the full n-dimensional posterior via the Woodbury identity, giving
+    exact per-row posteriors and a correct n-dim entropy — a strict improvement
+    over ``update_row_lowrank`` at the same O(nr + r³) asymptotic cost.
+
+    The Q update (Ψ_r = Σ_i (z̃_i z̃_i^T + V_r^T Σ_i V_r)) discards the
+    off-subspace contribution from γI, a deliberate O(mnr) approximation.
+
+    Args:
+        y_i:        Observations for row i, shape (n,).
+        s2_i:       Observation variances, shape (n,); ``inf`` = missing.
+        V_r:        Factor loading matrix, shape (n, r); orthonormal columns.
+        d_r:        Sqrt-eigenvalues of Ψ_r (> 0), shape (r,).
+        lambda_bar: E_q[λ], scalar.
+        gamma:      Isotropic prior precision for off-subspace directions, scalar.
+
+    Returns:
+        mu_i:        Full n-dim posterior mean (has off-subspace components), shape (n,).
+        z_tilde_i:   V_r^T mu_i — in-subspace projection, shape (r,).
+        VtSigmaV_i:  V_r^T Σ_i V_r — for Ψ_r accumulation, shape (r, r).
+        log_det_i:   Full n-dim log|Σ_i|, scalar.
+        diag_sig_i:  Full n-dim diagonal of Σ_i, shape (n,).
+    """
+    prec_noise = jnp.where(jnp.isfinite(s2_i), 1.0 / s2_i, 0.0)  # (n,)
+    dp = prec_noise + gamma  # augmented diagonal precision: p_i + γ  (n,)
+    inv_dp = 1.0 / dp  # (n,)
+
+    # G_i = V_r^T diag(inv_dp) V_r  [r×r]
+    Vt_invdp = V_r.T * inv_dp  # (r, n) — trailing-dim broadcast ✓
+    G = Vt_invdp @ V_r  # (r, n) @ (n, r) = (r, r)
+
+    # B̃_i = diag(d_r/λ̄) + G_i  [r×r]  — Cholesky: B̃_i = L L^T
+    prior_scale_r = d_r / jnp.maximum(lambda_bar, 1e-30)  # d_r / λ̄  (r,)
+    B_tilde = jnp.diag(prior_scale_r) + G  # (r, r)
+    cho = jsla.cho_factor(B_tilde, lower=True)
+    L = cho[0]  # lower-triangular Cholesky factor (lower triangle of L)
+
+    # rhs_scaled = (p_i * y_i) / (p_i + γ) — n-dim RHS, missing entries → 0
+    y_obs = jnp.where(jnp.isfinite(y_i), y_i, 0.0)
+    rhs_scaled = prec_noise * y_obs * inv_dp  # (n,)
+
+    # v_i = V_r^T rhs_scaled,  α_i = B̃_i^{-1} v_i
+    v = V_r.T @ rhs_scaled  # (r, n) @ (n,) = (r,)
+    alpha = jsla.cho_solve(cho, v)  # (r,)
+
+    # μ_i = rhs_scaled − inv_dp * (V_r α_i)  — full n-dim posterior mean
+    mu_i = rhs_scaled - inv_dp * (V_r @ alpha)  # (n,)
+
+    # z̃_i = V_r^T μ_i = v − G α  (V_r orthonormal)
+    z_tilde_i = v - G @ alpha  # (r,)
+
+    # diag(Σ_i): F = L^{-1} W_i^T  where W_i^T = Vt_invdp  shape (r, n)
+    F = jsla.solve_triangular(L, Vt_invdp, lower=True)  # (r, n)
+    diag_sig_i = inv_dp - (F ** 2).sum(axis=0)  # (n,)
+
+    # V_r^T Σ_i V_r = G − S^T S  where S = L^{-1} G
+    S = jsla.solve_triangular(L, G, lower=True)  # (r, r)
+    VtSigmaV_i = G - S.T @ S  # (r, r)
+
+    # log|Σ_i| = Σ_k log(d_r[k]/λ̄) − 2 Σ log diag(L) − Σ_j log(p_j + γ)
+    # (matrix determinant lemma applied to Λ_i = D̃_i + V_r diag(λ̄/d_r) V_r^T)
+    log_det_i = (
+        jnp.sum(jnp.log(jnp.maximum(prior_scale_r, 1e-30)))
+        - 2.0 * jnp.sum(jnp.log(jnp.diag(L)))
+        - jnp.sum(jnp.log(dp))
+    )
+
+    return mu_i, z_tilde_i, VtSigmaV_i, log_det_i, diag_sig_i
+
+
+# Vmapped + JIT version for all rows simultaneously
+update_rows_lowrank_isotropic = jax.jit(
+    jax.vmap(update_row_lowrank_isotropic, in_axes=(0, 0, None, None, None, None))
 )
 
 

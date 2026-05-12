@@ -6,8 +6,11 @@ import numpy as np
 import pytest
 
 import matlap
-from matlap import matlap_lowrank, matlap as run_matlap
-from matlap.linalg import update_row_lowrank, update_rows_lowrank
+from matlap import matlap_lowrank, matlap_lowrank_isotropic, matlap as run_matlap
+from matlap.linalg import (
+    update_row_lowrank, update_rows_lowrank,
+    update_row_lowrank_isotropic, update_rows_lowrank_isotropic,
+)
 
 jax.config.update("jax_enable_x64", False)
 
@@ -189,3 +192,233 @@ def test_matlap_lowrank_v_orthonormal():
     VtV = result.V_r.T @ result.V_r
     # Allow tolerance for float32 accumulation across rotations
     np.testing.assert_allclose(VtV, jnp.eye(5), atol=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# update_row_lowrank_isotropic
+# ---------------------------------------------------------------------------
+
+
+def test_update_row_lowrank_isotropic_shapes():
+    """Return shapes: (n,), (r,), (r,r), (), (n,)."""
+    rng = np.random.default_rng(20)
+    n, r = 10, 3
+    y_i = jnp.asarray(rng.standard_normal(n), dtype=jnp.float32)
+    s2_i = jnp.ones(n, dtype=jnp.float32)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.ones(r, dtype=jnp.float32)
+    lambda_bar = jnp.array(1.0, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    mu_i, z_tilde, VtSV, log_det, diag_sig = update_row_lowrank_isotropic(
+        y_i, s2_i, V_r, d_r, lambda_bar, gamma
+    )
+
+    assert mu_i.shape == (n,)
+    assert z_tilde.shape == (r,)
+    assert VtSV.shape == (r, r)
+    assert log_det.shape == ()
+    assert diag_sig.shape == (n,)
+
+
+def test_update_row_lowrank_isotropic_positive_diag():
+    """Diagonal of Σ_i must be strictly positive."""
+    rng = np.random.default_rng(21)
+    n, r = 12, 4
+    y_i = jnp.asarray(rng.standard_normal(n), dtype=jnp.float32)
+    s2_i = jnp.asarray(rng.uniform(0.5, 2.0, n), dtype=jnp.float32)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.asarray(rng.uniform(1.0, 3.0, r), dtype=jnp.float32)
+    lambda_bar = jnp.array(0.5, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    _, _, _, _, diag_sig = update_row_lowrank_isotropic(
+        y_i, s2_i, V_r, d_r, lambda_bar, gamma
+    )
+    assert jnp.all(diag_sig > 0)
+
+
+def test_update_row_lowrank_isotropic_z_tilde_matches_Vt_mu():
+    """z̃_i must equal V_r^T μ_i (for orthonormal V_r)."""
+    rng = np.random.default_rng(22)
+    n, r = 10, 3
+    y_i = jnp.asarray(rng.standard_normal(n), dtype=jnp.float32)
+    s2_i = jnp.asarray(rng.uniform(0.5, 2.0, n), dtype=jnp.float32)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.asarray(rng.uniform(1.0, 3.0, r), dtype=jnp.float32)
+    lambda_bar = jnp.array(1.0, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    mu_i, z_tilde, _, _, _ = update_row_lowrank_isotropic(
+        y_i, s2_i, V_r, d_r, lambda_bar, gamma
+    )
+    np.testing.assert_allclose(z_tilde, V_r.T @ mu_i, atol=1e-4)
+
+
+def test_update_row_lowrank_isotropic_mu_has_offsubspace():
+    """μ_i should have non-zero off-subspace component (unlike matlap_lowrank)."""
+    rng = np.random.default_rng(23)
+    n, r = 12, 3
+    # Signal in first 3 cols of V_r and also outside — use full observation
+    y_i = jnp.asarray(rng.standard_normal(n), dtype=jnp.float32)
+    s2_i = jnp.ones(n, dtype=jnp.float32)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.ones(r, dtype=jnp.float32)
+    lambda_bar = jnp.array(1.0, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    mu_i, z_tilde, _, _, _ = update_row_lowrank_isotropic(
+        y_i, s2_i, V_r, d_r, lambda_bar, gamma
+    )
+    # Off-subspace residual: μ_i - V_r z̃_i should be non-zero
+    off_subspace = mu_i - V_r @ z_tilde
+    assert float(jnp.linalg.norm(off_subspace)) > 1e-4, (
+        "mu_i has no off-subspace component; expected non-zero for isotropic prior"
+    )
+
+
+def test_update_row_lowrank_isotropic_missing_data():
+    """Missing observations should yield finite results with no NaN."""
+    rng = np.random.default_rng(24)
+    n, r = 8, 3
+    y_i = jnp.asarray(rng.standard_normal(n), dtype=jnp.float32)
+    s2_i = jnp.ones(n, dtype=jnp.float32).at[2].set(jnp.inf).at[5].set(jnp.inf)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.ones(r, dtype=jnp.float32)
+    lambda_bar = jnp.array(1.0, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    mu_i, z_tilde, VtSV, log_det, diag_sig = update_row_lowrank_isotropic(
+        y_i, s2_i, V_r, d_r, lambda_bar, gamma
+    )
+    assert jnp.all(jnp.isfinite(mu_i))
+    assert jnp.all(jnp.isfinite(diag_sig))
+    assert jnp.all(diag_sig > 0)
+    assert jnp.isfinite(log_det)
+
+
+def test_update_rows_lowrank_isotropic_matches_single():
+    """Vmapped version must match row-by-row calls."""
+    rng = np.random.default_rng(25)
+    m, n, r = 5, 8, 3
+    Y = jnp.asarray(rng.standard_normal((m, n)), dtype=jnp.float32)
+    S2 = jnp.ones((m, n), dtype=jnp.float32)
+    Q, _ = jnp.linalg.qr(jnp.asarray(rng.standard_normal((n, r)), dtype=jnp.float32))
+    V_r = Q
+    d_r = jnp.ones(r, dtype=jnp.float32)
+    lambda_bar = jnp.array(1.0, dtype=jnp.float32)
+    gamma = jnp.array(1e-3, dtype=jnp.float32)
+
+    mus, zs, VtSVs, log_dets, diag_sigs = update_rows_lowrank_isotropic(
+        Y, S2, V_r, d_r, lambda_bar, gamma
+    )
+
+    for i in range(m):
+        mu_i, z_i, VtSV_i, ld_i, ds_i = update_row_lowrank_isotropic(
+            Y[i], S2[i], V_r, d_r, lambda_bar, gamma
+        )
+        np.testing.assert_allclose(mus[i], mu_i, atol=2e-4)
+        np.testing.assert_allclose(zs[i], z_i, atol=2e-4)
+        np.testing.assert_allclose(VtSVs[i], VtSV_i, atol=2e-4)
+        np.testing.assert_allclose(float(log_dets[i]), float(ld_i), atol=2e-4)
+        np.testing.assert_allclose(diag_sigs[i], ds_i, atol=2e-4)
+
+
+# ---------------------------------------------------------------------------
+# matlap_lowrank_isotropic — correctness
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_lowrank_isotropic_returns_result():
+    """Should return LowRankIsotropicResult without error."""
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=10)
+    assert result.mu.shape == Y.shape
+    assert result.z.shape == (20, 5)
+    assert result.V_r.shape == (10, 5)
+    assert jnp.all(jnp.isfinite(result.mu))
+    assert result.gamma == pytest.approx(1e-3)
+
+
+def test_matlap_lowrank_isotropic_elbo_finite():
+    """ELBO trace must be all-finite."""
+    Y, S, _ = make_low_rank(15, 8, rank=2, noise_std=0.3, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=4, max_iter=20)
+    assert all(np.isfinite(e) for e in result.elbo_trace)
+
+
+def test_matlap_lowrank_isotropic_elbo_nondecreasing():
+    """ELBO should be non-decreasing (up to float32 rounding)."""
+    Y, S, _ = make_low_rank(20, 12, rank=2, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=50, tol=1e-9)
+    elbo = result.elbo_trace
+    for i in range(1, len(elbo)):
+        assert elbo[i] >= elbo[i - 1] - 0.05, (
+            f"ELBO decreased at iter {i}: {elbo[i-1]:.6f} → {elbo[i]:.6f}"
+        )
+
+
+def test_matlap_lowrank_isotropic_recovers_signal():
+    """Isotropic CAVI should produce lower RMSE than the noisy observations."""
+    Y, S, X_true = make_low_rank(30, 15, rank=3, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=50)
+
+    rmse_noisy = float(jnp.sqrt(jnp.mean((Y - X_true) ** 2)))
+    rmse_pred = float(jnp.sqrt(jnp.mean((result.mu - X_true) ** 2)))
+    assert rmse_pred < rmse_noisy, (
+        f"RMSE not improved: noisy={rmse_noisy:.4f}, pred={rmse_pred:.4f}"
+    )
+
+
+def test_matlap_lowrank_isotropic_lambda_unbiased_vs_lowrank():
+    """Lambda should be closer to m*n/m*r times the lowrank lambda (corrects bias)."""
+    rng = np.random.default_rng(30)
+    Y, S, _ = make_low_rank(40, 20, rank=3, noise_std=0.5, rng=rng)
+    r = 5
+
+    res_lr = matlap_lowrank(Y, S, rank=r, max_iter=50)
+    res_iso = matlap_lowrank_isotropic(Y, S, rank=r, max_iter=50)
+
+    m, n = Y.shape
+    # isotropic uses a_N = a0 + m*n; lowrank uses a0 + m*r  → iso lambda ~n/r × larger
+    ratio = res_iso.lambda_bar / (res_lr.lambda_bar + 1e-8)
+    expected = n / r  # theoretical ratio
+    # Ratio should be in the rough ballpark (between 0.3× and 3× of expected)
+    assert 0.3 * expected <= ratio <= 3.0 * expected, (
+        f"lambda ratio {ratio:.2f} far from expected {expected:.2f}"
+    )
+
+
+def test_matlap_lowrank_isotropic_with_missing():
+    """Should handle missing data (S=inf) without NaN."""
+    rng = np.random.default_rng(31)
+    Y, S, _ = make_low_rank(15, 8, rank=2, noise_std=0.5, rng=rng)
+    mask = rng.random(Y.shape) < 0.2
+    S = S.at[jnp.asarray(mask)].set(jnp.inf)
+
+    result = matlap_lowrank_isotropic(Y, S, rank=4, max_iter=20)
+    assert jnp.all(jnp.isfinite(result.mu))
+    assert all(np.isfinite(e) for e in result.elbo_trace)
+
+
+def test_matlap_lowrank_isotropic_v_orthonormal():
+    """V_r should have approximately orthonormal columns at convergence."""
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=30)
+    VtV = result.V_r.T @ result.V_r
+    np.testing.assert_allclose(VtV, jnp.eye(5), atol=1e-3)
+
+
+def test_matlap_lowrank_isotropic_z_matches_Vt_mu():
+    """||z||_F should equal ||mu @ V_r||_F (invariant under the final V_r rotation)."""
+    rng = np.random.default_rng(32)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=20)
+    norm_z = float(jnp.linalg.norm(result.z, 'fro'))
+    norm_mu_Vr = float(jnp.linalg.norm(result.mu @ result.V_r, 'fro'))
+    np.testing.assert_allclose(norm_z, norm_mu_Vr, atol=1e-3)

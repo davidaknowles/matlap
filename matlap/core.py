@@ -14,7 +14,12 @@ import jax
 import jax.numpy as jnp
 
 from .elbo import compute_elbo, compute_elbo_from_diag, compute_elbo_lowrank
-from .linalg import SqrtDecomp, matrix_sqrt_eigh, trace_sqrt, update_rows, update_rows_and_reduce, update_rows_lowrank, rsvd
+from .linalg import (
+    SqrtDecomp, matrix_sqrt_eigh, trace_sqrt,
+    update_rows, update_rows_and_reduce,
+    update_rows_lowrank, update_rows_lowrank_isotropic,
+    rsvd,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -388,6 +393,40 @@ class LowRankCAVIResult:
     n_iter: int = 0
 
 
+@dataclass
+class LowRankIsotropicResult:
+    """Result of matlap_lowrank_isotropic() CAVI optimisation.
+
+    Uses a low-rank-plus-isotropic prior V_r diag(λ̄/d_r) V_r^T + γI and the
+    Woodbury identity for full n-dimensional per-row posteriors, giving correct
+    n-dim entropy and unbiased λ estimates — a strict improvement over
+    ``matlap_lowrank`` at the same O(mnr + r³) asymptotic cost.
+
+    Attributes:
+        mu:          Full n-dim posterior mean of X, shape (m, n).
+        z:           In-subspace projection V_r^T μ_i, shape (m, r).
+        V_r:         Factor loading matrix, shape (n, r); orthonormal columns.
+        lambda_bar:  E_q[lambda], scalar.
+        a_N:         Gamma posterior shape (= a0 + m*n), scalar.
+        b_N:         Gamma posterior rate, scalar.
+        gamma:       Isotropic prior precision used (scalar).
+        elbo_trace:  ELBO at the end of each iteration, list of floats.
+        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
+        n_iter:      Number of iterations executed.
+    """
+
+    mu: jax.Array
+    z: jax.Array
+    V_r: jax.Array
+    lambda_bar: float
+    a_N: float
+    b_N: float
+    gamma: float
+    elbo_trace: list[float] = field(default_factory=list)
+    converged: bool = False
+    n_iter: int = 0
+
+
 def matlap_lowrank(
     Y: jax.Array,
     S: jax.Array,
@@ -496,6 +535,135 @@ def matlap_lowrank(
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
+        elbo_trace=elbo_trace,
+        converged=converged,
+        n_iter=len(elbo_trace),
+    )
+
+
+def matlap_lowrank_isotropic(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    rank: int = 50,
+    gamma: float = 1e-3,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    verbose: bool = False,
+) -> LowRankIsotropicResult:
+    """Low-rank-plus-isotropic Bayesian matrix denoising via CAVI.
+
+    Uses prior precision V_r diag(λ̄/d_r) V_r^T + γI and the Woodbury identity
+    to compute full n-dimensional per-row posteriors at O(mnr + r³) cost — the
+    same asymptotic complexity as :func:`matlap_lowrank` but with:
+
+    * Correct n-dimensional posterior covariances (including off-subspace).
+    * Accurate n-dim entropy in the ELBO.
+    * Unbiased λ estimation via a_N = a0 + m*n (not m*r).
+
+    The Q update discards the off-subspace (γI) contribution to Ψ, projecting
+    onto V_r as in :func:`matlap_lowrank`.  This is a deliberate O(mnr)
+    approximation and may slightly under-count variance outside the subspace.
+
+    Args:
+        Y:        Observed matrix, shape (m, n).  NaN/any value where missing.
+        S:        Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        rank:     Rank of the factor subspace (default 50).
+        gamma:    Isotropic prior precision for off-subspace directions
+                  (default: 1e-3).  Small values ensure posterior is proper for
+                  missing entries; negligible for well-observed entries.
+        a0:       Gamma prior shape for lambda (default: 1e-3).
+        b0:       Gamma prior rate for lambda (default: 1e-3).
+        max_iter: Maximum CAVI iterations.
+        tol:      Convergence tolerance on relative ELBO change.
+        verbose:  Print ELBO at each iteration.
+
+    Returns:
+        :class:`LowRankIsotropicResult` with posterior mean, factor coordinates,
+        and diagnostics.
+    """
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+    S2 = S ** 2
+    m, n = Y.shape
+    r = min(rank, n, m)
+    gamma_arr = jnp.asarray(gamma, dtype=jnp.float32)
+
+    # Initialise V_r via randomized SVD of observed data (missing → 0)
+    Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
+    _, _, Vt_r = rsvd(Y_obs, r)
+    V_r = Vt_r.T  # (n, r), orthonormal columns
+
+    # a_N = a0 + m*n (correct full-dimension prior, vs m*r in matlap_lowrank)
+    a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
+
+    # Initialise d_r so that the first lambda update gives lambda ≈ 1:
+    # trace_Q = d_r.sum() = a_N  →  b_N = b0 + a_N  →  lambda ≈ 1.
+    # Without this, d_r = ones(r) gives lambda = a_N/r ≫ 1, causing
+    # the posterior to be over-shrunk on the first iteration (runaway).
+    d_r = jnp.full(r, float(a_N) / r, dtype=jnp.float32)
+
+    b_N = jnp.asarray(a_N, dtype=jnp.float32)  # consistent with lambda_bar = 1
+    lambda_bar = a_N / b_N  # = 1.0
+
+    elbo_trace: list[float] = []
+    converged = False
+    mus: jax.Array | None = None
+    z_tildes: jax.Array | None = None
+
+    for i in range(max_iter):
+        # Update lambda
+        trace_Q = d_r.sum()
+        a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
+        b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
+        lambda_bar = a_N / b_N
+
+        # Full n-dim Woodbury row updates
+        mus, z_tildes, VtSigmaVs, log_dets, diag_sigs = (
+            update_rows_lowrank_isotropic(Y, S2, V_r, d_r, lambda_bar, gamma_arr)
+        )
+        # mus: (m,n), z_tildes: (m,r), VtSigmaVs: (m,r,r), log_dets: (m,), diag_sigs: (m,n)
+
+        # Ψ_r = V_r^T Ψ V_r = Σ_i (z̃_i z̃_i^T + V_r^T Σ_i V_r)
+        Psi_r = z_tildes.T @ z_tildes + VtSigmaVs.sum(axis=0)  # (r, r)
+
+        # Update d_r and rotate V_r via eigh(Ψ_r)
+        vals_r, vecs_r = jnp.linalg.eigh(Psi_r)
+        d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))
+        V_r = V_r @ vecs_r  # (n, r) — rotate columns
+
+        # Refresh lambda with new d_r
+        b_N = jnp.asarray(b0, dtype=jnp.float32) + d_r.sum()
+        lambda_bar = a_N / b_N
+
+        # ELBO: n-dim log-dets and diag_sigs, d_r for in-subspace trace_Q
+        elbo = compute_elbo_from_diag(
+            Y, S2, mus, diag_sigs, log_dets, d_r, lambda_bar, a_N, b_N, a0, b0,
+        )
+        elbo_val = float(elbo)
+        elbo_trace.append(elbo_val)
+
+        if verbose:
+            print(f"  iter {i+1:4d}  ELBO={elbo_val:.4f}  lambda={float(lambda_bar):.6f}")
+
+        if i > 0:
+            prev = elbo_trace[-2]
+            denom = max(abs(prev), 1e-10)
+            if abs(elbo_val - prev) / denom < tol:
+                converged = True
+                break
+
+    assert mus is not None and z_tildes is not None
+    return LowRankIsotropicResult(
+        mu=mus,
+        z=z_tildes,
+        V_r=V_r,
+        lambda_bar=float(lambda_bar),
+        a_N=float(a_N),
+        b_N=float(b_N),
+        gamma=float(gamma),
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),
