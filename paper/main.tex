@@ -242,36 +242,36 @@ Because $x_i$ lives in the column space of $V_r$, the entropy of $q(x_i)$ is com
 \subsection{Low-Rank-Plus-Isotropic CAVI via the Woodbury Identity}
 \label{sec:lowrank-woodbury}
 
-The factor-space restriction in Section~\ref{sec:lowrank-cavi} forces all posterior mass onto $\mathrm{col}(V_r)$, discarding uncertainty in the $n-r$ orthogonal directions and systematically under-counting entropy. Replacing the rank-$r$ prior precision with a low-rank-plus-isotropic form,
+The factor-space CAVI restricts $Q$ to be rank-$r$, assigning zero prior precision to off-subspace directions and forcing all posterior mass onto $\mathrm{col}(V_r)$. We instead restrict $Q$ to a low-rank-plus-isotropic family,
 \begin{equation}
-    \text{prior precision:}\quad V_r\,\mathrm{diag}(\bar\lambda/d_r)\,V_r^\top + \gamma I,
+    Q = V_r\,\mathrm{diag}(d_r)\,V_r^\top + \delta\,(I - V_r V_r^\top),
 \end{equation}
-yields a full $n$-dimensional posterior that is still computable in $O(nr + r^3)$ per row via the Woodbury identity. The isotropic term $\gamma > 0$ regularises off-subspace directions and ensures a proper posterior even when some entries per row are missing.
+where $\delta > 0$ is an additional \emph{variational} parameter—it has the same status as the in-subspace eigenvalues $d_{r,k}$, representing the off-subspace degrees of freedom of $Q$ and optimized by CAVI alongside them.
+
+\paragraph{Update for $\delta$.}
+With $Q^{-1} = V_r\,\mathrm{diag}(1/d_r)\,V_r^\top + \delta^{-1}(I - V_r V_r^\top)$, the nuclear-norm ELBO bound decomposes into independent in-subspace and off-subspace terms. The off-subspace contribution $-\tfrac{\bar\lambda}{2}[\mathrm{Tr}(\Psi_\perp)/\delta + (n-r)\delta]$ is minimised in closed form:
+\begin{equation}
+    \delta^* = \sqrt{\frac{\mathrm{Tr}(\Psi_\perp)}{n-r}}, \qquad
+    \mathrm{Tr}(\Psi_\perp) = \mathrm{Tr}(\Psi) - \mathrm{Tr}(\Psi_r),
+\end{equation}
+where $\mathrm{Tr}(\Psi) = \sum_i(\|\mu_i\|^2 + \mathrm{Tr}(\Sigma_i))$ and $\mathrm{Tr}(\Psi_r) = \sum_k d_{r,k}^2$. This is the exact analogue of $d_{r,k}^* = \sqrt{[\Psi_r]_{kk}}$ for the in-subspace modes: $\delta^*$ is the RMS off-subspace eigenvalue of $\Psi$.
 
 \paragraph{Posterior updates.}
-Let $\tilde{D}_i = \mathrm{diag}(p_i + \gamma)$, which is positive definite. The posterior precision is $\Lambda_i = \tilde{D}_i + V_r\,\mathrm{diag}(\bar\lambda/d_r)\,V_r^\top$. Applying the Woodbury matrix identity yields
+Let $\gamma = \bar\lambda/\delta$ (off-subspace prior precision), $\tilde{p}_{ij} = p_{ij} + \gamma$, and $c_k = \bar\lambda/d_{r,k} - \gamma$. In practice $\delta < d_{r,k}$ (off-subspace modes of $Q$ are smaller than in-subspace), so $c_k < 0$; the posterior precision $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$ is nevertheless PD. The Woodbury identity gives
 \begin{align}
-    \Sigma_i &= \tilde{D}_i^{-1} - \tilde{D}_i^{-1} V_r\,\tilde{B}_i^{-1}\, V_r^\top \tilde{D}_i^{-1}, \\
-    \tilde{B}_i &= \mathrm{diag}(d_r/\bar\lambda) + V_r^\top \tilde{D}_i^{-1} V_r \;\in \mathbb{R}^{r\times r},
+    \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V_r\,\tilde{B}_i^{-1}\,V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\
+    \tilde{B}_i &= \mathrm{diag}(1/c_k) + V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V_r \;\in \mathbb{R}^{r\times r},
 \end{align}
-a diagonal-minus-low-rank structure requiring $O(n + r^2)$ storage per row. The diagonal $\mathrm{diag}(\Sigma_i)$ needed for the ELBO is read off element-wise in $O(nr)$ without forming the full $n\times n$ matrix. The posterior mean is
-\begin{equation}
-    \mu_i = \tilde{D}_i^{-1}(p_i \odot y_i) - \tilde{D}_i^{-1} V_r\,\tilde{B}_i^{-1}\, V_r^\top \tilde{D}_i^{-1}(p_i \odot y_i),
-\end{equation}
-which now has components outside $\mathrm{col}(V_r)$, capturing residual signal in the data not yet explained by the current factor subspace.
+where $\tilde{B}_i \succ 0$ by the Schur complement of $\Lambda_i$. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V_r)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
 
-\paragraph{$Q$ update.}
-The projected expected second moment $\tilde{\Psi}_r = V_r^\top\!\sum_i(\mu_i\mu_i^\top + \Sigma_i)\,V_r \in \mathbb{S}_{++}^r$ is accumulated in $O(mnr)$ from the Woodbury factors $(V_r^\top\mu_i$ and $V_r^\top\Sigma_i V_r$ both follow directly from $\tilde{B}_i^{-1}$ and $\tilde{D}_i^{-1})$. Its eigendecomposition and the $V_r$ rotation proceed as in Section~\ref{sec:lowrank-cavi}.
+\paragraph{$Q$ and $\delta$ updates.}
+$\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ and $\gamma \leftarrow \bar\lambda/\delta^*$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$.
 
 \paragraph{ELBO.}
-By the matrix determinant lemma,
-\begin{equation}
-    \log|\Sigma_i| = \sum_{k=1}^r \log\!\frac{d_{r,k}}{\bar\lambda} - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
-\end{equation}
-an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. This corrects the systematic under-counting in the factor-space formulation (which uses $r$ degrees of freedom instead of $n$), yielding a tighter ELBO and better-calibrated automatic $\lambda$.
+$\log|\Sigma_i| = -\log|\Lambda_i|$ is computed via the matrix determinant lemma applied to $\Lambda_i$ in $O(n + r^3)$, using all $n$ degrees of freedom rather than only $r$.
 
 \paragraph{Summary.}
-At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal, reducing reconstruction error; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) $\gamma > 0$ ensures proper posteriors for rows with missing entries. Setting $\gamma \to 0$ recovers the exact optimal posterior for fully observed rows.
+At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) no new hyperparameters are introduced—$\delta$ is optimized from the data in closed form each iteration.
 
 \subsection{Randomized SVD for Approximate Nuclear Norm in SVI}
 \label{sec:rsvd}
