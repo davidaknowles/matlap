@@ -172,6 +172,21 @@ def run_vi_row_lowrank(Y, S, n_steps, guide_rank, approx_rank, lr=3e-3):
     return r.mu, float(r.lambda_bar), r.converged
 
 
+def run_matlap_batched(Y, S, max_iter, batch_size=64):
+    from matlap.core import matlap_batched
+    r = matlap_batched(Y, S, max_iter=max_iter, batch_size=batch_size)
+    return r.mu, float(r.lambda_bar), r.converged
+
+
+def run_matlap_grid_lowrank(Y, S, lam_grid, rank, max_iter):
+    from matlap.core import matlap_grid_lowrank
+    r = matlap_grid_lowrank(Y, S, lam_grid, rank=rank, max_iter=max_iter)
+    return r.best_result.mu, float(r.best_lambda), r.best_result.converged
+
+
+
+
+
 # ---------------------------------------------------------------------------
 # Single-seed benchmark
 # ---------------------------------------------------------------------------
@@ -188,6 +203,8 @@ def benchmark_seed(
     lowrank_rank: int,
     guide_rank: int,
     approx_rank: int,
+    grid_points: int,
+    batch_size: int,
     device,
     verbose: bool = True,
 ) -> dict:
@@ -196,8 +213,8 @@ def benchmark_seed(
         X_true, Y, S, mask = simulate(seed, m, n, rank, missing_frac)
         lam_heuristic = heuristic_lambda(S)
 
-        # Lambda grid for CV: 5 points spanning ±1.5 decades from heuristic
-        lam_grid = float(lam_heuristic) * np.logspace(-1.5, 1.5, 5)
+        # Lambda grid: grid_points log-spaced values ±1.5 decades from heuristic
+        lam_grid = float(lam_heuristic) * np.logspace(-1.5, 1.5, grid_points)
 
         results = {}
 
@@ -208,15 +225,21 @@ def benchmark_seed(
             ("proximal_cv",
              run_proximal_cv,
              (Y, S, lam_grid, proximal_iters // 2)),
+            ("matlap_lowrank",
+             run_matlap_lowrank,
+             (Y, S, lowrank_rank, lowrank_iters)),
+            ("matlap_grid_lowrank",
+             run_matlap_grid_lowrank,
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters)),
+            ("matlap_batched",
+             run_matlap_batched,
+             (Y, S, lowrank_iters, batch_size)),
             ("vi_diagonal",
              run_vi_diagonal,
              (Y, S, vi_steps)),
             ("vi_diagonal_approx",
              run_vi_diagonal_approx,
              (Y, S, vi_steps, approx_rank)),
-            ("matlap_lowrank",
-             run_matlap_lowrank,
-             (Y, S, lowrank_rank, lowrank_iters)),
             ("vi_matrix_factor",
              run_vi_matrix_factor,
              (Y, S, vi_steps, guide_rank, approx_rank)),
@@ -264,10 +287,11 @@ def benchmark_seed(
 
 EXCLUDED = {
     "matlap": (
-        "Stores O(m·n²) posterior covariances. At 10k×1k that is "
-        "10 000 × 1 000 × 1 000 × 4 bytes ≈ **40 GB** (OOM)."
+        "O(m·n³) compute even with batching — at 10k×1k each row needs an n=1000 "
+        "Cholesky (~10⁹ FLOPs); 10k rows per iter ≈ 10¹³ FLOPs/iter (infeasible). "
+        "Use `matlap_batched` at n ≲ 300."
     ),
-    "matlap_grid": "Same O(m·n²) memory requirement as matlap.",
+    "matlap_grid": "Same O(m·n³) compute limit as matlap; replaced by matlap_grid_lowrank.",
     "vi_row_mvn": (
         "Guide stores m row-MVN covariances of size n×n "
         "≈ 40 GB for 10k×1k (OOM)."
@@ -279,13 +303,15 @@ EXCLUDED = {
 }
 
 METHOD_DESC = {
-    "proximal":           "Nuclear-norm FISTA, λ set by heuristic",
-    "proximal_cv":        "Nuclear-norm FISTA, λ by 2-fold entry-wise CV",
-    "vi_diagonal":        "SVI, fully-factorised Gaussian guide, auto-λ",
-    "vi_diagonal_approx": "SVI, fully-factorised Gaussian + rSVD nuclear norm, auto-λ",
-    "matlap_lowrank":     "Low-rank CAVI (Woodbury, rank-r factor subspace), auto-λ",
-    "vi_matrix_factor":   "SVI, shared column-factor guide + rSVD, auto-λ; O(mn) memory",
-    "vi_row_lowrank":     "SVI, per-row low-rank guide + rSVD, auto-λ; O(mnr) memory",
+    "proximal":             "Nuclear-norm FISTA, λ set by heuristic",
+    "proximal_cv":          "Nuclear-norm FISTA, λ by entry-wise CV",
+    "matlap_lowrank":       "Low-rank CAVI (Woodbury, rank-r factor subspace), auto-λ",
+    "matlap_grid_lowrank":  "Low-rank CAVI on λ-grid, warm-started path, best ELBO",
+    "matlap_batched":       "Full CAVI, batched rows (O(batch·n²) peak mem), auto-λ",
+    "vi_diagonal":          "SVI, fully-factorised Gaussian guide, auto-λ",
+    "vi_diagonal_approx":   "SVI, fully-factorised Gaussian + rSVD nuclear norm, auto-λ",
+    "vi_matrix_factor":     "SVI, shared column-factor guide + rSVD, auto-λ; O(mn) memory",
+    "vi_row_lowrank":       "SVI, per-row low-rank guide + rSVD, auto-λ; O(mnr) memory",
 }
 
 
@@ -457,20 +483,20 @@ def build_report(
         lines.append("</details>")
         lines.append("")
 
-    # ── Scalability table
     lines.append("## Scalability Notes")
     lines.append("")
     lines.append("Memory and compute scaling at 10k×1k (m=10000, n=1000).")
     lines.append("")
     lines.append("| Method | Memory | Per-iter compute | Notes |")
     lines.append("|---|---|---|---|")
-    lines.append("| matlap (CAVI) | O(m·n²) — **40 GB OOM** | O(m·n³) | Exact but infeasible |")
+    lines.append("| matlap | O(m·n²) — **40 GB OOM** | O(m·n³) | Exact but infeasible at n=1k |")
+    lines.append(f"| matlap_batched | O(B·n²), B={args.batch_size} — {args.batch_size}×4MB={args.batch_size*4} MB | O(m·n³) — **slow** at n=1k | Feasible memory; use at n≲300 |")
+    lines.append(f"| matlap_lowrank | O(mn + nr²) at r={args.lowrank_rank} — ~44 MB | O(mn·r) Woodbury | Exact in rank-r subspace |")
+    lines.append(f"| matlap_grid_lowrank | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | G={args.grid_points} grid pts, warm-started |")
     lines.append("| proximal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/iter on CPU |")
-    lines.append("| vi_diagonal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/step on CPU |")
-    lines.append(f"| vi_diagonal_approx | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | ~30× faster per step |")
-    lines.append(f"| matlap_lowrank | O(mn + nr²) — ~44 MB at r={args.lowrank_rank} | O(mn·r) Woodbury | Exact in rank-r subspace |")
+    lines.append(f"| vi_diagonal_approx | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | ~30× faster per step vs full SVD |")
     lines.append(f"| vi_matrix_factor | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | Shared column-factor guide |")
-    lines.append(f"| vi_row_lowrank | O(mn·r) — ~600 MB at r={args.guide_rank} | O(mn·r) rSVD | Per-row low-rank covariance |")
+    lines.append(f"| vi_row_lowrank | O(mn·r) at r={args.guide_rank} — ~600 MB | O(mn·r) rSVD | Per-row low-rank covariance |")
     lines.append("| vi_row_mvn | O(mn²) — **40 GB OOM** | O(mn³) | Infeasible |")
     lines.append("| vi_matrix_normal | O(m²+n²) — 400 MB | O(m²n) — **impractical** | 10¹¹ FLOPs/step |")
     lines.append("")
@@ -498,6 +524,10 @@ def main() -> None:
     parser.add_argument("--lowrank-rank",         type=int,   default=50)
     parser.add_argument("--guide-rank",           type=int,   default=15)
     parser.add_argument("--approx-rank",          type=int,   default=30)
+    parser.add_argument("--grid-points",          type=int,   default=7,
+                        help="Lambda grid size for CV / matlap_grid_lowrank (default 7)")
+    parser.add_argument("--batch-size",           type=int,   default=64,
+                        help="Row batch size for matlap_batched (default 64)")
     parser.add_argument("--no-gpu",               action="store_true")
     parser.add_argument("--output",               type=str,   default="benchmark_results")
     args = parser.parse_args()
@@ -506,7 +536,8 @@ def main() -> None:
           f"| seeds={args.seeds} | missing={args.missing:.0%}")
     print(f"  proximal_iters={args.proximal_iters}  vi_steps={args.vi_steps}  "
           f"lowrank_iters={args.lowrank_iters}  lowrank_rank={args.lowrank_rank}  "
-          f"guide_rank={args.guide_rank}  approx_rank={args.approx_rank}")
+          f"guide_rank={args.guide_rank}  approx_rank={args.approx_rank}  "
+          f"grid_points={args.grid_points}  batch_size={args.batch_size}")
     print()
 
     devices = get_devices(args.no_gpu)
@@ -538,6 +569,8 @@ def main() -> None:
                 lowrank_rank=args.lowrank_rank,
                 guide_rank=args.guide_rank,
                 approx_rank=args.approx_rank,
+                grid_points=args.grid_points,
+                batch_size=args.batch_size,
                 device=device,
                 verbose=True,
             )

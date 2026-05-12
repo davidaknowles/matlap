@@ -140,6 +140,82 @@ Selects the best `λ` by final ELBO.
 | `best_result` | `CAVIResult` for the best λ |
 | `results` | List of `(lambda, CAVIResult)` for every grid point |
 
+---
+
+### `matlap_batched(Y, S, *, batch_size, a0, b0, max_iter, tol, verbose) → BatchedCAVIResult`
+
+Exact full CAVI with memory-efficient batched row processing.  
+Instead of materialising all `m` row covariances at once (O(mn²) = 40 GB at 10k×1k),
+rows are processed in mini-batches of `batch_size`. Each batch computes `Σᵢ`, immediately
+extracts `diag(Σᵢ)` and its contribution to `Ψ`, then discards the full covariance.
+Peak memory is O(B·n²) — with B=64 and n=300 this is ~21 MB.
+
+> **Note:** Each row still requires an O(n³) Cholesky solve, so this is practical
+> when `n` is moderate (≤300) but `m` is large. At n=1000 it is slow (~185 s/seed).
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `Y` | — | Observed matrix `(m, n)` |
+| `S` | — | Standard errors `(m, n)`; `jnp.inf` for missing |
+| `batch_size` | `64` | Mini-batch size `B` |
+| `a0` | `1e-3` | Gamma prior shape |
+| `b0` | `1e-3` | Gamma prior rate |
+| `max_iter` | `200` | Maximum CAVI iterations |
+| `tol` | `1e-6` | Relative ELBO convergence tolerance |
+
+**Returns** `BatchedCAVIResult`:
+
+| Field | Description |
+|-------|-------------|
+| `mu` | Posterior mean `(m, n)` |
+| `sigma_diag` | Diagonal of each row posterior covariance `(m, n)` |
+| `lambda_bar` | `E_q[λ]` |
+| `elbo_trace` | ELBO per iteration |
+| `converged` | Whether tolerance was reached |
+
+---
+
+### `matlap_grid_lowrank(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, verbose) → LowRankGridResult`
+
+**Recommended for large matrices.** Combines the low-rank CAVI (rank-`r` factor subspace)
+with a warm-started regularisation path. The grid is traversed from largest to smallest
+`λ`; each grid point is warm-started from the previous solution so convergence is fast.
+The `λ` with the highest ELBO (computed in factor space) is selected.
+
+```python
+from matlap import matlap_grid_lowrank
+import jax.numpy as jnp
+
+grid = jnp.logspace(0, 3, 7)
+result = matlap_grid_lowrank(Y, S, lambda_grid=grid, rank=30)
+print(result.best_lambda)
+print(result.best_result.mu)   # shape (m, n)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `Y` | — | Observed matrix `(m, n)` |
+| `S` | — | Standard errors `(m, n)`; `jnp.inf` for missing |
+| `lambda_grid` | — | 1-D array of λ values to search |
+| `rank` | `30` | Rank of the factor subspace `r` |
+| `a0` | `1e-3` | Gamma prior shape (used for ELBO comparison only) |
+| `b0` | `1e-3` | Gamma prior rate |
+| `max_iter` | `200` | Maximum CAVI iterations per grid point |
+| `tol` | `1e-6` | Relative ELBO convergence tolerance |
+
+**Returns** `LowRankGridResult`:
+
+| Field | Description |
+|-------|-------------|
+| `best_lambda` | λ with the highest final ELBO |
+| `best_result` | `LowRankCAVIResult` for the best λ |
+| `results` | List of `(lambda, LowRankCAVIResult)` for every grid point |
+
+**Memory:** ~44 MB at `m=10000, n=1000, rank=30`.  
+**Speed:** ~0.6 s on RTX 3090 for 7 grid points.
+
+---
+
 ## Algorithm
 
 The model is:
@@ -280,7 +356,7 @@ component, implemented via `jax.custom_vjp`.
 ### Benchmark
 
 ```bash
-# Full-scale benchmark (10k×1k, all 7 methods, 10 seeds)
+# Full-scale benchmark (10k×1k, all 9 methods, CPU+GPU)
 python scripts/benchmark.py
 
 # Faster run for testing
@@ -298,12 +374,34 @@ python scripts/benchmark.py \
 Results are written to `results/benchmark_10k.md` (human-readable report)
 and `results/benchmark_10k.csv` (raw numbers).
 
+### Results (10k×1k, rank-15, RTX 3090)
+
+| Method | RMSE | GPU time (s) | Converged |
+|---|---|---|---|
+| **`matlap_grid_lowrank`** | **0.092** | **0.6** | ✓ |
+| `proximal_cv` | 0.105 | 346 | — |
+| `proximal` | 0.123 | 67 | — |
+| `matlap_batched` | 0.153 | 185 | ✓ |
+| `vi_diagonal` | 0.207 | 203 | — (1000 steps) |
+| `matlap_lowrank` | 0.257 | 1.7 | ✓ |
+| `vi_matrix_factor` | 0.530 | 93 | — (1000 steps) |
+| `vi_row_lowrank` | 0.529 | 141 | — (1000 steps) |
+| `vi_diagonal_approx` | 0.654 | 52 | — (rSVD unstable) |
+
+**`matlap_grid_lowrank` is ~12% lower RMSE and ~500× faster than proximal CV.**
+
+- `matlap_lowrank` over-shrinks because the empirical-Bayes λ update in factor space is biased by a factor ~n/r. `matlap_grid_lowrank` fixes this by searching the grid.
+- `matlap_batched` gives exact full-CAVI results but is slow at n=1000 (O(n³) per row); best used when n ≤ 300.
+- rSVD nuclear-norm approximation (`vi_*_approx`) at rank 30 introduces gradient noise that prevents SVI convergence at this scale.
+
 ## Scalability
 
 | Method | Memory | Per-iter compute | 10k×1k feasible? |
 |---|---|---|---|
 | `matlap` | O(mn²) ≈ **40 GB** | O(mn³) | ✗ OOM |
+| `matlap_batched` | O(Bn²) ≈ 256 MB (B=64) | O(mn³) total | ✓ (slow at n=1000) |
 | `matlap_lowrank` | O(mn + mr²) ≈ 44 MB | O(mnr) | ✓ |
+| `matlap_grid_lowrank` | O(mn + mr²) ≈ 44 MB | O(G·mnr) | ✓ **recommended** |
 | `proximal` | O(mn) ≈ 40 MB | O(mn·min(m,n)) full SVD | ✓ |
 | `vi_diagonal` | O(mn) ≈ 40 MB | O(mn·min(m,n)) full SVD | ✓ (slow) |
 | `vi_diagonal` + rSVD | O(mn) ≈ 40 MB | O(mn·r) | ✓ |

@@ -272,3 +272,40 @@ def update_row_lowrank(
 update_rows_lowrank = jax.jit(
     jax.vmap(update_row_lowrank, in_axes=(0, 0, None, None, None))
 )
+
+
+@jax.jit
+def update_rows_and_reduce(
+    Y_b: jax.Array,
+    S2_b: jax.Array,
+    q_sqrt_vals: jax.Array,
+    q_vecs: jax.Array,
+    lambda_bar: jax.Array,
+) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
+    """Update a batch of rows and return reduced statistics.
+
+    Runs the full ``update_row`` computation for each row in the batch, then
+    immediately extracts the diagonal of each Sigma_i and accumulates the
+    batch's contribution to Psi = sum_i (mu_i mu_i^T + Sigma_i).  The full
+    (batch, n, n) sigma tensor is never returned, so XLA can free it after
+    the reduction, keeping peak memory at O(batch * n^2) instead of O(m * n^2).
+
+    Args:
+        Y_b:         Observations for the batch, shape (B, n).
+        S2_b:        Variances for the batch, shape (B, n); inf = missing.
+        q_sqrt_vals: Sqrt eigenvalues of Psi, shape (n,).
+        q_vecs:      Eigenvectors of Psi, shape (n, n).
+        lambda_bar:  E_q[lambda], scalar.
+
+    Returns:
+        mus_b:        Posterior means, shape (B, n).
+        sigma_diag_b: Diagonal of each Sigma_i, shape (B, n).
+        log_dets_b:   log|Sigma_i| per row, shape (B,).
+        Psi_b:        Batch contribution to Psi, shape (n, n).
+    """
+    _vmap_row = jax.vmap(update_row, in_axes=(0, 0, None, None, None))
+    mus_b, sigmas_b, log_dets_b = _vmap_row(Y_b, S2_b, q_sqrt_vals, q_vecs, lambda_bar)
+    sigma_diag_b = jnp.diagonal(sigmas_b, axis1=1, axis2=2)  # (B, n)
+    # Psi contribution — accumulate before discarding sigmas_b
+    Psi_b = jnp.einsum("im,in->mn", mus_b, mus_b) + sigmas_b.sum(axis=0)  # (n, n)
+    return mus_b, sigma_diag_b, log_dets_b, Psi_b

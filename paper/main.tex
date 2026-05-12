@@ -250,6 +250,20 @@ where $\hat{\sigma}_1 \geq \dots \geq \hat{\sigma}_r$ are the top-$r$ singular v
 
 To enable gradient-based optimization, we implement the approximation with a \texttt{jax.custom\_vjp} rule. The forward pass returns $\sum_k \hat{\sigma}_k$; the backward pass propagates the gradient $g \mapsto g \hat{U}_r \hat{V}_r^\top$, which is the standard nuclear norm subgradient restricted to the top-$r$ component and satisfies $\|\nabla\|_{\mathrm{op}} \leq 1$. This reduces the per-step cost from $O(mn^2)$ to $O(mnr)$ for matrices with $n \leq m$.
 
+\subsection{Low-Rank Grid Search with Warm-Started Regularisation Path}
+\label{sec:grid-lowrank}
+
+Rather than estimating $\lambda$ jointly with $X$ via the empirical-Bayes update, one may instead search a discrete grid of candidate values and select the best by ELBO, as in \texttt{matlap\_grid}. We combine this with the low-rank CAVI (Section~\ref{sec:lowrank-cavi}) to obtain \texttt{matlap\_grid\_lowrank}, which is both scalable and avoids the misspecification of the automatic $\lambda$ in factor space.
+
+The grid is traversed in \emph{decreasing} order of $\lambda$ (strong to weak regularisation). The solution at the previous (larger) $\lambda$ warm-starts the next grid point: the shared loading matrix $V_r$ and per-row factor means $\hat{z}_i$ are reused as the initial state. Because the previous solution is already near the new optimum (the signal grows smoothly as $\lambda$ decreases), each grid point typically converges in far fewer CAVI iterations than a cold start. After all grid points are evaluated, the $\lambda$ yielding the highest ELBO (computed in factor space, consistent with Section~\ref{sec:lowrank-cavi}) is selected.
+
+This strategy costs $O(G \cdot mnr)$ in total, where $G$ is the number of grid points. On a GPU at $m=10{,}000$, $n=1{,}000$, $r=30$, a grid of $G=7$ points converges in under one second.
+
+\subsection{Memory-Efficient Full CAVI via Batched Row Processing}
+\label{sec:batched}
+
+For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this with \texttt{matlap\_batched}, which processes rows in mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. With $B=64$ and $n=1{,}000$ this is approximately 256 MB versus 40 GB. The algorithm is otherwise identical to full CAVI (Section~\ref{sec:cavi}) and converges to the same solution.
+
 \subsection{Scalable Variational Guides for SVI}
 
 Two additional guide families reduce the SVI memory footprint to $O(mn)$ while capturing structured posterior correlations:
@@ -269,6 +283,49 @@ Each row $i$ has its own low-rank factor $F_i \in \mathbb{R}^{n \times k}$:
 At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, versus 40 GB for full row-MVN covariances.
 
 Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariateNormal} distribution and combined with the rSVD nuclear norm approximation, reducing per-step cost to $O(mnr)$.
+
+\section{Empirical Comparison}
+\label{sec:experiments}
+
+We benchmark all scalable methods on a synthetic matrix completion problem with $m=10{,}000$ rows, $n=1{,}000$ columns, true rank 15, heteroscedastic Gaussian noise ($\sigma_{ij} \sim \mathrm{Uniform}(0.5, 1.5)$), and 20\% of entries held out as a test set. We report test-set RMSE and wall-clock time on a NVIDIA RTX~3090 GPU, averaged over 3 seeds.
+
+\paragraph{Methods.}
+\texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (300 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
+\texttt{matlap\_lowrank} runs the rank-30 low-rank CAVI with automatic empirical-Bayes $\lambda$ (80 iterations, converged).
+\texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point).
+\texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; O($n^3$) per row, so slow at $n=1{,}000$).
+\texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (1000 steps, not converged).
+\texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (1000 steps, not converged).
+
+\paragraph{Results.}
+
+\begin{table}[h]
+\centering
+\caption{Test-set RMSE and GPU runtime on a $10{,}000 \times 1{,}000$ rank-15 matrix, 3 seeds.}
+\label{tab:benchmark}
+\begin{tabular}{lrrrl}
+\hline
+Method & RMSE & Time (s) & Converged & Notes \\
+\hline
+\texttt{matlap\_grid\_lowrank} & \textbf{0.092} & \textbf{0.6} & \checkmark & Best overall \\
+\texttt{proximal\_cv}          & 0.105 & 346 & -- & 500$\times$ slower \\
+\texttt{proximal}              & 0.123 & 67  & -- & Fixed $\lambda$ \\
+\texttt{matlap\_batched}       & 0.153 & 185 & \checkmark & Exact; slow at $n=1{,}000$ \\
+\texttt{matlap\_lowrank}       & 0.257 & 1.7 & \checkmark & Auto-$\lambda$ over-shrinks \\
+\texttt{vi\_diagonal}          & 0.207 & 203 & -- & 1000 steps \\
+\texttt{vi\_diagonal\_approx}  & 0.654 & 52  & -- & rSVD approx unstable \\
+\texttt{vi\_matrix\_factor}    & 0.530 & 93  & -- & rSVD approx unstable \\
+\texttt{vi\_row\_lowrank}      & 0.529 & 141 & -- & rSVD approx unstable \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Discussion.}
+\texttt{matlap\_grid\_lowrank} achieves the lowest RMSE (0.092) and the shortest runtime (0.6 s), demonstrating that the warm-started regularisation path is both accurate and highly efficient.  By evaluating multiple $\lambda$ values on a shared low-rank basis, it avoids the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 33$) while remaining far cheaper than the proximal CV baseline.
+
+\texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
+
+The SVI methods (\texttt{vi\_diagonal}, \texttt{vi\_matrix\_factor}, \texttt{vi\_row\_lowrank}) have not converged at 1000 steps, and the rSVD nuclear-norm approximation introduces additional gradient noise at rank 30 that degrades the \texttt{approx} variants. With sufficient steps and a higher approximation rank, \texttt{vi\_diagonal} achieves competitive RMSE (0.207 at 1000 steps).
 
 \begin{thebibliography}{9}
 

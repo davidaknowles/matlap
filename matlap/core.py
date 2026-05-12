@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 import jax
 import jax.numpy as jnp
 
-from .elbo import compute_elbo, compute_elbo_lowrank
-from .linalg import SqrtDecomp, matrix_sqrt_eigh, trace_sqrt, update_rows, update_rows_lowrank, rsvd
+from .elbo import compute_elbo, compute_elbo_from_diag, compute_elbo_lowrank
+from .linalg import SqrtDecomp, matrix_sqrt_eigh, trace_sqrt, update_rows, update_rows_and_reduce, update_rows_lowrank, rsvd
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +61,48 @@ class GridResult:
     best_lambda: float
     best_result: CAVIResult
     results: list[tuple[float, CAVIResult]]
+
+
+@dataclass
+class BatchedCAVIResult:
+    """Result of matlap_batched() — full CAVI with O(batch*n²) peak memory.
+
+    Attributes:
+        mu:          Posterior mean of X, shape (m, n).
+        sigma_diag:  Diagonal of per-row posterior covariances, shape (m, n).
+                     Full Sigma_i (n×n per row) is never stored simultaneously.
+        lambda_bar:  E_q[lambda], scalar.
+        a_N:         Gamma posterior shape, scalar.
+        b_N:         Gamma posterior rate, scalar.
+        elbo_trace:  ELBO at the end of each iteration, list of floats.
+        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
+        n_iter:      Number of iterations executed.
+    """
+
+    mu: jax.Array
+    sigma_diag: jax.Array
+    lambda_bar: float
+    a_N: float
+    b_N: float
+    elbo_trace: list[float] = field(default_factory=list)
+    converged: bool = False
+    n_iter: int = 0
+
+
+@dataclass
+class LowRankGridResult:
+    """Result of matlap_grid_lowrank().
+
+    Attributes:
+        best_lambda:  Lambda with the highest ELBO.
+        best_result:  LowRankCAVIResult for the best lambda.
+        results:      List of (lambda, LowRankCAVIResult) for every grid point,
+                      sorted by lambda ascending.
+    """
+
+    best_lambda: float
+    best_result: "LowRankCAVIResult"
+    results: list[tuple[float, "LowRankCAVIResult"]]
 
 
 # ---------------------------------------------------------------------------
@@ -457,4 +499,257 @@ def matlap_lowrank(
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Batched full CAVI (memory-efficient)
+# ---------------------------------------------------------------------------
+
+
+def matlap_batched(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    batch_size: int = 64,
+    verbose: bool = False,
+) -> BatchedCAVIResult:
+    """Full CAVI with memory-efficient batched row processing.
+
+    Runs the same algorithm as :func:`matlap` but avoids storing all m row
+    covariances Sigma_i simultaneously.  Instead each batch of ``batch_size``
+    rows is processed by a single JIT call that:
+
+    1. Computes ``(mu_b, Sigma_b, log_det_b)`` via Cholesky.
+    2. Extracts ``diag(Sigma_b)`` and the batch's Psi contribution
+       ``sum_i (mu_i mu_i^T + Sigma_i)``.
+    3. Discards the full ``Sigma_b`` before returning.
+
+    Peak memory is O(batch_size * n²) instead of O(m * n²), making it
+    feasible for large m at moderate n.  At n = 1 000, a single row requires
+    an O(n³) Cholesky, so this is only practical for n ≲ 300; use
+    :func:`matlap_lowrank` for larger n.
+
+    Args:
+        Y:          Observed matrix, shape (m, n). NaN/any value where missing.
+        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        a0:         Gamma prior shape for lambda (default: 1e-3).
+        b0:         Gamma prior rate for lambda (default: 1e-3).
+        max_iter:   Maximum CAVI iterations.
+        tol:        Convergence tolerance on relative ELBO change.
+        batch_size: Number of rows processed per JIT call (controls peak memory).
+        verbose:    Print ELBO at each iteration.
+
+    Returns:
+        BatchedCAVIResult with posterior mean, diagonal covariances, and diagnostics.
+    """
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+    S2 = S ** 2
+    m, n = Y.shape
+
+    obs_mask = jnp.isfinite(S) & jnp.isfinite(Y)
+    mus = jnp.where(obs_mask, Y, 0.0)
+
+    # Initial Psi from a single pass over rows in batches (no sigma storage)
+    # Use identity covariances as starting point: Psi = mumuT + mI
+    Psi = jnp.einsum("im,in->mn", mus, mus) + m * jnp.eye(n, dtype=jnp.float32)
+    decomp = matrix_sqrt_eigh(Psi)
+
+    a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
+    b_N = jnp.asarray(b0 + trace_sqrt(decomp), dtype=jnp.float32)
+    lambda_bar = a_N / b_N
+
+    elbo_trace: list[float] = []
+    converged = False
+    sigma_diag = jnp.zeros((m, n), dtype=jnp.float32)
+    log_dets = jnp.zeros(m, dtype=jnp.float32)
+
+    for i in range(max_iter):
+        new_Psi = jnp.zeros((n, n), dtype=jnp.float32)
+        mus_parts: list[jax.Array] = []
+        sd_parts: list[jax.Array] = []
+        ld_parts: list[jax.Array] = []
+
+        for start in range(0, m, batch_size):
+            end = min(start + batch_size, m)
+            mu_b, sd_b, ld_b, Psi_b = update_rows_and_reduce(
+                Y[start:end], S2[start:end],
+                decomp.sqrt_vals, decomp.vecs, lambda_bar,
+            )
+            mus_parts.append(mu_b)
+            sd_parts.append(sd_b)
+            ld_parts.append(ld_b)
+            new_Psi = new_Psi + Psi_b
+
+        mus = jnp.concatenate(mus_parts, axis=0)
+        sigma_diag = jnp.concatenate(sd_parts, axis=0)
+        log_dets = jnp.concatenate(ld_parts, axis=0)
+
+        decomp = matrix_sqrt_eigh(new_Psi)
+
+        trace_Q = trace_sqrt(decomp)
+        a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
+        b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
+        lambda_bar = a_N / b_N
+
+        elbo = compute_elbo_from_diag(
+            Y, S2, mus, sigma_diag, log_dets,
+            decomp.sqrt_vals, lambda_bar, a_N, b_N, a0, b0,
+        )
+        elbo_val = float(elbo)
+        elbo_trace.append(elbo_val)
+
+        if verbose:
+            print(f"  iter {i+1:4d}  ELBO={elbo_val:.4f}  lambda={float(lambda_bar):.4f}")
+
+        if i > 0:
+            prev = elbo_trace[-2]
+            if abs(elbo_val - prev) / max(abs(prev), 1e-10) < tol:
+                converged = True
+                break
+
+    return BatchedCAVIResult(
+        mu=mus,
+        sigma_diag=sigma_diag,
+        lambda_bar=float(lambda_bar),
+        a_N=float(a_N),
+        b_N=float(b_N),
+        elbo_trace=elbo_trace,
+        converged=converged,
+        n_iter=len(elbo_trace),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Low-rank grid search (warm-started regularisation path)
+# ---------------------------------------------------------------------------
+
+
+def matlap_grid_lowrank(
+    Y: jax.Array,
+    S: jax.Array,
+    lambda_grid: jax.Array,
+    *,
+    rank: int = 50,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 50,
+    tol: float = 1e-6,
+    verbose: bool = False,
+) -> LowRankGridResult:
+    """Grid search over lambda using low-rank CAVI with warm-started path.
+
+    Evaluates each lambda in ``lambda_grid`` using the low-rank CAVI algorithm
+    from :func:`matlap_lowrank`.  Lambda values are processed in **decreasing**
+    order so that the sparse solution at large lambda warm-starts the denser
+    solution at the next smaller lambda.  This regularisation-path strategy
+    typically needs far fewer iterations per grid point than cold-starting.
+
+    The best lambda is selected by maximising the ELBO (computed in factor
+    space, consistent with how :func:`matlap_grid` selects lambda in the full
+    CAVI).
+
+    Args:
+        Y:            Observed matrix, shape (m, n). NaN/any value where missing.
+        S:            Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_grid:  1-D array of lambda values to evaluate.
+        rank:         Rank of the factor subspace (default 50).
+        a0:           Gamma prior shape (used in ELBO; lambda is fixed per point).
+        b0:           Gamma prior rate.
+        max_iter:     Maximum CAVI iterations **per grid point** (default 50).
+        tol:          Convergence tolerance on relative ELBO change.
+        verbose:      Print progress.
+
+    Returns:
+        LowRankGridResult with best lambda and per-lambda LowRankCAVIResults.
+    """
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+    S2 = S ** 2
+    m, n = Y.shape
+    r = min(rank, n, m)
+
+    # Initialise shared state via rSVD of the observed data
+    Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
+    _, _, Vt_r = rsvd(Y_obs, r)
+    V_r = Vt_r.T  # (n, r)
+    d_r = jnp.ones(r, dtype=jnp.float32)
+    zs: jax.Array | None = None
+
+    # Process lambda in decreasing order — warm-start regularisation path
+    lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
+
+    results: list[tuple[float, LowRankCAVIResult]] = []
+    best_elbo = -jnp.inf
+    best_lam = lambda_vals[0]
+    best_res: LowRankCAVIResult | None = None
+
+    for lam_val in lambda_vals:
+        lam = jnp.asarray(lam_val, dtype=jnp.float32)
+        # Fix lambda: set a_N/b_N so lambda_bar = lam (same as matlap_grid)
+        a_N = jnp.asarray(a0 + m * r, dtype=jnp.float32)
+        b_N = jnp.asarray(a_N / lam, dtype=jnp.float32)
+        lambda_bar = lam
+
+        elbo_trace: list[float] = []
+        converged = False
+
+        for i in range(max_iter):
+            # Update q(X) rows (warm-started from previous lambda's V_r, d_r)
+            zs, A_r_invs, log_dets, diag_sigs = update_rows_lowrank(
+                Y, S2, V_r, d_r, lambda_bar,
+            )
+            mus = zs @ V_r.T
+
+            # Refresh V_r and d_r via eigh of factor-space Psi_r
+            Psi_r = zs.T @ zs + A_r_invs.sum(axis=0)
+            vals_r, vecs_r = jnp.linalg.eigh(Psi_r)
+            d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))
+            V_r = V_r @ vecs_r
+
+            # ELBO with fixed lambda (b_N fixed, lambda_bar = lam throughout)
+            elbo = compute_elbo_lowrank(
+                Y, S2, mus, diag_sigs, log_dets, d_r, lambda_bar, a_N, b_N, a0, b0,
+            )
+            elbo_val = float(elbo)
+            elbo_trace.append(elbo_val)
+
+            if i > 0:
+                prev = elbo_trace[-2]
+                if abs(elbo_val - prev) / max(abs(prev), 1e-10) < tol:
+                    converged = True
+                    break
+
+        res = LowRankCAVIResult(
+            mu=mus,
+            z=zs,
+            V_r=V_r,
+            lambda_bar=lam_val,
+            a_N=float(a_N),
+            b_N=float(b_N),
+            elbo_trace=elbo_trace,
+            converged=converged,
+            n_iter=len(elbo_trace),
+        )
+        results.append((lam_val, res))
+
+        if verbose:
+            print(f"  lambda={lam_val:.4f}  ELBO={elbo_trace[-1]:.4f}  "
+                  f"iters={len(elbo_trace)}  converged={converged}")
+
+        if elbo_trace[-1] > best_elbo:
+            best_elbo = elbo_trace[-1]
+            best_lam = lam_val
+            best_res = res
+
+    results.sort(key=lambda x: x[0])
+    return LowRankGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
     )

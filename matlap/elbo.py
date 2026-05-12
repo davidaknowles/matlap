@@ -102,6 +102,66 @@ def compute_elbo(
 
 
 @jax.jit
+def compute_elbo_from_diag(
+    Y: jax.Array,
+    S2: jax.Array,
+    mus: jax.Array,
+    sigma_diag: jax.Array,
+    log_det_sigmas: jax.Array,
+    q_sqrt_vals: jax.Array,
+    lambda_bar: jax.Array,
+    a_N: jax.Array,
+    b_N: jax.Array,
+    a0: float,
+    b0: float,
+) -> jax.Array:
+    """ELBO for batched full CAVI — identical to compute_elbo but accepts the
+    diagonal of each Sigma_i rather than the full (m, n, n) covariance tensor.
+
+    This allows matlap_batched to avoid storing O(m n²) covariances: only the
+    diagonal (m, n) is retained after each batch.  The prior and entropy terms
+    still use m*n (the full model dimension), unlike compute_elbo_lowrank.
+
+    Args:
+        Y:               observations, shape (m, n); NaN where missing
+        S2:              observation variances, shape (m, n); inf where missing
+        mus:             posterior means, shape (m, n)
+        sigma_diag:      diagonal of per-row posterior covariances, shape (m, n)
+        log_det_sigmas:  log|Sigma_i| for each row, shape (m,)
+        q_sqrt_vals:     sqrt eigenvalues of Psi, shape (n,)
+        lambda_bar:      E_q[lambda] = a_N / b_N, scalar
+        a_N:             Gamma posterior shape, scalar
+        b_N:             Gamma posterior rate, scalar
+        a0:              Gamma prior shape
+        b0:              Gamma prior rate
+
+    Returns:
+        Scalar ELBO value.
+    """
+    m, n = Y.shape
+    obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)
+    prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
+
+    resid2 = (Y - mus) ** 2
+    ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
+    ll -= 0.5 * jnp.sum(jnp.where(obs_mask, jnp.log(2.0 * jnp.pi * S2), 0.0))
+
+    trace_Q = jnp.sum(q_sqrt_vals)
+    e_log_lam = jss.digamma(a_N) - jnp.log(b_N)
+    prior_X = -lambda_bar * trace_Q + m * n * e_log_lam
+
+    entropy_X = 0.5 * (jnp.sum(log_det_sigmas) + m * n * (1.0 + jnp.log(2.0 * jnp.pi)))
+
+    kl_lam = (
+        a_N * jnp.log(b_N) - a0 * jnp.log(b0)
+        - jss.gammaln(a_N) + jss.gammaln(a0)
+        + (a_N - a0) * e_log_lam
+        + (b0 - b_N) * lambda_bar
+    )
+    return ll + prior_X + entropy_X + (-kl_lam)
+
+
+@jax.jit
 def compute_elbo_lowrank(
     Y: jax.Array,
     S2: jax.Array,
