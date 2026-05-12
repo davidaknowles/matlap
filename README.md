@@ -492,33 +492,41 @@ and `results/lambda_study.md`.
 | `proximal_cv` | 0.230 ± 0.004 | 0.292 ± 0.007 | 0.316 ± 0.003 | 0.310 ± 0.018 | 0.228 ± 0.004 | 0.163 ± 0.002 |
 | `matlap_auto` | 0.255 ± 0.005 | 0.392 ± 0.007 | 0.404 ± 0.004 | 0.319 ± 0.012 | 0.229 ± 0.004 | **0.162 ± 0.002** |
 | `lowrank_auto` | 1.055 ± 0.028 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.323 ± 0.012 | 0.230 ± 0.004 | **0.162 ± 0.002** |
-| `lowrank_elbo` | 0.448 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.334 ± 0.008 | 0.267 ± 0.024 | 0.173 ± 0.002 |
+| `lowrank_grid` | 0.448 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.334 ± 0.008 | 0.267 ± 0.024 | 0.173 ± 0.002 |
 | `lowrank_cv` | 0.315 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.315 ± 0.011 | 0.230 ± 0.004 | **0.162 ± 0.002** |
-| `iso_auto` | 1.581 ± 0.010 | 1.660 ± 0.009 | 1.618 ± 0.002 | 1.544 ± 0.013 | 1.475 ± 0.013 | 1.443 ± 0.017 |
-| `iso_cv` | 1.475 ± 0.009 | 1.546 ± 0.009 | 1.436 ± 0.005 | 1.332 ± 0.013 | 1.262 ± 0.011 | 1.231 ± 0.013 |
+| `iso_auto` | 1.042 ± 0.028 | 0.606 ± 0.013 | 0.466 ± 0.005 | 0.330 ± 0.012 | 0.233 ± 0.004 | 0.164 ± 0.002 |
+| `iso_cv` | 1.052 ± 0.030 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.324 ± 0.012 | 0.230 ± 0.004 | **0.162 ± 0.002** |
+
+`iso_*` = `matlap_lowrank_isotropic` (low-rank + isotropic prior); `lowrank_grid` = `matlap_grid_lowrank`.
 
 ### Chosen λ (mean ± std)
 
 | Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
 |---|---|---|---|---|---|---|
-| `proximal_cv` | 16.1 ± 0.0 | 16.1 ± 0.0 | 16.1 ± 0.0 | 21.1 ± 7.0 | 31.1 ± 0.0 | 31.1 ± 0.0 |
-| `matlap_auto` | 30.1 ± 0.5 | 36.1 ± 0.3 | 44.3 ± 0.6 | 56.5 ± 0.6 | 63.4 ± 0.4 | 67.1 ± 0.1 |
-| `lowrank_auto` | **343 ± 24** | **462 ± 1** | **481 ± 5** | **499 ± 0** | **500 ± 0** | **500 ± 0** |
-| `lowrank_cv` | 31.1 ± 0.0 | 31.1 ± 0.0 | 31.1 ± 0.0 | 60.0 ± 0.1 | 115.8 ± 0.1 | 223.5 ± 0.3 |
-| `iso_auto` | 9.3 ± 0.1 | 10.8 ± 0.1 | 11.2 ± 0.0 | 11.4 ± 0.0 | 11.6 ± 0.0 | 11.7 ± 0.0 |
+| `proximal_cv` | 16.1 | 16.1 | 16.1 | 21.1 | 31.1 | 31.1 |
+| `matlap_auto` | 30.1 | 36.1 | 44.3 | 56.5 | 63.4 | 67.1 |
+| `lowrank_auto` | **343** | **462** | **481** | **499** | **500** | **500** |
+| `lowrank_grid` | 16.1 | 31.1 | 31.1 | 31.1 | 40.7 | 60.0 |
+| `lowrank_cv` | 31.1 | 31.1 | 31.1 | 60.0 | 115.8 | 223.5 |
+| `iso_auto` (γ=λ̄) | 80 | 91 | 93 | 94 | 95 | 95 |
+| `iso_cv` (γ=λ) | 2.2 | 2.2 | 224 | 224 | 224 | 224 |
 
 ### Interpretation
 
 - **`matlap_auto`** (full CAVI, empirical-Bayes λ) is the best automatic method
-  for rank≥10 — matching `proximal_cv` quality at ~10× less runtime.
-- **`lowrank_cv`** (rank-r CAVI, grid + CV) is the best scalable method: close to
-  `proximal_cv` for all ranks and much faster.
-- **`lowrank_auto`** is severely biased: λ saturates at ~500 (grid max) due to the
-  r-dim trace vs the full n-dim expectation. Always use `lowrank_cv` or
-  `matlap_grid_lowrank` for automatic λ selection in the low-rank regime.
-- **`iso_auto` / `iso_cv`** perform poorly (RMSE ~1.4–1.6) regardless of rank:
-  the isotropic off-subspace regularisation is too strong for this signal type.
-  These methods are best used when off-subspace mass is explicitly desired.
+  for rank≥10, matching `proximal_cv` at ~10× less runtime.
+- **`lowrank_cv`** (rank-r CAVI, grid + CV) is the best scalable method: matches
+  `proximal_cv` for all ranks.
+- **`lowrank_grid`** (`matlap_grid_lowrank`, ELBO selection) systematically
+  under-regularises (ELBO prefers lower λ than CV), giving 5–20% worse RMSE.
+  Use `lowrank_cv` or `proximal_cv` when accuracy matters.
+- **`lowrank_auto`** is unusable: λ saturates at the grid max due to the r-dim
+  vs n-dim trace bias. Always use grid+CV for λ in the low-rank regime.
+- **`iso_auto`/`iso_cv`** are `matlap_lowrank_isotropic` (lowrank+isotropic prior)
+  with γ=λ. They match `lowrank_cv` for rank≥20 and run 7× faster. At low
+  true rank (rank=1–5) they lag because the isotropic prior cannot zero out the
+  in-subspace noise dimensions (rank=50 subspace contains many more dims than the
+  true signal rank, and γ only regularises directions *outside* the subspace).
 
 ## Scalability
 

@@ -7,10 +7,10 @@ Compares seven combinations of method × lambda-selection strategy:
   1. proximal_cv        Nuclear-norm FISTA with entry-wise 3-fold CV
   2. matlap_auto        Full CAVI, automatic empirical-Bayes λ  (n=100 → feasible)
   3. lowrank_auto       Low-rank CAVI (rank-r factor space), auto-λ  (biased by n/r)
-  4. lowrank_elbo       Low-rank CAVI on λ-grid, best ELBO (warm-started path)
+  4. lowrank_grid       Low-rank CAVI on λ-grid, best ELBO (= matlap_grid_lowrank)
   5. lowrank_cv         Low-rank CAVI on λ-grid, best by 3-fold entry-wise CV
-  6. iso_auto           Low-rank-plus-isotropic CAVI, auto-λ  (n-dim entropy, unbiased)
-  7. iso_cv             Low-rank-plus-isotropic CAVI on λ-grid, best by 3-fold CV
+  6. iso_auto           Low-rank+isotropic CAVI, auto-λ; γ=λ̄ (off-subspace ∝ in-subspace)
+  7. iso_cv             Low-rank+isotropic CAVI on λ-grid; γ=λ per grid point
 
 Experiment design
 -----------------
@@ -64,7 +64,7 @@ METHODS = [
     "proximal_cv",
     "matlap_auto",
     "lowrank_auto",
-    "lowrank_elbo",
+    "lowrank_grid",
     "lowrank_cv",
     "iso_auto",
     "iso_cv",
@@ -74,10 +74,10 @@ METHOD_LABELS = {
     "proximal_cv":  "proximal_cv    (FISTA + 3-fold CV)",
     "matlap_auto":  "matlap_auto    (full CAVI, auto-λ)",
     "lowrank_auto": "lowrank_auto   (rank-r CAVI, auto-λ, biased)",
-    "lowrank_elbo": "lowrank_elbo   (rank-r CAVI, grid+ELBO)",
+    "lowrank_grid": "lowrank_grid   (matlap_grid_lowrank, best ELBO)",
     "lowrank_cv":   "lowrank_cv     (rank-r CAVI, grid+CV)",
-    "iso_auto":     "iso_auto       (isotropic CAVI, auto-λ, unbiased)",
-    "iso_cv":       "iso_cv         (isotropic CAVI, grid+CV)",
+    "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, γ=λ̄)",
+    "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, γ=λ)",
 }
 
 
@@ -134,7 +134,7 @@ def run_lowrank_auto(Y, S, rank=LOWRANK_RANK):
     return r.mu, float(r.lambda_bar)
 
 
-def run_lowrank_elbo(Y, S, lam_grid, rank=LOWRANK_RANK):
+def run_lowrank_grid(Y, S, lam_grid, rank=LOWRANK_RANK):
     from matlap.core import matlap_grid_lowrank
     r = matlap_grid_lowrank(Y, S, jnp.array(lam_grid), rank=rank, max_iter=LOWRANK_ITERS)
     return r.best_result.mu, float(r.best_lambda)
@@ -152,17 +152,24 @@ def run_lowrank_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
 
 
 def run_iso_auto(Y, S, rank=LOWRANK_RANK):
+    """Two-pass: first estimate λ, then re-run with γ = λ̄ so off-subspace is regularized."""
     from matlap.core import matlap_lowrank_isotropic
-    r = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS)
+    # Pass 1: rough λ estimate with small γ
+    r0 = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS, gamma=1e-3)
+    gamma = float(r0.lambda_bar)
+    # Pass 2: full run with γ = λ̄ (off-subspace regularized at same scale as in-subspace)
+    r = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS, gamma=gamma)
     return r.mu, float(r.lambda_bar)
 
 
 def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
+    """Grid+CV: for each λ, set γ = λ so off-subspace tracks in-subspace scale."""
     from matlap.core import matlap_lowrank_isotropic
     from matlap.cv import cv_lambda
 
     def fit_fn(Y_, S_, lam):
-        return matlap_lowrank_isotropic(Y_, S_, lam, rank=rank, max_iter=LOWRANK_ITERS)
+        return matlap_lowrank_isotropic(Y_, S_, lam, rank=rank, max_iter=LOWRANK_ITERS,
+                                        gamma=float(lam))
 
     best_lam, r = cv_lambda(Y, S, lam_grid, fit_fn, n_folds=n_folds)
     return r.mu, float(best_lam)
@@ -184,7 +191,7 @@ def run_one_seed(seed: int, r_true: int) -> dict:
         ("proximal_cv",  lambda: run_proximal_cv(Y, S, lam_grid)),
         ("matlap_auto",  lambda: run_matlap_auto(Y, S)),
         ("lowrank_auto", lambda: run_lowrank_auto(Y, S)),
-        ("lowrank_elbo", lambda: run_lowrank_elbo(Y, S, lam_grid)),
+        ("lowrank_grid", lambda: run_lowrank_grid(Y, S, lam_grid)),
         ("lowrank_cv",   lambda: run_lowrank_cv(Y, S, lam_grid)),
         ("iso_auto",     lambda: run_iso_auto(Y, S)),
         ("iso_cv",       lambda: run_iso_cv(Y, S, lam_grid)),
@@ -304,7 +311,13 @@ def build_report(all_data: list[dict]) -> str:
     lines.append(f"- Low-rank rank: {LOWRANK_RANK}")
     lines.append(f"- Lambda grid: {GRID_POINTS} log-spaced values, 0.1×–10× heuristic")
     lines.append(f"- `lowrank_auto` λ is biased by factor ~n/r = {N}/{LOWRANK_RANK} = {N/LOWRANK_RANK:.1f}×")
-    lines.append(f"  vs the unbiased `iso_auto` which uses the full n-dim ELBO.")
+    lines.append(f"  (r-dim trace vs full n-dim); use `lowrank_grid` or `lowrank_cv` instead.")
+    lines.append(f"- `lowrank_grid` = `matlap_grid_lowrank` (ELBO-based λ selection).")
+    lines.append(f"  ELBO prefers lower λ than CV → tends to under-regularize.")
+    lines.append(f"- `iso_auto`/`iso_cv` use `matlap_lowrank_isotropic` (lowrank+isotropic prior).")
+    lines.append(f"  γ is set to λ̄ (auto) or λ (CV), regularizing off-subspace at the")
+    lines.append(f"  same scale as in-subspace.  With γ=1e-3 (old default) off-subspace")
+    lines.append(f"  directions are unregularised and the RMSE degrades to noise level.")
     lines.append("")
 
     for m in METHODS:
