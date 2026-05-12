@@ -268,7 +268,11 @@ where $\tilde{B}_i \succ 0$ by the Schur complement of $\Lambda_i$. The posterio
 $\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ and $\gamma \leftarrow \bar\lambda/\delta^*$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$.
 
 \paragraph{ELBO.}
-$\log|\Sigma_i| = -\log|\Lambda_i|$ is computed via the matrix determinant lemma applied to $\Lambda_i$ in $O(n + r^3)$, using all $n$ degrees of freedom rather than only $r$.
+By the matrix determinant lemma,
+\begin{equation}
+    \log|\Sigma_i| = \sum_{k=1}^r \log\!\frac{d_{r,k}}{\bar\lambda} - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
+\end{equation}
+an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy.
 
 \paragraph{Summary.}
 At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) no new hyperparameters are introduced—$\delta$ is optimized from the data in closed form each iteration.

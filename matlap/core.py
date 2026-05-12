@@ -430,6 +430,7 @@ class LowRankIsotropicResult:
 def matlap_lowrank(
     Y: jax.Array,
     S: jax.Array,
+    lambda_val: float | None = None,
     *,
     rank: int = 50,
     a0: float = 1e-3,
@@ -450,14 +451,17 @@ def matlap_lowrank(
     approximately r/n × those of full CAVI.
 
     Args:
-        Y:        Observed matrix, shape (m, n).  NaN/any value where missing.
-        S:        Known standard errors, shape (m, n). ``jnp.inf`` where missing.
-        rank:     Rank of the factor subspace (default 50).
-        a0:       Gamma prior shape for lambda (default: 1e-3).
-        b0:       Gamma prior rate for lambda (default: 1e-3).
-        max_iter: Maximum CAVI iterations.
-        tol:      Convergence tolerance on relative ELBO change.
-        verbose:  Print ELBO at each iteration.
+        Y:          Observed matrix, shape (m, n).  NaN/any value where missing.
+        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_val: If provided, fix lambda to this value (skip empirical-Bayes
+                    update).  Pass as a positional arg to use with
+                    :func:`~matlap.cv.cv_lambda`.
+        rank:       Rank of the factor subspace (default 50).
+        a0:         Gamma prior shape for lambda (default: 1e-3).
+        b0:         Gamma prior rate for lambda (default: 1e-3).
+        max_iter:   Maximum CAVI iterations.
+        tol:        Convergence tolerance on relative ELBO change.
+        verbose:    Print ELBO at each iteration.
 
     Returns:
         LowRankCAVIResult with posterior mean, factor coordinates, and diagnostics.
@@ -486,11 +490,15 @@ def matlap_lowrank(
     zs: jax.Array | None = None
 
     for i in range(max_iter):
-        # Update lambda from current d_r
+        # Update lambda from current d_r (skip if fixed)
         trace_Q = d_r.sum()
         a_N = jnp.asarray(a0 + m * r, dtype=jnp.float32)
-        b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
-        lambda_bar = a_N / b_N
+        if lambda_val is None:
+            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
+            lambda_bar = a_N / b_N
+        else:
+            lambda_bar = jnp.asarray(lambda_val, dtype=jnp.float32)
+            b_N = a_N / lambda_bar
 
         # Update q(X) for all rows via Woodbury r×r solve
         zs, A_r_invs, log_dets, diag_sigs = update_rows_lowrank(Y, S2, V_r, d_r, lambda_bar)
@@ -507,9 +515,10 @@ def matlap_lowrank(
         d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))  # (r,)
         V_r = V_r @ vecs_r  # (n, r)  — rotate columns
 
-        # Update lambda with new d_r
-        b_N = jnp.asarray(b0, dtype=jnp.float32) + d_r.sum()
-        lambda_bar = a_N / b_N
+        # Update lambda with new d_r (skip if fixed)
+        if lambda_val is None:
+            b_N = jnp.asarray(b0, dtype=jnp.float32) + d_r.sum()
+            lambda_bar = a_N / b_N
 
         # ELBO in factor space (log_dets and diag_sigs are rotation-invariant)
         elbo = compute_elbo_lowrank(
@@ -544,6 +553,7 @@ def matlap_lowrank(
 def matlap_lowrank_isotropic(
     Y: jax.Array,
     S: jax.Array,
+    lambda_val: float | None = None,
     *,
     rank: int = 50,
     gamma: float = 1e-3,
@@ -568,17 +578,20 @@ def matlap_lowrank_isotropic(
     approximation and may slightly under-count variance outside the subspace.
 
     Args:
-        Y:        Observed matrix, shape (m, n).  NaN/any value where missing.
-        S:        Known standard errors, shape (m, n). ``jnp.inf`` where missing.
-        rank:     Rank of the factor subspace (default 50).
-        gamma:    Isotropic prior precision for off-subspace directions
-                  (default: 1e-3).  Small values ensure posterior is proper for
-                  missing entries; negligible for well-observed entries.
-        a0:       Gamma prior shape for lambda (default: 1e-3).
-        b0:       Gamma prior rate for lambda (default: 1e-3).
-        max_iter: Maximum CAVI iterations.
-        tol:      Convergence tolerance on relative ELBO change.
-        verbose:  Print ELBO at each iteration.
+        Y:          Observed matrix, shape (m, n).  NaN/any value where missing.
+        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_val: If provided, fix lambda to this value (skip empirical-Bayes
+                    update).  Pass as a positional arg to use with
+                    :func:`~matlap.cv.cv_lambda`.
+        rank:       Rank of the factor subspace (default 50).
+        gamma:      Isotropic prior precision for off-subspace directions
+                    (default: 1e-3).  Small values ensure posterior is proper for
+                    missing entries; negligible for well-observed entries.
+        a0:         Gamma prior shape for lambda (default: 1e-3).
+        b0:         Gamma prior rate for lambda (default: 1e-3).
+        max_iter:   Maximum CAVI iterations.
+        tol:        Convergence tolerance on relative ELBO change.
+        verbose:    Print ELBO at each iteration.
 
     Returns:
         :class:`LowRankIsotropicResult` with posterior mean, factor coordinates,
@@ -599,11 +612,14 @@ def matlap_lowrank_isotropic(
     # a_N = a0 + m*n (correct full-dimension prior, vs m*r in matlap_lowrank)
     a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
 
-    # Initialise d_r so that the first lambda update gives lambda ≈ 1:
-    # trace_Q = d_r.sum() = a_N  →  b_N = b0 + a_N  →  lambda ≈ 1.
-    # Without this, d_r = ones(r) gives lambda = a_N/r ≫ 1, causing
-    # the posterior to be over-shrunk on the first iteration (runaway).
-    d_r = jnp.full(r, float(a_N) / r, dtype=jnp.float32)
+    d_r = jnp.ones(r, dtype=jnp.float32)
+
+    # Initialize trace_Q_sqrt so the first lambda update gives lambda ≈ 1:
+    # trace_Q = n * (a_N/n) = a_N  →  b_N = b0 + a_N  →  lambda ≈ 1.
+    # trace_Q_sqrt has shape (n,) matching q_sqrt_vals in compute_elbo_from_diag.
+    # After each row update we recompute it as sqrt(diag(Psi)) using all n dims,
+    # which fixes the d_r.sum() divergence (d_r only covers r << n dimensions).
+    trace_Q_sqrt = jnp.full(n, float(a_N) / n, dtype=jnp.float32)
 
     b_N = jnp.asarray(a_N, dtype=jnp.float32)  # consistent with lambda_bar = 1
     lambda_bar = a_N / b_N  # = 1.0
@@ -614,11 +630,16 @@ def matlap_lowrank_isotropic(
     z_tildes: jax.Array | None = None
 
     for i in range(max_iter):
-        # Update lambda
-        trace_Q = d_r.sum()
+        # Update lambda using the full n-dim diagonal approximation of trace(Q).
+        # Using d_r.sum() here would only count the r-dim projected trace, making
+        # b_N ≈ m*n/m*r = n/r times too small and lambda diverge to infinity.
         a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
-        b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
-        lambda_bar = a_N / b_N
+        if lambda_val is None:
+            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q_sqrt.sum()
+            lambda_bar = a_N / b_N
+        else:
+            lambda_bar = jnp.asarray(lambda_val, dtype=jnp.float32)
+            b_N = a_N / lambda_bar
 
         # Full n-dim Woodbury row updates
         mus, z_tildes, VtSigmaVs, log_dets, diag_sigs = (
@@ -634,13 +655,21 @@ def matlap_lowrank_isotropic(
         d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))
         V_r = V_r @ vecs_r  # (n, r) — rotate columns
 
-        # Refresh lambda with new d_r
-        b_N = jnp.asarray(b0, dtype=jnp.float32) + d_r.sum()
-        lambda_bar = a_N / b_N
+        # Full n-dim trace_Q via diagonal approximation of Ψ:
+        # trace(sqrt(Ψ)) ≈ Σ_j sqrt(Ψ_jj) = Σ_j sqrt(Σ_i (μ_ij² + σ_ij))
+        # This uses all n columns (not just the r projected ones), so the lambda
+        # update is consistent with a_N = m*n.
+        Psi_diag = (mus**2 + diag_sigs).sum(axis=0)  # (n,)
+        trace_Q_sqrt = jnp.sqrt(jnp.maximum(Psi_diag, 0.0))  # (n,)
 
-        # ELBO: n-dim log-dets and diag_sigs, d_r for in-subspace trace_Q
+        # Refresh lambda with updated trace_Q_sqrt (skip if fixed)
+        if lambda_val is None:
+            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q_sqrt.sum()
+            lambda_bar = a_N / b_N
+
+        # ELBO: n-dim log-dets, diag_sigs, and trace_Q_sqrt for the prior term
         elbo = compute_elbo_from_diag(
-            Y, S2, mus, diag_sigs, log_dets, d_r, lambda_bar, a_N, b_N, a0, b0,
+            Y, S2, mus, diag_sigs, log_dets, trace_Q_sqrt, lambda_bar, a_N, b_N, a0, b0,
         )
         elbo_val = float(elbo)
         elbo_trace.append(elbo_val)
