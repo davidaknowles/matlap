@@ -213,7 +213,7 @@ We restrict the variational family to a rank-$r$ \emph{factor subspace}. Instead
 \begin{equation}
     q(z_i) = \mathcal{N}(z_i \mid \hat{z}_i,\; A_r^{(i)-1}), \qquad x_i = V_r z_i,
 \end{equation}
-so that the implied row posterior is $\mathcal{N}(\mu_i, \Sigma_i)$ with $\mu_i = V_r \hat{z}_i$ and $\Sigma_i = V_r A_r^{(i)-1} V_r^\top$.
+so that the implied row posterior is $\mathcal{N}(x_i|\mu_i, \Sigma_i)$ with $\mu_i = V_r \hat{z}_i$ and $\Sigma_i = V_r A_r^{(i)-1} V_r^\top$.
 
 \paragraph{Per-row update.}
 Let $p_i \in \mathbb{R}^n$ be the vector of observed precisions for row $i$ (i.e.\ $p_{ij} = 1/s_{ij}^2$ for observed entries, $0$ for missing). The $r \times r$ factor precision and factor mean are:
@@ -238,6 +238,40 @@ The algorithm stores $\hat{z}_i \in \mathbb{R}^r$ and $A_r^{(i)} \in \mathbb{R}^
 
 \paragraph{ELBO in factor space.}
 Because $x_i$ lives in the column space of $V_r$, the entropy of $q(x_i)$ is computed in the $r$-dimensional factor space: $H[q(z_i)] = \tfrac{1}{2}\log|A_r^{(i)-1}| + \tfrac{r}{2}(1+\log 2\pi)$. The $\lambda$ update uses $mn$ replaced by $mr$ in the Gamma shape parameter update.
+
+\subsection{Low-Rank-Plus-Isotropic CAVI via the Woodbury Identity}
+\label{sec:lowrank-woodbury}
+
+The factor-space restriction in Section~\ref{sec:lowrank-cavi} forces all posterior mass onto $\mathrm{col}(V_r)$, discarding uncertainty in the $n-r$ orthogonal directions and systematically under-counting entropy. Replacing the rank-$r$ prior precision with a low-rank-plus-isotropic form,
+\begin{equation}
+    \text{prior precision:}\quad V_r\,\mathrm{diag}(\bar\lambda/d_r)\,V_r^\top + \gamma I,
+\end{equation}
+yields a full $n$-dimensional posterior that is still computable in $O(nr + r^3)$ per row via the Woodbury identity. The isotropic term $\gamma > 0$ regularises off-subspace directions and ensures a proper posterior even when some entries per row are missing.
+
+\paragraph{Posterior updates.}
+Let $\tilde{D}_i = \mathrm{diag}(p_i + \gamma)$, which is positive definite. The posterior precision is $\Lambda_i = \tilde{D}_i + V_r\,\mathrm{diag}(\bar\lambda/d_r)\,V_r^\top$. Applying the Woodbury matrix identity yields
+\begin{align}
+    \Sigma_i &= \tilde{D}_i^{-1} - \tilde{D}_i^{-1} V_r\,\tilde{B}_i^{-1}\, V_r^\top \tilde{D}_i^{-1}, \\
+    \tilde{B}_i &= \mathrm{diag}(d_r/\bar\lambda) + V_r^\top \tilde{D}_i^{-1} V_r \;\in \mathbb{R}^{r\times r},
+\end{align}
+a diagonal-minus-low-rank structure requiring $O(n + r^2)$ storage per row. The diagonal $\mathrm{diag}(\Sigma_i)$ needed for the ELBO is read off element-wise in $O(nr)$ without forming the full $n\times n$ matrix. The posterior mean is
+\begin{equation}
+    \mu_i = \tilde{D}_i^{-1}(p_i \odot y_i) - \tilde{D}_i^{-1} V_r\,\tilde{B}_i^{-1}\, V_r^\top \tilde{D}_i^{-1}(p_i \odot y_i),
+\end{equation}
+which now has components outside $\mathrm{col}(V_r)$, capturing residual signal in the data not yet explained by the current factor subspace.
+
+\paragraph{$Q$ update.}
+The projected expected second moment $\tilde{\Psi}_r = V_r^\top\!\sum_i(\mu_i\mu_i^\top + \Sigma_i)\,V_r \in \mathbb{S}_{++}^r$ is accumulated in $O(mnr)$ from the Woodbury factors $(V_r^\top\mu_i$ and $V_r^\top\Sigma_i V_r$ both follow directly from $\tilde{B}_i^{-1}$ and $\tilde{D}_i^{-1})$. Its eigendecomposition and the $V_r$ rotation proceed as in Section~\ref{sec:lowrank-cavi}.
+
+\paragraph{ELBO.}
+By the matrix determinant lemma,
+\begin{equation}
+    \log|\Sigma_i| = \sum_{k=1}^r \log\!\frac{d_{r,k}}{\bar\lambda} - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
+\end{equation}
+an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. This corrects the systematic under-counting in the factor-space formulation (which uses $r$ degrees of freedom instead of $n$), yielding a tighter ELBO and better-calibrated automatic $\lambda$.
+
+\paragraph{Summary.}
+At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal, reducing reconstruction error; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) $\gamma > 0$ ensures proper posteriors for rows with missing entries. Setting $\gamma \to 0$ recovers the exact optimal posterior for fully observed rows.
 
 \subsection{Randomized SVD for Approximate Nuclear Norm in SVI}
 \label{sec:rsvd}
