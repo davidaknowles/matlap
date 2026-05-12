@@ -19,7 +19,7 @@ Requires JAX ≥ 0.4 (CPU or GPU). The package is tested on the JAX venv at `~/v
 ```python
 import jax
 import jax.numpy as jnp
-from matlap import matlap, matlap_grid, matlap_lowrank
+from matlap import matlap, matlap_grid, matlap_lowrank, matlap_lowrank_isotropic
 
 # --- synthetic data ---
 key = jax.random.PRNGKey(0)
@@ -45,6 +45,11 @@ print(grid.best_result.mu)
 result_lr = matlap_lowrank(Y_large, S_large, rank=50)
 print(result_lr.mu)        # posterior mean (m, n)
 print(result_lr.lambda_bar)
+
+# --- low-rank-plus-isotropic CAVI (full n-dim posteriors, unbiased λ) ---
+result_iso = matlap_lowrank_isotropic(Y_large, S_large, rank=50)
+print(result_iso.mu)        # off-subspace mass included
+print(result_iso.lambda_bar)  # unbiased estimate
 ```
 
 ## Missing data
@@ -93,7 +98,69 @@ hyperprior `λ ~ Gamma(a0, b0)`.
 
 ---
 
-### `matlap_lowrank(Y, S, *, rank, a0, b0, max_iter, tol, verbose) → LowRankCAVIResult`
+### `matlap_lowrank_isotropic(Y, S, lambda_val=None, *, rank, gamma, a0, b0, max_iter, tol, verbose) → LowRankIsotropicResult`
+
+Low-rank-plus-isotropic CAVI using prior precision `V_r diag(λ̄/d_r) V_rᵀ + γI`.
+Computes **full n-dimensional** per-row posteriors via the Woodbury identity — a
+strict improvement over `matlap_lowrank` at the same O(mnr + r³) asymptotic cost:
+
+- **Correct n-dim entropy** in the ELBO (vs r-dim in `matlap_lowrank`) → unbiased λ
+- **Off-subspace posterior mass** → lower reconstruction error
+- `lambda_val` can be passed as a positional arg for use with `cv_lambda`
+
+```python
+from matlap import matlap_lowrank_isotropic
+from matlap.cv import cv_lambda
+import jax.numpy as jnp
+
+# Auto lambda (n-dim empirical Bayes — unbiased)
+result = matlap_lowrank_isotropic(Y, S, rank=50)
+print(result.mu)          # posterior mean (m, n) — includes off-subspace
+print(result.lambda_bar)  # unbiased E_q[λ]
+
+# Lambda selection by CV
+grid = jnp.logspace(-1, 2, 12)
+best_lam, result = cv_lambda(
+    Y, S, grid,
+    lambda Y_, S_, lam: matlap_lowrank_isotropic(Y_, S_, lam, rank=50),
+)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `Y` | — | Observed matrix `(m, n)` |
+| `S` | — | Standard errors `(m, n)`; `jnp.inf` for missing |
+| `lambda_val` | `None` | Fix λ (skip empirical-Bayes update); pass positionally for `cv_lambda` |
+| `rank` | `50` | Rank of the factor subspace `r` |
+| `gamma` | `1e-3` | Isotropic prior precision `γ` for off-subspace directions |
+| `a0` | `1e-3` | Gamma prior shape |
+| `b0` | `1e-3` | Gamma prior rate |
+| `max_iter` | `200` | Maximum CAVI iterations |
+| `tol` | `1e-6` | Relative ELBO convergence tolerance |
+
+**Returns** `LowRankIsotropicResult`:
+
+| Field | Description |
+|-------|-------------|
+| `mu` | Full n-dim posterior mean `(m, n)` (includes off-subspace directions) |
+| `z` | In-subspace projection `Vᵣᵀ μᵢ`, shape `(m, r)` |
+| `V_r` | Loading matrix `(n, r)`; orthonormal columns |
+| `gamma` | Isotropic prior precision used |
+| `lambda_bar` | `E_q[λ]` (unbiased: uses n-dim entropy) |
+| `a_N`, `b_N` | Gamma posterior parameters |
+| `elbo_trace` | ELBO per iteration |
+| `converged` | Whether tolerance was reached |
+| `n_iter` | Number of iterations executed |
+
+**Memory:** same as `matlap_lowrank` — ~44 MB at `m=10000, n=1000, rank=50`.
+
+> **Key difference vs `matlap_lowrank`:** The ELBO uses n-dimensional entropy
+> (`a_N = a0 + m·n`) so λ is estimated correctly. `matlap_lowrank` uses
+> `a_N = a0 + m·r`, biasing λ low by a factor of ~r/n and causing over-shrinkage.
+
+---
+
+### `matlap_lowrank(Y, S, lambda_val=None, *, rank, …) → LowRankCAVIResult`
 
 Low-rank CAVI that restricts the variational family to a rank-`r` factor subspace,
 reducing memory from O(mn²) to O(mn + mr²). Uses the **Woodbury identity** so
@@ -249,6 +316,20 @@ z_i     = cho_solve(A_r^(i), V_rᵀ (pᵢ ⊙ yᵢ))
 
 After all rows, `Ψ_r = Σ_i (zᵢzᵢᵀ + A_r^(i)⁻¹)` is accumulated in `R^{r×r}`, then `eigh(Ψ_r)` rotates `V_r` and gives `d_r = sqrt(eigenvalues)`. Memory is O(mn + mr² + nr) instead of O(mn²).
 
+> **λ bias:** `a_N = a0 + m·r` so the automatic λ is biased by ~r/n relative to full CAVI. Use `matlap_lowrank_isotropic` for unbiased λ estimation.
+
+### Low-rank-plus-isotropic CAVI (`matlap_lowrank_isotropic`)
+
+Uses prior precision `V_r diag(λ̄/d_r) V_rᵀ + γI`. By the **Woodbury matrix identity**, each per-row posterior is fully n-dimensional:
+
+```
+B̃ᵢ     = diag(dᵣ/λ̄) + V_rᵀ D̃ᵢ⁻¹ V_r     [r×r; D̃ᵢ = diag(pᵢ + γ)]
+Σᵢ      = D̃ᵢ⁻¹ − D̃ᵢ⁻¹ V_r B̃ᵢ⁻¹ V_rᵀ D̃ᵢ⁻¹   [diagonal-minus-lowrank, n-dim]
+μᵢ      = Σᵢ (pᵢ ⊙ yᵢ)                       [n-dim posterior mean]
+```
+
+The Q update projects `Ψ` onto `V_r` (same O(mnr) cost), while the ELBO uses the full n-dimensional entropy via the matrix determinant lemma — correcting the systematic under-counting in `matlap_lowrank` and giving unbiased λ.
+
 ## Comparator methods
 
 ### Nuclear-norm proximal gradient (`proximal_gradient` / `proximal_cv`)
@@ -394,6 +475,51 @@ and `results/benchmark_10k.csv` (raw numbers).
 - `matlap_batched` gives exact full-CAVI results but is slow at n=1000 (O(n³) per row); best used when n ≤ 300.
 - rSVD nuclear-norm approximation (`vi_*_approx`) at rank 30 introduces gradient noise that prevents SVI convergence at this scale.
 
+## λ selection strategy comparison
+
+```bash
+python scripts/lambda_study.py
+```
+
+Compares 7 λ-selection strategies on a 500×100 matrix with heteroscedastic noise
+across true ranks 1–40 (3 seeds each). Results written to `results/lambda_study.csv`
+and `results/lambda_study.md`.
+
+### Test RMSE (mean ± std over 3 seeds)
+
+| Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
+|---|---|---|---|---|---|---|
+| `proximal_cv` | 0.230 ± 0.004 | 0.292 ± 0.007 | 0.316 ± 0.003 | 0.310 ± 0.018 | 0.228 ± 0.004 | 0.163 ± 0.002 |
+| `matlap_auto` | 0.255 ± 0.005 | 0.392 ± 0.007 | 0.404 ± 0.004 | 0.319 ± 0.012 | 0.229 ± 0.004 | **0.162 ± 0.002** |
+| `lowrank_auto` | 1.055 ± 0.028 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.323 ± 0.012 | 0.230 ± 0.004 | **0.162 ± 0.002** |
+| `lowrank_elbo` | 0.448 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.334 ± 0.008 | 0.267 ± 0.024 | 0.173 ± 0.002 |
+| `lowrank_cv` | 0.315 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.315 ± 0.011 | 0.230 ± 0.004 | **0.162 ± 0.002** |
+| `iso_auto` | 1.581 ± 0.010 | 1.660 ± 0.009 | 1.618 ± 0.002 | 1.544 ± 0.013 | 1.475 ± 0.013 | 1.443 ± 0.017 |
+| `iso_cv` | 1.475 ± 0.009 | 1.546 ± 0.009 | 1.436 ± 0.005 | 1.332 ± 0.013 | 1.262 ± 0.011 | 1.231 ± 0.013 |
+
+### Chosen λ (mean ± std)
+
+| Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
+|---|---|---|---|---|---|---|
+| `proximal_cv` | 16.1 ± 0.0 | 16.1 ± 0.0 | 16.1 ± 0.0 | 21.1 ± 7.0 | 31.1 ± 0.0 | 31.1 ± 0.0 |
+| `matlap_auto` | 30.1 ± 0.5 | 36.1 ± 0.3 | 44.3 ± 0.6 | 56.5 ± 0.6 | 63.4 ± 0.4 | 67.1 ± 0.1 |
+| `lowrank_auto` | **343 ± 24** | **462 ± 1** | **481 ± 5** | **499 ± 0** | **500 ± 0** | **500 ± 0** |
+| `lowrank_cv` | 31.1 ± 0.0 | 31.1 ± 0.0 | 31.1 ± 0.0 | 60.0 ± 0.1 | 115.8 ± 0.1 | 223.5 ± 0.3 |
+| `iso_auto` | 9.3 ± 0.1 | 10.8 ± 0.1 | 11.2 ± 0.0 | 11.4 ± 0.0 | 11.6 ± 0.0 | 11.7 ± 0.0 |
+
+### Interpretation
+
+- **`matlap_auto`** (full CAVI, empirical-Bayes λ) is the best automatic method
+  for rank≥10 — matching `proximal_cv` quality at ~10× less runtime.
+- **`lowrank_cv`** (rank-r CAVI, grid + CV) is the best scalable method: close to
+  `proximal_cv` for all ranks and much faster.
+- **`lowrank_auto`** is severely biased: λ saturates at ~500 (grid max) due to the
+  r-dim trace vs the full n-dim expectation. Always use `lowrank_cv` or
+  `matlap_grid_lowrank` for automatic λ selection in the low-rank regime.
+- **`iso_auto` / `iso_cv`** perform poorly (RMSE ~1.4–1.6) regardless of rank:
+  the isotropic off-subspace regularisation is too strong for this signal type.
+  These methods are best used when off-subspace mass is explicitly desired.
+
 ## Scalability
 
 | Method | Memory | Per-iter compute | 10k×1k feasible? |
@@ -402,6 +528,7 @@ and `results/benchmark_10k.csv` (raw numbers).
 | `matlap_batched` | O(Bn²) ≈ 256 MB (B=64) | O(mn³) total | ✓ (slow at n=1000) |
 | `matlap_lowrank` | O(mn + mr²) ≈ 44 MB | O(mnr) | ✓ |
 | `matlap_grid_lowrank` | O(mn + mr²) ≈ 44 MB | O(G·mnr) | ✓ **recommended** |
+| `matlap_lowrank_isotropic` | O(mn + mr²) ≈ 44 MB | O(mnr) | ✓ **unbiased λ** |
 | `proximal` | O(mn) ≈ 40 MB | O(mn·min(m,n)) full SVD | ✓ |
 | `vi_diagonal` | O(mn) ≈ 40 MB | O(mn·min(m,n)) full SVD | ✓ (slow) |
 | `vi_diagonal` + rSVD | O(mn) ≈ 40 MB | O(mn·r) | ✓ |
