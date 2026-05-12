@@ -76,8 +76,8 @@ METHOD_LABELS = {
     "lowrank_auto": "lowrank_auto   (rank-r CAVI, auto-λ, biased)",
     "lowrank_grid": "lowrank_grid   (matlap_grid_lowrank, best ELBO)",
     "lowrank_cv":   "lowrank_cv     (rank-r CAVI, grid+CV)",
-    "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, γ=λ̄)",
-    "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, γ=λ)",
+    "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)",
+    "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)",
 }
 
 
@@ -152,24 +152,19 @@ def run_lowrank_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
 
 
 def run_iso_auto(Y, S, rank=LOWRANK_RANK):
-    """Two-pass: first estimate λ, then re-run with γ = λ̄ so off-subspace is regularized."""
+    """Single-pass: δ is learned as a variational parameter each iteration."""
     from matlap.core import matlap_lowrank_isotropic
-    # Pass 1: rough λ estimate with small γ
-    r0 = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS, gamma=1e-3)
-    gamma = float(r0.lambda_bar)
-    # Pass 2: full run with γ = λ̄ (off-subspace regularized at same scale as in-subspace)
-    r = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS, gamma=gamma)
+    r = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=LOWRANK_ITERS)
     return r.mu, float(r.lambda_bar)
 
 
 def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
-    """Grid+CV: for each λ, set γ = λ so off-subspace tracks in-subspace scale."""
+    """Grid+CV: δ is learned as a variational parameter for each fixed λ."""
     from matlap.core import matlap_lowrank_isotropic
     from matlap.cv import cv_lambda
 
     def fit_fn(Y_, S_, lam):
-        return matlap_lowrank_isotropic(Y_, S_, lam, rank=rank, max_iter=LOWRANK_ITERS,
-                                        gamma=float(lam))
+        return matlap_lowrank_isotropic(Y_, S_, lam, rank=rank, max_iter=LOWRANK_ITERS)
 
     best_lam, r = cv_lambda(Y, S, lam_grid, fit_fn, n_folds=n_folds)
     return r.mu, float(best_lam)

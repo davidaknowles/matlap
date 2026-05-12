@@ -397,10 +397,9 @@ class LowRankCAVIResult:
 class LowRankIsotropicResult:
     """Result of matlap_lowrank_isotropic() CAVI optimisation.
 
-    Uses a low-rank-plus-isotropic prior V_r diag(λ̄/d_r) V_r^T + γI and the
-    Woodbury identity for full n-dimensional per-row posteriors, giving correct
-    n-dim entropy and unbiased λ estimates — a strict improvement over
-    ``matlap_lowrank`` at the same O(mnr + r³) asymptotic cost.
+    Implements Q = V_r diag(d_r) V_r^T + δ(I − V_r V_r^T), where δ is a
+    variational parameter optimised by CAVI (not a hyperparameter).  The
+    off-subspace prior precision γ = λ̄/δ is derived each iteration.
 
     Attributes:
         mu:          Full n-dim posterior mean of X, shape (m, n).
@@ -409,7 +408,7 @@ class LowRankIsotropicResult:
         lambda_bar:  E_q[lambda], scalar.
         a_N:         Gamma posterior shape (= a0 + m*n), scalar.
         b_N:         Gamma posterior rate, scalar.
-        gamma:       Isotropic prior precision used (scalar).
+        delta:       Converged off-subspace Q eigenvalue δ* = sqrt(Tr(Ψ⊥)/(n-r)).
         elbo_trace:  ELBO at the end of each iteration, list of floats.
         converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
         n_iter:      Number of iterations executed.
@@ -421,7 +420,7 @@ class LowRankIsotropicResult:
     lambda_bar: float
     a_N: float
     b_N: float
-    gamma: float
+    delta: float
     elbo_trace: list[float] = field(default_factory=list)
     converged: bool = False
     n_iter: int = 0
@@ -556,7 +555,6 @@ def matlap_lowrank_isotropic(
     lambda_val: float | None = None,
     *,
     rank: int = 50,
-    gamma: float = 1e-3,
     a0: float = 1e-3,
     b0: float = 1e-3,
     max_iter: int = 200,
@@ -565,17 +563,17 @@ def matlap_lowrank_isotropic(
 ) -> LowRankIsotropicResult:
     """Low-rank-plus-isotropic Bayesian matrix denoising via CAVI.
 
-    Uses prior precision V_r diag(λ̄/d_r) V_r^T + γI and the Woodbury identity
-    to compute full n-dimensional per-row posteriors at O(mnr + r³) cost — the
-    same asymptotic complexity as :func:`matlap_lowrank` but with:
+    Implements Q = V_r diag(d_r) V_r^T + δ(I − V_r V_r^T) where δ is a
+    variational parameter (not a hyperparameter) optimised in closed form each
+    iteration as δ* = sqrt(Tr(Ψ⊥) / (n − r)).  The off-subspace prior
+    precision γ = λ̄/δ is derived from δ and λ̄, so no extra hyperparameters
+    are introduced beyond those in :func:`matlap_lowrank`.
 
-    * Correct n-dimensional posterior covariances (including off-subspace).
-    * Accurate n-dim entropy in the ELBO.
-    * Unbiased λ estimation via a_N = a0 + m*n (not m*r).
+    Compared to :func:`matlap_lowrank`:
 
-    The Q update discards the off-subspace (γI) contribution to Ψ, projecting
-    onto V_r as in :func:`matlap_lowrank`.  This is a deliberate O(mnr)
-    approximation and may slightly under-count variance outside the subspace.
+    * μ_i captures off-subspace signal (components outside col(V_r)).
+    * Entropy uses all n dimensions, correcting the auto-λ over-shrinkage.
+    * δ is learned from the data; no γ hyperparameter to tune.
 
     Args:
         Y:          Observed matrix, shape (m, n).  NaN/any value where missing.
@@ -584,9 +582,6 @@ def matlap_lowrank_isotropic(
                     update).  Pass as a positional arg to use with
                     :func:`~matlap.cv.cv_lambda`.
         rank:       Rank of the factor subspace (default 50).
-        gamma:      Isotropic prior precision for off-subspace directions
-                    (default: 1e-3).  Small values ensure posterior is proper for
-                    missing entries; negligible for well-observed entries.
         a0:         Gamma prior shape for lambda (default: 1e-3).
         b0:         Gamma prior rate for lambda (default: 1e-3).
         max_iter:   Maximum CAVI iterations.
@@ -595,34 +590,30 @@ def matlap_lowrank_isotropic(
 
     Returns:
         :class:`LowRankIsotropicResult` with posterior mean, factor coordinates,
-        and diagnostics.
+        and diagnostics (including converged δ).
     """
     Y = jnp.asarray(Y, dtype=jnp.float32)
     S = jnp.asarray(S, dtype=jnp.float32)
     S2 = S ** 2
     m, n = Y.shape
     r = min(rank, n, m)
-    gamma_arr = jnp.asarray(gamma, dtype=jnp.float32)
 
     # Initialise V_r via randomized SVD of observed data (missing → 0)
     Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
     _, _, Vt_r = rsvd(Y_obs, r)
     V_r = Vt_r.T  # (n, r), orthonormal columns
 
-    # a_N = a0 + m*n (correct full-dimension prior, vs m*r in matlap_lowrank)
+    # a_N = a0 + m*n (correct full-dimension prior)
     a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
 
     d_r = jnp.ones(r, dtype=jnp.float32)
 
-    # Initialize trace_Q_sqrt so the first lambda update gives lambda ≈ 1:
-    # trace_Q = n * (a_N/n) = a_N  →  b_N = b0 + a_N  →  lambda ≈ 1.
-    # trace_Q_sqrt has shape (n,) matching q_sqrt_vals in compute_elbo_from_diag.
-    # After each row update we recompute it as sqrt(diag(Psi)) using all n dims,
-    # which fixes the d_r.sum() divergence (d_r only covers r << n dimensions).
-    trace_Q_sqrt = jnp.full(n, float(a_N) / n, dtype=jnp.float32)
+    # δ: off-subspace Q eigenvalue.  Start at 1 → γ = λ̄/δ = 1 initially.
+    delta = 1.0
 
-    b_N = jnp.asarray(a_N, dtype=jnp.float32)  # consistent with lambda_bar = 1
-    lambda_bar = a_N / b_N  # = 1.0
+    # Initialise λ ≈ 1: trace_Q = d_r.sum() + (n-r)*delta = r + (n-r) = n
+    b_N = jnp.asarray(a0 + float(a_N), dtype=jnp.float32)
+    lambda_bar = a_N / b_N  # ≈ 1.0
 
     elbo_trace: list[float] = []
     converged = False
@@ -630,13 +621,18 @@ def matlap_lowrank_isotropic(
     z_tildes: jax.Array | None = None
 
     for i in range(max_iter):
-        # Update lambda using the full n-dim diagonal approximation of trace(Q).
-        # Using d_r.sum() here would only count the r-dim projected trace, making
-        # b_N ≈ m*n/m*r = n/r times too small and lambda diverge to infinity.
+        # Derive γ from current λ̄ and δ
+        gamma_val = float(lambda_bar) / max(delta, 1e-8)
+        gamma_arr = jnp.asarray(gamma_val, dtype=jnp.float32)
+
+        # Pre-row lambda update using current trace_Q
+        trace_Q = float(d_r.sum()) + (n - r) * delta
         a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
         if lambda_val is None:
-            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q_sqrt.sum()
+            b_N = jnp.asarray(b0 + trace_Q, dtype=jnp.float32)
             lambda_bar = a_N / b_N
+            gamma_val = float(lambda_bar) / max(delta, 1e-8)
+            gamma_arr = jnp.asarray(gamma_val, dtype=jnp.float32)
         else:
             lambda_bar = jnp.asarray(lambda_val, dtype=jnp.float32)
             b_N = a_N / lambda_bar
@@ -655,27 +651,33 @@ def matlap_lowrank_isotropic(
         d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))
         V_r = V_r @ vecs_r  # (n, r) — rotate columns
 
-        # Full n-dim trace_Q via diagonal approximation of Ψ:
-        # trace(sqrt(Ψ)) ≈ Σ_j sqrt(Ψ_jj) = Σ_j sqrt(Σ_i (μ_ij² + σ_ij))
-        # This uses all n columns (not just the r projected ones), so the lambda
-        # update is consistent with a_N = m*n.
-        Psi_diag = (mus**2 + diag_sigs).sum(axis=0)  # (n,)
-        trace_Q_sqrt = jnp.sqrt(jnp.maximum(Psi_diag, 0.0))  # (n,)
+        # Update δ: δ* = sqrt(Tr(Ψ⊥) / (n − r))
+        # Tr(Ψ) = Σ_i (‖μ_i‖² + Tr(Σ_i))   (full n-dim)
+        # Tr(Ψ_r) = Σ_k d_{r,k}²            (d_r = sqrt eigenvals of Ψ_r)
+        Psi_total = float((mus ** 2 + diag_sigs).sum())
+        Psi_r_tr = float((d_r ** 2).sum())
+        Psi_perp = max(Psi_total - Psi_r_tr, 0.0)
+        delta = max(float(jnp.sqrt(Psi_perp / max(n - r, 1))), 1e-6)
 
-        # Refresh lambda with updated trace_Q_sqrt (skip if fixed)
+        # Post-row trace_Q and lambda update with refreshed d_r and delta
+        trace_Q = float(d_r.sum()) + (n - r) * delta
         if lambda_val is None:
-            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q_sqrt.sum()
+            b_N = jnp.asarray(b0 + trace_Q, dtype=jnp.float32)
             lambda_bar = a_N / b_N
 
-        # ELBO: n-dim log-dets, diag_sigs, and trace_Q_sqrt for the prior term
+        # ELBO: q_sqrt_vals sums to Tr(Q) = Σ_k d_{r,k} + (n−r)δ
+        q_sqrt_vals = jnp.concatenate(
+            [d_r, jnp.full(n - r, delta, dtype=jnp.float32)]
+        )
         elbo = compute_elbo_from_diag(
-            Y, S2, mus, diag_sigs, log_dets, trace_Q_sqrt, lambda_bar, a_N, b_N, a0, b0,
+            Y, S2, mus, diag_sigs, log_dets, q_sqrt_vals, lambda_bar, a_N, b_N, a0, b0,
         )
         elbo_val = float(elbo)
         elbo_trace.append(elbo_val)
 
         if verbose:
-            print(f"  iter {i+1:4d}  ELBO={elbo_val:.4f}  lambda={float(lambda_bar):.6f}")
+            print(f"  iter {i+1:4d}  ELBO={elbo_val:.4f}  lambda={float(lambda_bar):.4f}"
+                  f"  delta={delta:.4f}  gamma={gamma_val:.4f}")
 
         if i > 0:
             prev = elbo_trace[-2]
@@ -692,7 +694,7 @@ def matlap_lowrank_isotropic(
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
-        gamma=float(gamma),
+        delta=float(delta),
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),

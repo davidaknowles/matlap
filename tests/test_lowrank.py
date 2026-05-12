@@ -342,7 +342,7 @@ def test_matlap_lowrank_isotropic_returns_result():
     assert result.z.shape == (20, 5)
     assert result.V_r.shape == (10, 5)
     assert jnp.all(jnp.isfinite(result.mu))
-    assert result.gamma == pytest.approx(1e-3)
+    assert result.delta > 0
 
 
 def test_matlap_lowrank_isotropic_elbo_finite():
@@ -355,10 +355,9 @@ def test_matlap_lowrank_isotropic_elbo_finite():
 def test_matlap_lowrank_isotropic_elbo_nondecreasing():
     """ELBO should converge (finite, net improvement).
 
-    The hybrid lambda update (full n-dim diagonal trace_Q) is inconsistent with
-    the projected Psi_r Q-update, so strict per-step monotonicity is not
-    guaranteed.  We check that the ELBO is finite throughout and that the final
-    value exceeds the initial value.
+    The Q update projects Ψ onto V_r, discarding off-subspace contributions,
+    so strict per-step ELBO monotonicity is not guaranteed.  We check that
+    the ELBO is finite throughout and that the final value exceeds the initial.
     """
     Y, S, _ = make_low_rank(20, 12, rank=2, noise_std=0.5, rng=RNG)
     result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=50, tol=1e-9)

@@ -284,15 +284,20 @@ def update_row_lowrank_isotropic(
     lambda_bar: jax.Array,
     gamma: jax.Array,
 ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
-    """Woodbury row update for the low-rank-plus-isotropic CAVI model.
+    """Woodbury row update for the improved low-rank-plus-isotropic CAVI model.
 
-    Prior precision: V_r diag(λ̄/d_r) V_r^T + γI (isotropic off-subspace term).
-    Computes the full n-dimensional posterior via the Woodbury identity, giving
-    exact per-row posteriors and a correct n-dim entropy — a strict improvement
-    over ``update_row_lowrank`` at the same O(nr + r³) asymptotic cost.
+    Implements the model Q = V_r diag(d_r) V_r^T + δ(I − V_r V_r^T), where
+    γ = λ̄/δ is the off-subspace prior precision.  The posterior precision is:
 
-    The Q update (Ψ_r = Σ_i (z̃_i z̃_i^T + V_r^T Σ_i V_r)) discards the
-    off-subspace contribution from γI, a deliberate O(mnr) approximation.
+        Λ_i = diag(p̃_i) + V_r diag(c_k) V_r^T
+
+    where p̃_ij = p_ij + γ and c_k = λ̄/d_{r,k} − γ.  When δ < d_{r,k} (the
+    typical case), c_k < 0; Λ_i is nevertheless PD.
+
+    B̃_i = diag(1/c_k) + V_r^T diag(p̃_i^{−1}) V_r is symmetric but may be
+    indefinite (when c_k < 0), so we solve via eigh rather than Cholesky.
+    The sign of det(B̃_i) always equals the sign of ∏c_k (since Λ_i ≻ 0),
+    so |det(Λ_i)| = |diag(p̃)| · |∏c_k| · |det(B̃_i)| is real and positive.
 
     Args:
         y_i:        Observations for row i, shape (n,).
@@ -300,7 +305,7 @@ def update_row_lowrank_isotropic(
         V_r:        Factor loading matrix, shape (n, r); orthonormal columns.
         d_r:        Sqrt-eigenvalues of Ψ_r (> 0), shape (r,).
         lambda_bar: E_q[λ], scalar.
-        gamma:      Isotropic prior precision for off-subspace directions, scalar.
+        gamma:      Off-subspace prior precision γ = λ̄/δ, scalar.
 
     Returns:
         mu_i:        Full n-dim posterior mean (has off-subspace components), shape (n,).
@@ -310,47 +315,56 @@ def update_row_lowrank_isotropic(
         diag_sig_i:  Full n-dim diagonal of Σ_i, shape (n,).
     """
     prec_noise = jnp.where(jnp.isfinite(s2_i), 1.0 / s2_i, 0.0)  # (n,)
-    dp = prec_noise + gamma  # augmented diagonal precision: p_i + γ  (n,)
+    dp = prec_noise + gamma  # p̃_ij = p_ij + γ  (n,)
     inv_dp = 1.0 / dp  # (n,)
 
-    # G_i = V_r^T diag(inv_dp) V_r  [r×r]
-    Vt_invdp = V_r.T * inv_dp  # (r, n) — trailing-dim broadcast ✓
-    G = Vt_invdp @ V_r  # (r, n) @ (n, r) = (r, r)
+    # c_k = λ̄/d_{r,k} − γ  (can be negative when δ < d_{r,k})
+    c_k = lambda_bar / jnp.maximum(d_r, 1e-30) - gamma  # (r,)
+    # Guard against c_k ≈ 0 (δ ≈ d_{r,k}); preserve sign for log-det
+    safe_c_k = jnp.where(jnp.abs(c_k) > 1e-8, c_k, jnp.sign(c_k + 1e-30) * 1e-8)
 
-    # B̃_i = diag(d_r/λ̄) + G_i  [r×r]  — Cholesky: B̃_i = L L^T
-    prior_scale_r = d_r / jnp.maximum(lambda_bar, 1e-30)  # d_r / λ̄  (r,)
-    B_tilde = jnp.diag(prior_scale_r) + G  # (r, r)
-    cho = jsla.cho_factor(B_tilde, lower=True)
-    L = cho[0]  # lower-triangular Cholesky factor (lower triangle of L)
+    # G = V_r^T diag(inv_dp) V_r  [r×r]
+    Vt_invdp = V_r.T * inv_dp  # (r, n)
+    G = Vt_invdp @ V_r  # (r, r)
 
-    # rhs_scaled = (p_i * y_i) / (p_i + γ) — n-dim RHS, missing entries → 0
+    # B̃_i = diag(1/c_k) + G  [r×r]  — symmetric, possibly indefinite
+    B_tilde = jnp.diag(1.0 / safe_c_k) + G  # (r, r)
+
+    # Eigendecomposition for the solve (handles indefinite B̃_i correctly)
+    eigs, evecs = jnp.linalg.eigh(B_tilde)  # eigs real; may include negatives
+    safe_eigs = jnp.where(jnp.abs(eigs) > 1e-8, eigs, jnp.sign(eigs + 1e-30) * 1e-8)
+
+    # rhs_scaled = (p_i * y_i) / (p_i + γ) — missing entries → 0
     y_obs = jnp.where(jnp.isfinite(y_i), y_i, 0.0)
     rhs_scaled = prec_noise * y_obs * inv_dp  # (n,)
 
-    # v_i = V_r^T rhs_scaled,  α_i = B̃_i^{-1} v_i
-    v = V_r.T @ rhs_scaled  # (r, n) @ (n,) = (r,)
-    alpha = jsla.cho_solve(cho, v)  # (r,)
+    # v = V_r^T rhs_scaled,  α = B̃^{-1} v  (eigh-based solve)
+    v = V_r.T @ rhs_scaled  # (r,)
+    alpha = evecs @ ((evecs.T @ v) / safe_eigs)  # B̃^{-1} v  (r,)
 
-    # μ_i = rhs_scaled − inv_dp * (V_r α_i)  — full n-dim posterior mean
+    # μ_i = rhs_scaled − inv_dp * (V_r α)  — full n-dim posterior mean
     mu_i = rhs_scaled - inv_dp * (V_r @ alpha)  # (n,)
 
-    # z̃_i = V_r^T μ_i = v − G α  (V_r orthonormal)
+    # z̃_i = V_r^T μ_i = v − G α
     z_tilde_i = v - G @ alpha  # (r,)
 
-    # diag(Σ_i): F = L^{-1} W_i^T  where W_i^T = Vt_invdp  shape (r, n)
-    F = jsla.solve_triangular(L, Vt_invdp, lower=True)  # (r, n)
-    diag_sig_i = inv_dp - (F ** 2).sum(axis=0)  # (n,)
+    # diag(Σ_i): diag(diag(inv_dp) − diag(inv_dp) V_r B̃^{-1} V_r^T diag(inv_dp))
+    # = inv_dp − diag(W^T B̃^{-1} W)  where W = Vt_invdp  (r, n)
+    # Using eigh: diag(W^T B̃^{-1} W)_j = Σ_k F[k,j]^2 / safe_eigs[k], F = evecs^T W
+    F = evecs.T @ Vt_invdp  # (r, n)
+    diag_sig_i = inv_dp - (F ** 2 / safe_eigs[:, None]).sum(axis=0)  # (n,)
 
-    # V_r^T Σ_i V_r = G − S^T S  where S = L^{-1} G
-    S = jsla.solve_triangular(L, G, lower=True)  # (r, r)
-    VtSigmaV_i = G - S.T @ S  # (r, r)
+    # V_r^T Σ_i V_r = G − G B̃^{-1} G
+    B_inv_G = evecs @ ((evecs.T @ G) / safe_eigs[:, None])  # (r, r)
+    VtSigmaV_i = G - G @ B_inv_G  # (r, r)
 
-    # log|Σ_i| = Σ_k log(d_r[k]/λ̄) − 2 Σ log diag(L) − Σ_j log(p_j + γ)
-    # (matrix determinant lemma applied to Λ_i = D̃_i + V_r diag(λ̄/d_r) V_r^T)
+    # log|Σ_i| = −Σ_j log(p̃_j) − Σ_k log|c_k| − Σ_k log|eig_k(B̃)|
+    # (matrix determinant lemma: |Λ_i| = |diag(p̃)| · |diag(c_k)| · |B̃_i|;
+    #  absolute values are valid since sign(∏c_k) = sign(det B̃_i) and |Λ_i| > 0)
     log_det_i = (
-        jnp.sum(jnp.log(jnp.maximum(prior_scale_r, 1e-30)))
-        - 2.0 * jnp.sum(jnp.log(jnp.diag(L)))
-        - jnp.sum(jnp.log(dp))
+        -jnp.sum(jnp.log(dp))
+        - jnp.sum(jnp.log(jnp.abs(safe_c_k)))
+        - jnp.sum(jnp.log(jnp.abs(safe_eigs)))
     )
 
     return mu_i, z_tilde_i, VtSigmaV_i, log_det_i, diag_sig_i
