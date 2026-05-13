@@ -2,8 +2,16 @@
 Coordinate Ascent Variational Inference (CAVI) for Bayesian Matrix Denoising.
 
 Main public functions:
-    matlap()      — full CAVI with automatic lambda estimation (empirical Bayes)
-    matlap_grid() — CAVI with fixed lambda on a user-supplied grid
+    matlap()                       — full CAVI with automatic lambda estimation
+    matlap_grid()                  — full CAVI, lambda selected by ELBO over grid
+    matlap_lowrank()               — low-rank CAVI with automatic lambda
+    matlap_grid_lowrank()          — low-rank CAVI, lambda selected by ELBO over grid
+    matlap_lowrank_isotropic()     — low-rank+isotropic CAVI with automatic lambda
+    matlap_grid_lowrank_isotropic()— low-rank+isotropic CAVI, ELBO grid search
+
+Grid functions warm-start in decreasing-lambda order, calling through to the
+corresponding single-lambda function with the previous point's (V_r, d_r[, δ])
+as initialisation.  This means every algorithm lives in exactly one place.
 """
 
 from __future__ import annotations
@@ -374,6 +382,7 @@ class LowRankCAVIResult:
         mu:          Posterior mean of X = Z V_r^T, shape (m, n).
         z:           Factor-space posterior means, shape (m, r).
         V_r:         Factor loading matrix, shape (n, r); orthonormal columns.
+        d_r:         Q eigenvalues sqrt(eig(Ψ_r)), shape (r,).  Warm-start state.
         lambda_bar:  E_q[lambda], scalar.
         a_N:         Gamma posterior shape, scalar.
         b_N:         Gamma posterior rate, scalar.
@@ -385,6 +394,7 @@ class LowRankCAVIResult:
     mu: jax.Array
     z: jax.Array
     V_r: jax.Array
+    d_r: jax.Array
     lambda_bar: float
     a_N: float
     b_N: float
@@ -405,6 +415,7 @@ class LowRankIsotropicResult:
         mu:          Full n-dim posterior mean of X, shape (m, n).
         z:           In-subspace projection V_r^T μ_i, shape (m, r).
         V_r:         Factor loading matrix, shape (n, r); orthonormal columns.
+        d_r:         Q eigenvalues sqrt(eig(Ψ_r)), shape (r,).  Warm-start state.
         lambda_bar:  E_q[lambda], scalar.
         a_N:         Gamma posterior shape (= a0 + m*n), scalar.
         b_N:         Gamma posterior rate, scalar.
@@ -417,6 +428,7 @@ class LowRankIsotropicResult:
     mu: jax.Array
     z: jax.Array
     V_r: jax.Array
+    d_r: jax.Array
     lambda_bar: float
     a_N: float
     b_N: float
@@ -424,6 +436,22 @@ class LowRankIsotropicResult:
     elbo_trace: list[float] = field(default_factory=list)
     converged: bool = False
     n_iter: int = 0
+
+
+@dataclass
+class LowRankIsotropicGridResult:
+    """Result of matlap_grid_lowrank_isotropic().
+
+    Attributes:
+        best_lambda:  Lambda with the highest ELBO.
+        best_result:  LowRankIsotropicResult for the best lambda.
+        results:      List of (lambda, LowRankIsotropicResult) for every grid
+                      point, sorted by lambda ascending.
+    """
+
+    best_lambda: float
+    best_result: "LowRankIsotropicResult"
+    results: list[tuple[float, "LowRankIsotropicResult"]]
 
 
 def matlap_lowrank(
@@ -437,6 +465,8 @@ def matlap_lowrank(
     max_iter: int = 200,
     tol: float = 1e-6,
     verbose: bool = False,
+    V_r_init: jax.Array | None = None,
+    d_r_init: jax.Array | None = None,
 ) -> LowRankCAVIResult:
     """Low-rank Bayesian matrix denoising via CAVI.
 
@@ -461,9 +491,14 @@ def matlap_lowrank(
         max_iter:   Maximum CAVI iterations.
         tol:        Convergence tolerance on relative ELBO change.
         verbose:    Print ELBO at each iteration.
+        V_r_init:   Warm-start factor loadings, shape (n, r).  If None, initialised
+                    from rSVD of the observed data.
+        d_r_init:   Warm-start Q eigenvalues, shape (r,).  If None, initialised to
+                    ones.
 
     Returns:
         LowRankCAVIResult with posterior mean, factor coordinates, and diagnostics.
+        The ``V_r`` and ``d_r`` fields can be passed as warm-start to the next call.
     """
     Y = jnp.asarray(Y, dtype=jnp.float32)
     S = jnp.asarray(S, dtype=jnp.float32)
@@ -471,13 +506,14 @@ def matlap_lowrank(
     m, n = Y.shape
     r = min(rank, n, m)
 
-    # Initialise V_r via randomized SVD of observed data (missing → 0)
-    Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
-    _, _, Vt_r = rsvd(Y_obs, r)
-    V_r = Vt_r.T  # (n, r), orthonormal columns
-
-    # Initial d_r = ones (arbitrary; will be updated on first iteration)
-    d_r = jnp.ones(r, dtype=jnp.float32)
+    if V_r_init is not None:
+        V_r = jnp.asarray(V_r_init, dtype=jnp.float32)
+        d_r = jnp.asarray(d_r_init, dtype=jnp.float32)
+    else:
+        Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
+        _, _, Vt_r = rsvd(Y_obs, r)
+        V_r = Vt_r.T  # (n, r), orthonormal columns
+        d_r = jnp.ones(r, dtype=jnp.float32)
 
     # Initialise lambda
     a_N = jnp.asarray(a0 + m * r, dtype=jnp.float32)
@@ -540,6 +576,7 @@ def matlap_lowrank(
         mu=mus,
         z=zs,
         V_r=V_r,
+        d_r=d_r,
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
@@ -560,6 +597,9 @@ def matlap_lowrank_isotropic(
     max_iter: int = 200,
     tol: float = 1e-6,
     verbose: bool = False,
+    V_r_init: jax.Array | None = None,
+    d_r_init: jax.Array | None = None,
+    delta_init: float | None = None,
 ) -> LowRankIsotropicResult:
     """Low-rank-plus-isotropic Bayesian matrix denoising via CAVI.
 
@@ -576,21 +616,27 @@ def matlap_lowrank_isotropic(
     * δ is learned from the data; no γ hyperparameter to tune.
 
     Args:
-        Y:          Observed matrix, shape (m, n).  NaN/any value where missing.
-        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
-        lambda_val: If provided, fix lambda to this value (skip empirical-Bayes
-                    update).  Pass as a positional arg to use with
-                    :func:`~matlap.cv.cv_lambda`.
-        rank:       Rank of the factor subspace (default 50).
-        a0:         Gamma prior shape for lambda (default: 1e-3).
-        b0:         Gamma prior rate for lambda (default: 1e-3).
-        max_iter:   Maximum CAVI iterations.
-        tol:        Convergence tolerance on relative ELBO change.
-        verbose:    Print ELBO at each iteration.
+        Y:           Observed matrix, shape (m, n).  NaN/any value where missing.
+        S:           Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_val:  If provided, fix lambda to this value (skip empirical-Bayes
+                     update).  Pass as a positional arg to use with
+                     :func:`~matlap.cv.cv_lambda`.
+        rank:        Rank of the factor subspace (default 50).
+        a0:          Gamma prior shape for lambda (default: 1e-3).
+        b0:          Gamma prior rate for lambda (default: 1e-3).
+        max_iter:    Maximum CAVI iterations.
+        tol:         Convergence tolerance on relative ELBO change.
+        verbose:     Print ELBO at each iteration.
+        V_r_init:    Warm-start factor loadings, shape (n, r).  If None, initialised
+                     from rSVD of the observed data.
+        d_r_init:    Warm-start Q eigenvalues, shape (r,).  If None, initialised to
+                     ones.
+        delta_init:  Warm-start off-subspace scale δ.  If None, derived from a_N.
 
     Returns:
         :class:`LowRankIsotropicResult` with posterior mean, factor coordinates,
-        and diagnostics (including converged δ).
+        and diagnostics (including converged δ).  The ``V_r``, ``d_r``, and
+        ``delta`` fields can be passed as warm-start to the next call.
     """
     Y = jnp.asarray(Y, dtype=jnp.float32)
     S = jnp.asarray(S, dtype=jnp.float32)
@@ -598,22 +644,23 @@ def matlap_lowrank_isotropic(
     m, n = Y.shape
     r = min(rank, n, m)
 
-    # Initialise V_r via randomized SVD of observed data (missing → 0)
-    Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
-    _, _, Vt_r = rsvd(Y_obs, r)
-    V_r = Vt_r.T  # (n, r), orthonormal columns
-
     # a_N = a0 + m*n (correct full-dimension prior)
     a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
 
-    d_r = jnp.ones(r, dtype=jnp.float32)
+    if V_r_init is not None:
+        V_r = jnp.asarray(V_r_init, dtype=jnp.float32)
+        d_r = jnp.asarray(d_r_init, dtype=jnp.float32)
+    else:
+        Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
+        _, _, Vt_r = rsvd(Y_obs, r)
+        V_r = Vt_r.T  # (n, r), orthonormal columns
+        d_r = jnp.ones(r, dtype=jnp.float32)
 
-    # Initialise δ so that trace_Q = d_r.sum() + (n-r)*delta ≈ a_N,
-    # giving lambda_bar ≈ 1 on the first iteration and gamma = lambda/delta ≈ (n-r)/(m*n-r) ≈ 0.
-    # This matches the matlap initialisation pattern (b_N = a_N → lambda = 1).
-    a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
-    delta_init = max((float(a_N) - float(r)) / max(n - r, 1), 1.0)
-    delta = delta_init
+    if delta_init is not None:
+        delta = float(delta_init)
+    else:
+        # Initialise δ so that trace_Q ≈ a_N → lambda_bar ≈ 1 on the first iteration.
+        delta = max((float(a_N) - float(r)) / max(n - r, 1), 1.0)
 
     b_N = jnp.asarray(b0 + float(a_N), dtype=jnp.float32)  # trace_Q ≈ a_N → lambda ≈ 1
     lambda_bar = a_N / b_N
@@ -693,6 +740,7 @@ def matlap_lowrank_isotropic(
         mu=mus,
         z=z_tildes,
         V_r=V_r,
+        d_r=d_r,
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
@@ -827,7 +875,7 @@ def matlap_batched(
 
 
 # ---------------------------------------------------------------------------
-# Low-rank grid search (warm-started regularisation path)
+# Low-rank and isotropic grid search (warm-started regularisation paths)
 # ---------------------------------------------------------------------------
 
 
@@ -845,15 +893,9 @@ def matlap_grid_lowrank(
 ) -> LowRankGridResult:
     """Grid search over lambda using low-rank CAVI with warm-started path.
 
-    Evaluates each lambda in ``lambda_grid`` using the low-rank CAVI algorithm
-    from :func:`matlap_lowrank`.  Lambda values are processed in **decreasing**
-    order so that the sparse solution at large lambda warm-starts the denser
-    solution at the next smaller lambda.  This regularisation-path strategy
-    typically needs far fewer iterations per grid point than cold-starting.
-
-    The best lambda is selected by maximising the ELBO (computed in factor
-    space, consistent with how :func:`matlap_grid` selects lambda in the full
-    CAVI).
+    Calls :func:`matlap_lowrank` for each lambda in **decreasing** order,
+    passing the previous point's ``(V_r, d_r)`` as warm-start.  The best
+    lambda is selected by the highest ELBO.
 
     Args:
         Y:            Observed matrix, shape (m, n). NaN/any value where missing.
@@ -867,89 +909,112 @@ def matlap_grid_lowrank(
         verbose:      Print progress.
 
     Returns:
-        LowRankGridResult with best lambda and per-lambda LowRankCAVIResults.
+        :class:`LowRankGridResult` with best lambda and per-lambda results.
     """
-    Y = jnp.asarray(Y, dtype=jnp.float32)
-    S = jnp.asarray(S, dtype=jnp.float32)
-    S2 = S ** 2
-    m, n = Y.shape
-    r = min(rank, n, m)
-
-    # Initialise shared state via rSVD of the observed data
-    Y_obs = jnp.where(jnp.isfinite(Y) & jnp.isfinite(S), Y, 0.0)
-    _, _, Vt_r = rsvd(Y_obs, r)
-    V_r = Vt_r.T  # (n, r)
-    d_r = jnp.ones(r, dtype=jnp.float32)
-    zs: jax.Array | None = None
-
-    # Process lambda in decreasing order — warm-start regularisation path
     lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
 
+    V_r: jax.Array | None = None
+    d_r: jax.Array | None = None
+
     results: list[tuple[float, LowRankCAVIResult]] = []
-    best_elbo = -jnp.inf
+    best_elbo = -float("inf")
     best_lam = lambda_vals[0]
     best_res: LowRankCAVIResult | None = None
 
     for lam_val in lambda_vals:
-        lam = jnp.asarray(lam_val, dtype=jnp.float32)
-        # Fix lambda: set a_N/b_N so lambda_bar = lam (same as matlap_grid)
-        a_N = jnp.asarray(a0 + m * r, dtype=jnp.float32)
-        b_N = jnp.asarray(a_N / lam, dtype=jnp.float32)
-        lambda_bar = lam
-
-        elbo_trace: list[float] = []
-        converged = False
-
-        for i in range(max_iter):
-            # Update q(X) rows (warm-started from previous lambda's V_r, d_r)
-            zs, A_r_invs, log_dets, diag_sigs = update_rows_lowrank(
-                Y, S2, V_r, d_r, lambda_bar,
-            )
-            mus = zs @ V_r.T
-
-            # Refresh V_r and d_r via eigh of factor-space Psi_r
-            Psi_r = zs.T @ zs + A_r_invs.sum(axis=0)
-            vals_r, vecs_r = jnp.linalg.eigh(Psi_r)
-            d_r = jnp.sqrt(jnp.maximum(vals_r, 0.0))
-            V_r = V_r @ vecs_r
-
-            # ELBO with fixed lambda (b_N fixed, lambda_bar = lam throughout)
-            elbo = compute_elbo_lowrank(
-                Y, S2, mus, diag_sigs, log_dets, d_r, lambda_bar, a_N, b_N, a0, b0,
-            )
-            elbo_val = float(elbo)
-            elbo_trace.append(elbo_val)
-
-            if i > 0:
-                prev = elbo_trace[-2]
-                if abs(elbo_val - prev) / max(abs(prev), 1e-10) < tol:
-                    converged = True
-                    break
-
-        res = LowRankCAVIResult(
-            mu=mus,
-            z=zs,
-            V_r=V_r,
-            lambda_bar=lam_val,
-            a_N=float(a_N),
-            b_N=float(b_N),
-            elbo_trace=elbo_trace,
-            converged=converged,
-            n_iter=len(elbo_trace),
+        res = matlap_lowrank(
+            Y, S, lam_val,
+            rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol,
+            V_r_init=V_r, d_r_init=d_r,
         )
-        results.append((lam_val, res))
+        V_r = res.V_r
+        d_r = res.d_r
 
-        if verbose:
-            print(f"  lambda={lam_val:.4f}  ELBO={elbo_trace[-1]:.4f}  "
-                  f"iters={len(elbo_trace)}  converged={converged}")
-
-        if elbo_trace[-1] > best_elbo:
-            best_elbo = elbo_trace[-1]
+        elbo = res.elbo_trace[-1]
+        if elbo > best_elbo:
+            best_elbo = elbo
             best_lam = lam_val
             best_res = res
 
+        results.append((lam_val, res))
+        if verbose:
+            print(f"  lambda={lam_val:.4f}  ELBO={elbo:.4f}  "
+                  f"iters={res.n_iter}  converged={res.converged}")
+
     results.sort(key=lambda x: x[0])
     return LowRankGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
+    )
+
+
+def matlap_grid_lowrank_isotropic(
+    Y: jax.Array,
+    S: jax.Array,
+    lambda_grid: jax.Array,
+    *,
+    rank: int = 50,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 50,
+    tol: float = 1e-6,
+    verbose: bool = False,
+) -> LowRankIsotropicGridResult:
+    """Grid search over lambda using low-rank+isotropic CAVI with warm-started path.
+
+    Calls :func:`matlap_lowrank_isotropic` for each lambda in **decreasing**
+    order, passing the previous point's ``(V_r, d_r, delta)`` as warm-start.
+    The best lambda is selected by the highest ELBO.
+
+    Args:
+        Y:            Observed matrix, shape (m, n). NaN/any value where missing.
+        S:            Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_grid:  1-D array of lambda values to evaluate.
+        rank:         Rank of the factor subspace (default 50).
+        a0:           Gamma prior shape (used in ELBO; lambda is fixed per point).
+        b0:           Gamma prior rate.
+        max_iter:     Maximum CAVI iterations **per grid point** (default 50).
+        tol:          Convergence tolerance on relative ELBO change.
+        verbose:      Print progress.
+
+    Returns:
+        :class:`LowRankIsotropicGridResult` with best lambda and per-lambda results.
+    """
+    lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
+
+    V_r: jax.Array | None = None
+    d_r: jax.Array | None = None
+    delta: float | None = None
+
+    results: list[tuple[float, LowRankIsotropicResult]] = []
+    best_elbo = -float("inf")
+    best_lam = lambda_vals[0]
+    best_res: LowRankIsotropicResult | None = None
+
+    for lam_val in lambda_vals:
+        res = matlap_lowrank_isotropic(
+            Y, S, lam_val,
+            rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol,
+            V_r_init=V_r, d_r_init=d_r, delta_init=delta,
+        )
+        V_r = res.V_r
+        d_r = res.d_r
+        delta = res.delta
+
+        elbo = res.elbo_trace[-1]
+        if elbo > best_elbo:
+            best_elbo = elbo
+            best_lam = lam_val
+            best_res = res
+
+        results.append((lam_val, res))
+        if verbose:
+            print(f"  lambda={lam_val:.4f}  ELBO={elbo:.4f}  "
+                  f"iters={res.n_iter}  converged={res.converged}")
+
+    results.sort(key=lambda x: x[0])
+    return LowRankIsotropicGridResult(
         best_lambda=best_lam,
         best_result=best_res,
         results=results,

@@ -71,20 +71,24 @@ SNR_RANK = 5
 METHODS = [
     "proximal_cv",
     "matlap_auto",
+    "matlap_grid",
     "lowrank_auto",
     "lowrank_grid",
     "lowrank_cv",
     "iso_auto",
+    "iso_grid",
     "iso_cv",
 ]
 
 METHOD_LABELS = {
     "proximal_cv":  "proximal_cv    (FISTA + 3-fold CV)",
     "matlap_auto":  "matlap_auto    (full CAVI, auto-λ)",
+    "matlap_grid":  "matlap_grid    (full CAVI, best ELBO over grid)",
     "lowrank_auto": "lowrank_auto   (rank-r CAVI, auto-λ, biased)",
     "lowrank_grid": "lowrank_grid   (matlap_grid_lowrank, best ELBO)",
     "lowrank_cv":   "lowrank_cv     (rank-r CAVI, grid+CV)",
     "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)",
+    "iso_grid":     "iso_grid       (lowrank+iso CAVI, best ELBO over grid)",
     "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)",
 }
 
@@ -169,7 +173,19 @@ def run_iso_auto(Y, S, rank=LOWRANK_RANK):
     return r.mu, float(r.lambda_bar)
 
 
-def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
+def run_matlap_grid(Y, S, lam_grid):
+    from matlap.core import matlap_grid
+    r = matlap_grid(Y, S, jnp.array(lam_grid), max_iter=MAX_ITER)
+    return r.best_result.mu, float(r.best_lambda)
+
+
+def run_iso_grid(Y, S, lam_grid, rank=LOWRANK_RANK):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(Y, S, jnp.array(lam_grid), rank=rank, max_iter=LOWRANK_ITERS)
+    return r.best_result.mu, float(r.best_lambda)
+
+
+
     """Grid+CV: δ is learned as a variational parameter for each fixed λ."""
     from matlap.core import matlap_lowrank_isotropic
     from matlap.cv import cv_lambda
@@ -196,10 +212,12 @@ def run_one_seed(seed: int, r_true: int, snr: float = 1.0) -> dict:
     runners = [
         ("proximal_cv",  lambda: run_proximal_cv(Y, S, lam_grid)),
         ("matlap_auto",  lambda: run_matlap_auto(Y, S)),
+        ("matlap_grid",  lambda: run_matlap_grid(Y, S, lam_grid)),
         ("lowrank_auto", lambda: run_lowrank_auto(Y, S)),
         ("lowrank_grid", lambda: run_lowrank_grid(Y, S, lam_grid)),
         ("lowrank_cv",   lambda: run_lowrank_cv(Y, S, lam_grid)),
         ("iso_auto",     lambda: run_iso_auto(Y, S)),
+        ("iso_grid",     lambda: run_iso_grid(Y, S, lam_grid)),
         ("iso_cv",       lambda: run_iso_cv(Y, S, lam_grid)),
     ]
 

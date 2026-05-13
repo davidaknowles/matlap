@@ -2,8 +2,10 @@
 
 from .core import (
     CAVIResult, BatchedCAVIResult, GridResult,
-    LowRankCAVIResult, LowRankGridResult, LowRankIsotropicResult,
-    matlap, matlap_batched, matlap_grid, matlap_grid_lowrank,
+    LowRankCAVIResult, LowRankGridResult,
+    LowRankIsotropicResult, LowRankIsotropicGridResult,
+    matlap, matlap_batched, matlap_grid,
+    matlap_grid_lowrank, matlap_grid_lowrank_isotropic,
     matlap_lowrank, matlap_lowrank_isotropic,
 )
 from .proximal import ProximalResult, proximal_cv, proximal_gradient
@@ -16,6 +18,7 @@ __all__ = [
     "matlap_batched",
     "matlap_grid",
     "matlap_grid_lowrank",
+    "matlap_grid_lowrank_isotropic",
     "matlap_lowrank",
     "matlap_lowrank_isotropic",
     "CAVIResult",
@@ -24,6 +27,7 @@ __all__ = [
     "LowRankCAVIResult",
     "LowRankGridResult",
     "LowRankIsotropicResult",
+    "LowRankIsotropicGridResult",
     # Proximal gradient
     "proximal_gradient",
     "proximal_cv",

@@ -6,7 +6,11 @@ import numpy as np
 import pytest
 
 import matlap
-from matlap import matlap_lowrank, matlap_lowrank_isotropic, matlap as run_matlap
+from matlap import (
+    matlap_lowrank, matlap_lowrank_isotropic, matlap as run_matlap,
+    matlap_grid_lowrank, matlap_grid_lowrank_isotropic,
+    LowRankIsotropicGridResult,
+)
 from matlap.linalg import (
     update_row_lowrank, update_rows_lowrank,
     update_row_lowrank_isotropic, update_rows_lowrank_isotropic,
@@ -433,3 +437,84 @@ def test_matlap_lowrank_isotropic_z_matches_Vt_mu():
     norm_z = float(jnp.linalg.norm(result.z, 'fro'))
     norm_mu_Vr = float(jnp.linalg.norm(result.mu @ result.V_r, 'fro'))
     np.testing.assert_allclose(norm_z, norm_mu_Vr, atol=1e-3)
+
+
+# ---------------------------------------------------------------------------
+# d_r field and warm-start
+# ---------------------------------------------------------------------------
+
+
+def test_lowrank_result_has_d_r():
+    """LowRankCAVIResult should expose d_r with shape (r,)."""
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank(Y, S, rank=5, max_iter=10)
+    assert result.d_r.shape == (5,)
+    assert jnp.all(result.d_r >= 0)
+
+
+def test_lowrank_isotropic_result_has_d_r():
+    """LowRankIsotropicResult should expose d_r with shape (r,)."""
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=RNG)
+    result = matlap_lowrank_isotropic(Y, S, rank=5, max_iter=10)
+    assert result.d_r.shape == (5,)
+    assert jnp.all(result.d_r >= 0)
+
+
+def test_lowrank_warmstart_matches_cold():
+    """Warm-starting from a converged solution should reach same ELBO as cold-start."""
+    rng = np.random.default_rng(99)
+    Y, S, _ = make_low_rank(30, 15, rank=3, noise_std=0.5, rng=rng)
+    cold = matlap_lowrank(Y, S, 5.0, rank=5, max_iter=100, tol=1e-8)
+    warm = matlap_lowrank(Y, S, 5.0, rank=5, max_iter=100, tol=1e-8,
+                          V_r_init=cold.V_r, d_r_init=cold.d_r)
+    np.testing.assert_allclose(cold.elbo_trace[-1], warm.elbo_trace[-1], rtol=1e-4)
+
+
+def test_lowrank_isotropic_warmstart_converges_faster():
+    """Warm-starting iso from a converged solution should reach the same ELBO."""
+    rng = np.random.default_rng(77)
+    Y, S, _ = make_low_rank(30, 15, rank=3, noise_std=0.5, rng=rng)
+    cold = matlap_lowrank_isotropic(Y, S, 5.0, rank=5, max_iter=100, tol=1e-7)
+    warm = matlap_lowrank_isotropic(Y, S, 5.0, rank=5, max_iter=100, tol=1e-7,
+                                    V_r_init=cold.V_r, d_r_init=cold.d_r,
+                                    delta_init=cold.delta)
+    np.testing.assert_allclose(cold.elbo_trace[-1], warm.elbo_trace[-1], rtol=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# matlap_grid_lowrank_isotropic
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_grid_lowrank_isotropic_returns_result():
+    """matlap_grid_lowrank_isotropic should return LowRankIsotropicGridResult."""
+    rng = np.random.default_rng(55)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([1.0, 5.0, 20.0])
+    result = matlap_grid_lowrank_isotropic(Y, S, grid, rank=5, max_iter=10)
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_lambda in [1.0, 5.0, 20.0]
+    assert result.best_result.mu.shape == Y.shape
+    assert len(result.results) == 3
+
+
+def test_matlap_grid_lowrank_isotropic_selects_best_elbo():
+    """best_lambda should correspond to the grid point with the highest ELBO."""
+    rng = np.random.default_rng(66)
+    Y, S, _ = make_low_rank(25, 12, rank=3, noise_std=0.4, rng=rng)
+    grid = jnp.array([0.5, 2.0, 10.0, 50.0])
+    result = matlap_grid_lowrank_isotropic(Y, S, grid, rank=5, max_iter=20)
+    elbos = {lam: res.elbo_trace[-1] for lam, res in result.results}
+    best_lam_by_elbo = max(elbos, key=elbos.get)
+    assert result.best_lambda == best_lam_by_elbo
+
+
+def test_matlap_grid_lowrank_iso_results_sorted_ascending():
+    """results list should be sorted by lambda ascending."""
+    rng = np.random.default_rng(44)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([10.0, 1.0, 50.0, 5.0])
+    result = matlap_grid_lowrank_isotropic(Y, S, grid, rank=5, max_iter=10)
+    lams = [lam for lam, _ in result.results]
+    assert lams == sorted(lams)
+
