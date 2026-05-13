@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Lambda selection strategy comparison across matrices of varying true rank.
+Lambda selection strategy comparison across matrices of varying true rank and SNR.
 
 Compares seven combinations of method × lambda-selection strategy:
 
@@ -9,23 +9,27 @@ Compares seven combinations of method × lambda-selection strategy:
   3. lowrank_auto       Low-rank CAVI (rank-r factor space), auto-λ  (biased by n/r)
   4. lowrank_grid       Low-rank CAVI on λ-grid, best ELBO (= matlap_grid_lowrank)
   5. lowrank_cv         Low-rank CAVI on λ-grid, best by 3-fold entry-wise CV
-  6. iso_auto           Low-rank+isotropic CAVI, auto-λ; γ=λ̄ (off-subspace ∝ in-subspace)
-  7. iso_cv             Low-rank+isotropic CAVI on λ-grid; γ=λ per grid point
+  6. iso_auto           Low-rank+isotropic CAVI, auto-λ; δ is a variational parameter
+  7. iso_cv             Low-rank+isotropic CAVI on λ-grid; δ is a variational parameter
 
 Experiment design
 -----------------
   Matrix size:    m=500, n=100
-  True ranks:     1, 3, 5, 10, 20, 40
-  Noise:          heteroscedastic σ_ij ~ Uniform(0.5, 1.5)
+  Rank sweep:     true ranks 1, 3, 5, 10, 20, 40  (SNR=1 fixed)
+  SNR sweep:      SNR 0.1, 0.3, 1, 3, 10           (rank=5 fixed)
+  Noise:          heteroscedastic σ_ij ~ Uniform(0.5, 1.5), mean σ ≈ 1
+  SNR definition: signal per-entry std / mean noise std  ≈  signal_scale / 1
   Test fraction:  20% of observed entries held out
-  Lambda grid:    12 log-spaced values from 0.1 × heuristic to 10 × heuristic
+  Lambda grid:    8 log-spaced values from 0.1 × heuristic to 10 × heuristic
   Low-rank rank:  min(50, n-1) = 50
   Seeds:          3
 
 Outputs
 -------
-  results/lambda_study.csv   — raw (method, r_true, seed, lambda_chosen, rmse_test)
-  results/lambda_study.md    — formatted tables with mean ± std across seeds
+  results/lambda_study.csv   — rank sweep raw results
+  results/lambda_study.md    — rank sweep formatted tables
+  results/snr_study.csv      — SNR sweep raw results
+  results/snr_study.md       — SNR sweep formatted tables
 """
 
 from __future__ import annotations
@@ -60,6 +64,10 @@ N_FOLDS = 3
 MAX_ITER = 50   # full CAVI converges quickly at m=500, n=100
 LOWRANK_ITERS = 50
 
+# SNR sweep: fix rank, vary signal strength (signal std / mean noise std)
+SNR_VALUES = [0.1, 0.3, 1.0, 3.0, 10.0]
+SNR_RANK = 5
+
 METHODS = [
     "proximal_cv",
     "matlap_auto",
@@ -85,14 +93,15 @@ METHOD_LABELS = {
 # Data simulation
 # ---------------------------------------------------------------------------
 
-def simulate(seed: int, m: int, n: int, rank: int, missing_frac: float):
+def simulate(seed: int, m: int, n: int, rank: int, missing_frac: float, snr: float = 1.0):
     key = jax.random.PRNGKey(seed)
     # scale = rank^0.25 keeps per-entry variance of X_true = 1 regardless of rank
-    # (Var(X[i,j]) = rank / scale^4 = 1), matching the noise level σ²≈1
+    # (Var(X[i,j]) = rank / scale^4 = 1), matching the noise level σ²≈1.
+    # Multiplying by snr scales the signal std to snr (noise std ≈ 1).
     scale = float(rank) ** 0.25
     U = jax.random.normal(key, (m, rank)) / scale
     V = jax.random.normal(jax.random.fold_in(key, 1), (n, rank)) / scale
-    X_true = U @ V.T
+    X_true = snr * (U @ V.T)
 
     s_vals = 0.5 + 1.0 * jax.random.uniform(jax.random.fold_in(key, 2), (m, n))
     noise = s_vals * jax.random.normal(jax.random.fold_in(key, 3), (m, n))
@@ -176,8 +185,8 @@ def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
 # Single-seed benchmark
 # ---------------------------------------------------------------------------
 
-def run_one_seed(seed: int, r_true: int) -> dict:
-    X_true, Y, S, mask, _ = simulate(seed, M, N, r_true, MISSING_FRAC)
+def run_one_seed(seed: int, r_true: int, snr: float = 1.0) -> dict:
+    X_true, Y, S, mask, _ = simulate(seed, M, N, r_true, MISSING_FRAC, snr=snr)
 
     lam_heuristic = heuristic_lambda(S)
     lam_grid = list(float(lam_heuristic) * np.logspace(-1.0, 1.0, GRID_POINTS))
@@ -194,6 +203,7 @@ def run_one_seed(seed: int, r_true: int) -> dict:
         ("iso_cv",       lambda: run_iso_cv(Y, S, lam_grid)),
     ]
 
+    label = f"r={r_true} snr={snr}"
     for name, fn in runners:
         t0 = time.perf_counter()
         try:
@@ -201,23 +211,14 @@ def run_one_seed(seed: int, r_true: int) -> dict:
             _ = mu_hat.block_until_ready()
             elapsed = time.perf_counter() - t0
             rmse = test_rmse(mu_hat, X_true, mask)
-            results[name] = {
-                "rmse": rmse,
-                "lambda": lam_est,
-                "time": elapsed,
-                "error": None,
-            }
-            print(f"  r_true={r_true:2d}  seed={seed}  {name:<20}  "
+            results[name] = {"rmse": rmse, "lambda": lam_est, "time": elapsed, "error": None}
+            print(f"  {label:<16}  seed={seed}  {name:<20}  "
                   f"RMSE={rmse:.4f}  λ={lam_est:.3f}  t={elapsed:.1f}s")
         except Exception as exc:  # noqa: BLE001
             elapsed = time.perf_counter() - t0
-            results[name] = {
-                "rmse": float("nan"),
-                "lambda": float("nan"),
-                "time": elapsed,
-                "error": str(exc),
-            }
-            print(f"  r_true={r_true:2d}  seed={seed}  {name:<20}  ERROR: {exc}")
+            results[name] = {"rmse": float("nan"), "lambda": float("nan"),
+                             "time": elapsed, "error": str(exc)}
+            print(f"  {label:<16}  seed={seed}  {name:<20}  ERROR: {exc}")
 
     return results
 
@@ -231,98 +232,89 @@ def _fmt(mean, std):
     return f"{mean:.3f} ± {std:.3f}"
 
 
+def _make_tables(all_data, sweep_key, sweep_vals, sweep_label, lines):
+    """Append RMSE, λ, and runtime tables sweeping over sweep_key values."""
+
+    def collect(method, val, field):
+        return [d[field] for d in all_data
+                if d["method"] == method and d[sweep_key] == val
+                and not (isinstance(d[field], float) and np.isnan(d[field]))]
+
+    col_labels = [f"{sweep_label}={v}" for v in sweep_vals]
+    header = "| Method | " + " | ".join(col_labels) + " |"
+    sep = "|---|" + "---|" * len(sweep_vals)
+
+    for title, field, fmt in [
+        ("Test RMSE (mean ± std over seeds)", "rmse",
+         lambda v: _fmt(float(np.mean(v)), float(np.std(v)))),
+        ("Chosen λ (mean ± std over seeds)", "lambda",
+         lambda v: _fmt(float(np.mean(v)), float(np.std(v)))),
+        ("Runtime in seconds (mean over seeds)", "time",
+         lambda v: f"{float(np.mean(v)):.1f}s"),
+    ]:
+        lines.append(f"## {title}")
+        lines.append("")
+        lines.append(header)
+        lines.append(sep)
+        for m in METHODS:
+            row = f"| `{m}` |"
+            for val in sweep_vals:
+                vals = collect(m, val, field)
+                row += f" {fmt(vals)} |" if vals else " — |"
+            lines.append(row)
+        lines.append("")
+
+
 def build_report(all_data: list[dict]) -> str:
-    """all_data: list of {r_true, seed, method, rmse, lambda, time}."""
+    """Rank-sweep report.  all_data rows have key 'r_true'."""
     lines = []
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines.append("# matlap Lambda Selection Study")
+    lines.append("# matlap Lambda Selection Study — Rank Sweep")
     lines.append("")
     lines.append(
-        f"Generated: {ts}  |  Matrix: {M}×{N}  |  "
+        f"Generated: {ts}  |  Matrix: {M}×{N}  |  SNR=1  |  "
         f"Seeds: {N_SEEDS}  |  Low-rank rank: {LOWRANK_RANK}  |  "
         f"CV folds: {N_FOLDS}  |  Grid points: {GRID_POINTS}"
     )
     lines.append("")
+    _make_tables(all_data, "r_true", TRUE_RANKS, "rank", lines)
+    _add_notes(lines)
+    return "\n".join(lines)
 
-    def collect(method, rank, field):
-        vals = [d[field] for d in all_data
-                if d["method"] == method and d["r_true"] == rank
-                and not (isinstance(d[field], float) and np.isnan(d[field]))]
-        return vals
 
-    # ── Table 1: Test RMSE
-    lines.append("## Test RMSE (mean ± std over seeds)")
+def build_snr_report(all_data: list[dict]) -> str:
+    """SNR-sweep report.  all_data rows have key 'snr'."""
+    lines = []
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    lines.append("# matlap Lambda Selection Study — SNR Sweep")
     lines.append("")
-    header = "| Method | " + " | ".join(f"rank={r}" for r in TRUE_RANKS) + " |"
-    sep = "|---|" + "---|" * len(TRUE_RANKS)
-    lines.append(header)
-    lines.append(sep)
-    for m in METHODS:
-        row = f"| `{m}` |"
-        for r in TRUE_RANKS:
-            vals = collect(m, r, "rmse")
-            if vals:
-                row += f" {_fmt(float(np.mean(vals)), float(np.std(vals)))} |"
-            else:
-                row += " — |"
-        lines.append(row)
+    lines.append(
+        f"Generated: {ts}  |  Matrix: {M}×{N}  |  rank={SNR_RANK}  |  "
+        f"Seeds: {N_SEEDS}  |  Low-rank rank: {LOWRANK_RANK}  |  "
+        f"CV folds: {N_FOLDS}  |  Grid points: {GRID_POINTS}"
+    )
     lines.append("")
+    lines.append(f"SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1")
+    lines.append("")
+    _make_tables(all_data, "snr", SNR_VALUES, "SNR", lines)
+    _add_notes(lines)
+    return "\n".join(lines)
 
-    # ── Table 2: Chosen lambda
-    lines.append("## Chosen λ (mean ± std over seeds)")
-    lines.append("")
-    lines.append(header)
-    lines.append(sep)
-    for m in METHODS:
-        row = f"| `{m}` |"
-        for r in TRUE_RANKS:
-            vals = collect(m, r, "lambda")
-            if vals:
-                row += f" {_fmt(float(np.mean(vals)), float(np.std(vals)))} |"
-            else:
-                row += " — |"
-        lines.append(row)
-    lines.append("")
 
-    # ── Table 3: Runtime
-    lines.append("## Runtime in seconds (mean over seeds)")
-    lines.append("")
-    lines.append(header)
-    lines.append(sep)
-    for m in METHODS:
-        row = f"| `{m}` |"
-        for r in TRUE_RANKS:
-            vals = collect(m, r, "time")
-            if vals:
-                row += f" {float(np.mean(vals)):.1f}s |"
-            else:
-                row += " — |"
-        lines.append(row)
-    lines.append("")
-
-    # ── Notes
+def _add_notes(lines):
     lines.append("## Notes")
     lines.append("")
     lines.append(f"- Matrix: {M}×{N}, heteroscedastic noise σ ~ Uniform(0.5, 1.5)")
+    lines.append(f"- Signal scale = rank^0.25 / snr → Var(X_entry) = snr² (std = snr, noise std ≈ 1)")
     lines.append(f"- Test fraction: {MISSING_FRAC:.0%} of observed entries")
     lines.append(f"- Low-rank rank: {LOWRANK_RANK}")
     lines.append(f"- Lambda grid: {GRID_POINTS} log-spaced values, 0.1×–10× heuristic")
-    lines.append(f"- `lowrank_auto` λ is biased (diverges to ~m) because trace_Q uses only r dims;")
-    lines.append(f"  use `iso_auto`, `lowrank_grid`, or `lowrank_cv` instead.")
-    lines.append(f"- `lowrank_grid` = `matlap_grid_lowrank` (ELBO-based λ selection).")
-    lines.append(f"  ELBO prefers slightly lower λ than CV at low rank.")
-    lines.append(f"- `iso_auto`/`iso_cv` use `matlap_lowrank_isotropic` (low-rank+isotropic prior).")
-    lines.append(f"  δ is a variational parameter optimised each iteration (δ*=sqrt(Tr(Ψ⊥)/(n-r)));")
-    lines.append(f"  γ=λ̄/δ is derived, not a hyperparameter.  `iso_auto` gives the same λ as")
-    lines.append(f"  `matlap_auto` at O(mnr) cost (vs O(mn²) for full CAVI).")
-    lines.append(f"  `iso_cv` grid selects λ that is slightly lower than auto-λ.")
+    lines.append(f"- `lowrank_auto` λ diverges (~m) due to rank-r trace; use iso_auto instead.")
+    lines.append(f"- `iso_auto`/`iso_cv`: δ* = sqrt(Tr(Ψ⊥)/(n−r)) each iteration; γ = λ̄/δ.")
     lines.append("")
-
     for m in METHODS:
         lines.append(f"- **`{m}`**: {METHOD_LABELS[m]}")
     lines.append("")
-
-    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -332,10 +324,10 @@ def build_report(all_data: list[dict]) -> str:
 def main():
     os.makedirs("results", exist_ok=True)
 
+    # ── Rank sweep ────────────────────────────────────────────────────────────
     csv_path = "results/lambda_study.csv"
     fieldnames = ["r_true", "seed", "method", "rmse", "lambda", "time", "error"]
 
-    # Open CSV for incremental writing so results are saved as they arrive
     csv_file = open(csv_path, "w", newline="")  # noqa: SIM115
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     writer.writeheader()
@@ -345,28 +337,20 @@ def main():
 
     for r_true in TRUE_RANKS:
         print(f"\n{'='*60}")
-        print(f"True rank = {r_true}")
+        print(f"True rank = {r_true}  (SNR=1)")
         print(f"{'='*60}")
         for seed in range(N_SEEDS):
-            res = run_one_seed(seed, r_true)
+            res = run_one_seed(seed, r_true, snr=1.0)
             for method, info in res.items():
-                row = {
-                    "r_true": r_true,
-                    "seed": seed,
-                    "method": method,
-                    "rmse": info["rmse"],
-                    "lambda": info["lambda"],
-                    "time": info["time"],
-                    "error": info.get("error") or "",
-                }
+                row = {"r_true": r_true, "seed": seed, "method": method,
+                       "rmse": info["rmse"], "lambda": info["lambda"],
+                       "time": info["time"], "error": info.get("error") or ""}
                 writer.writerow(row)
                 csv_file.flush()
                 all_flat.append(row)
 
     csv_file.close()
     print(f"\nSaved raw results to {csv_path}")
-
-    # Write Markdown report
     md_path = "results/lambda_study.md"
     report = build_report(all_flat)
     with open(md_path, "w") as f:
@@ -374,6 +358,41 @@ def main():
     print(f"Saved report to {md_path}")
     print()
     print(report)
+
+    # ── SNR sweep ─────────────────────────────────────────────────────────────
+    snr_csv_path = "results/snr_study.csv"
+    snr_fieldnames = ["snr", "seed", "method", "rmse", "lambda", "time", "error"]
+
+    snr_csv_file = open(snr_csv_path, "w", newline="")  # noqa: SIM115
+    snr_writer = csv.DictWriter(snr_csv_file, fieldnames=snr_fieldnames)
+    snr_writer.writeheader()
+    snr_csv_file.flush()
+
+    snr_flat: list[dict] = []
+
+    for snr in SNR_VALUES:
+        print(f"\n{'='*60}")
+        print(f"SNR = {snr}  (rank={SNR_RANK})")
+        print(f"{'='*60}")
+        for seed in range(N_SEEDS):
+            res = run_one_seed(seed, SNR_RANK, snr=snr)
+            for method, info in res.items():
+                row = {"snr": snr, "seed": seed, "method": method,
+                       "rmse": info["rmse"], "lambda": info["lambda"],
+                       "time": info["time"], "error": info.get("error") or ""}
+                snr_writer.writerow(row)
+                snr_csv_file.flush()
+                snr_flat.append(row)
+
+    snr_csv_file.close()
+    print(f"\nSaved SNR raw results to {snr_csv_path}")
+    snr_md_path = "results/snr_study.md"
+    snr_report = build_snr_report(snr_flat)
+    with open(snr_md_path, "w") as f:
+        f.write(snr_report)
+    print(f"Saved SNR report to {snr_md_path}")
+    print()
+    print(snr_report)
 
 
 if __name__ == "__main__":

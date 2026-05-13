@@ -1,6 +1,6 @@
-# matlap Lambda Selection Study
+# matlap Lambda Selection Study — Rank Sweep
 
-Generated: 2026-05-13 10:33  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
+Generated: 2026-05-13 12:39  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
 
 ## Test RMSE (mean ± std over seeds)
 
@@ -30,29 +30,23 @@ Generated: 2026-05-13 10:33  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank:
 
 | Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
 |---|---|---|---|---|---|---|
-| `proximal_cv` | 33.1s | 31.3s | 33.3s | 37.5s | 44.5s | 37.4s |
-| `matlap_auto` | 1.9s | 1.2s | 1.4s | 1.2s | 1.1s | 1.1s |
-| `lowrank_auto` | 2.7s | 2.1s | 2.3s | 1.8s | 2.0s | 2.4s |
-| `lowrank_grid` | 4.8s | 3.4s | 3.1s | 2.9s | 3.1s | 2.6s |
-| `lowrank_cv` | 13.7s | 11.7s | 11.0s | 11.1s | 9.7s | 10.8s |
+| `proximal_cv` | 32.4s | 31.7s | 34.6s | 41.5s | 44.0s | 41.2s |
+| `matlap_auto` | 1.7s | 1.3s | 1.2s | 1.1s | 1.1s | 1.1s |
+| `lowrank_auto` | 2.2s | 1.8s | 2.3s | 2.0s | 1.8s | 2.1s |
+| `lowrank_grid` | 4.9s | 3.5s | 3.1s | 3.0s | 3.2s | 2.8s |
+| `lowrank_cv` | 14.4s | 11.8s | 11.1s | 11.0s | 10.7s | 10.0s |
 | `iso_auto` | 2.3s | 1.9s | 1.9s | 1.8s | 1.7s | 1.7s |
-| `iso_cv` | 33.7s | 29.8s | 28.7s | 27.6s | 26.8s | 27.1s |
+| `iso_cv` | 33.7s | 29.8s | 28.6s | 27.5s | 26.9s | 27.0s |
 
 ## Notes
 
 - Matrix: 500×100, heteroscedastic noise σ ~ Uniform(0.5, 1.5)
+- Signal scale = rank^0.25 / snr → Var(X_entry) = snr² (std = snr, noise std ≈ 1)
 - Test fraction: 20% of observed entries
 - Low-rank rank: 50
 - Lambda grid: 8 log-spaced values, 0.1×–10× heuristic
-- `lowrank_auto` λ is biased (diverges to ~m) because trace_Q uses only r dims;
-  use `iso_auto`, `lowrank_grid`, or `lowrank_cv` instead.
-- `lowrank_grid` = `matlap_grid_lowrank` (ELBO-based λ selection).
-  ELBO prefers slightly lower λ than CV at low rank.
-- `iso_auto`/`iso_cv` use `matlap_lowrank_isotropic` (low-rank+isotropic prior).
-  δ is a variational parameter optimised each iteration (δ*=sqrt(Tr(Ψ⊥)/(n-r)));
-  γ=λ̄/δ is derived, not a hyperparameter.  `iso_auto` gives the same λ as
-  `matlap_auto` at O(mnr) cost (vs O(mn²) for full CAVI).
-  `iso_cv` grid selects λ that is slightly lower than auto-λ.
+- `lowrank_auto` λ diverges (~m) due to rank-r trace; use iso_auto instead.
+- `iso_auto`/`iso_cv`: δ* = sqrt(Tr(Ψ⊥)/(n−r)) each iteration; γ = λ̄/δ.
 
 - **`proximal_cv`**: proximal_cv    (FISTA + 3-fold CV)
 - **`matlap_auto`**: matlap_auto    (full CAVI, auto-λ)
