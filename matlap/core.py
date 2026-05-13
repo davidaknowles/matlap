@@ -608,12 +608,15 @@ def matlap_lowrank_isotropic(
 
     d_r = jnp.ones(r, dtype=jnp.float32)
 
-    # δ: off-subspace Q eigenvalue.  Start at 1 → γ = λ̄/δ = 1 initially.
-    delta = 1.0
+    # Initialise δ so that trace_Q = d_r.sum() + (n-r)*delta ≈ a_N,
+    # giving lambda_bar ≈ 1 on the first iteration and gamma = lambda/delta ≈ (n-r)/(m*n-r) ≈ 0.
+    # This matches the matlap initialisation pattern (b_N = a_N → lambda = 1).
+    a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
+    delta_init = max((float(a_N) - float(r)) / max(n - r, 1), 1.0)
+    delta = delta_init
 
-    # Initialise λ ≈ 1: trace_Q = d_r.sum() + (n-r)*delta = r + (n-r) = n
-    b_N = jnp.asarray(a0 + float(a_N), dtype=jnp.float32)
-    lambda_bar = a_N / b_N  # ≈ 1.0
+    b_N = jnp.asarray(b0 + float(a_N), dtype=jnp.float32)  # trace_Q ≈ a_N → lambda ≈ 1
+    lambda_bar = a_N / b_N
 
     elbo_trace: list[float] = []
     converged = False
@@ -627,7 +630,6 @@ def matlap_lowrank_isotropic(
 
         # Pre-row lambda update using current trace_Q
         trace_Q = float(d_r.sum()) + (n - r) * delta
-        a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
         if lambda_val is None:
             b_N = jnp.asarray(b0 + trace_Q, dtype=jnp.float32)
             lambda_bar = a_N / b_N

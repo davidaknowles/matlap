@@ -1,6 +1,6 @@
 # matlap Lambda Selection Study
 
-Generated: 2026-05-12 14:49  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
+Generated: 2026-05-12 23:30  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
 
 ## Test RMSE (mean ± std over seeds)
 
@@ -11,8 +11,8 @@ Generated: 2026-05-12 14:49  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank:
 | `lowrank_auto` | 1.055 ± 0.028 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.323 ± 0.012 | 0.230 ± 0.004 | 0.162 ± 0.002 |
 | `lowrank_grid` | 0.448 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.334 ± 0.008 | 0.267 ± 0.024 | 0.173 ± 0.002 |
 | `lowrank_cv` | 0.315 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.315 ± 0.011 | 0.230 ± 0.004 | 0.162 ± 0.002 |
-| `iso_auto` | 1.042 ± 0.028 | 0.606 ± 0.013 | 0.466 ± 0.005 | 0.330 ± 0.012 | 0.233 ± 0.004 | 0.164 ± 0.002 |
-| `iso_cv` | 1.052 ± 0.030 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.324 ± 0.012 | 0.230 ± 0.004 | 0.162 ± 0.002 |
+| `iso_auto` | 0.259 ± 0.005 | 0.393 ± 0.008 | 0.404 ± 0.004 | 0.319 ± 0.012 | 0.229 ± 0.004 | 0.162 ± 0.002 |
+| `iso_cv` | 0.245 ± 0.004 | 0.354 ± 0.008 | 0.360 ± 0.003 | 0.305 ± 0.011 | 0.229 ± 0.004 | 0.166 ± 0.003 |
 
 ## Chosen λ (mean ± std over seeds)
 
@@ -23,20 +23,20 @@ Generated: 2026-05-12 14:49  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank:
 | `lowrank_auto` | 342.829 ± 24.351 | 461.782 ± 0.913 | 481.363 ± 4.977 | 499.407 ± 0.015 | 499.573 ± 0.008 | 499.649 ± 0.001 |
 | `lowrank_grid` | 16.088 ± 0.020 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 40.714 ± 13.687 | 59.971 ± 0.074 |
 | `lowrank_cv` | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 59.971 ± 0.074 | 115.786 ± 0.143 | 223.548 ± 0.276 |
-| `iso_auto` | 80.018 ± 1.179 | 90.737 ± 0.315 | 92.789 ± 0.105 | 94.200 ± 0.057 | 95.015 ± 0.122 | 95.448 ± 0.125 |
-| `iso_cv` | 2.235 ± 0.003 | 2.235 ± 0.003 | 223.548 ± 0.276 | 223.548 ± 0.276 | 223.548 ± 0.276 | 223.548 ± 0.276 |
+| `iso_auto` | 30.128 ± 0.526 | 36.065 ± 0.264 | 44.407 ± 0.514 | 56.529 ± 0.595 | 63.305 ± 0.338 | 66.899 ± 0.130 |
+| `iso_cv` | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 26.073 ± 7.064 | 13.246 ± 12.634 |
 
 ## Runtime in seconds (mean over seeds)
 
 | Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
 |---|---|---|---|---|---|---|
-| `proximal_cv` | 33.6s | 36.6s | 35.7s | 38.5s | 32.8s | 33.9s |
-| `matlap_auto` | 2.0s | 2.4s | 3.6s | 3.8s | 3.8s | 3.4s |
-| `lowrank_auto` | 2.3s | 1.8s | 1.4s | 0.1s | 0.1s | 0.1s |
-| `lowrank_grid` | 4.8s | 2.6s | 2.6s | 2.8s | 2.3s | 2.2s |
-| `lowrank_cv` | 15.3s | 10.2s | 9.7s | 10.3s | 9.6s | 9.9s |
-| `iso_auto` | 1.7s | 1.4s | 1.4s | 1.7s | 1.3s | 1.4s |
-| `iso_cv` | 7.2s | 6.9s | 7.2s | 6.8s | 6.9s | 6.9s |
+| `proximal_cv` | 30.7s | 35.9s | 32.5s | 34.2s | 31.2s | 32.0s |
+| `matlap_auto` | 1.7s | 2.4s | 3.4s | 3.3s | 3.5s | 3.9s |
+| `lowrank_auto` | 2.9s | 1.8s | 1.7s | 0.1s | 0.1s | 0.1s |
+| `lowrank_grid` | 5.3s | 2.7s | 2.3s | 2.2s | 2.3s | 2.1s |
+| `lowrank_cv` | 13.5s | 9.9s | 10.2s | 10.5s | 9.4s | 9.6s |
+| `iso_auto` | 2.3s | 3.0s | 4.7s | 4.7s | 4.7s | 4.7s |
+| `iso_cv` | 33.7s | 26.9s | 26.0s | 26.1s | 26.0s | 25.7s |
 
 ## Notes
 
@@ -44,19 +44,20 @@ Generated: 2026-05-12 14:49  |  Matrix: 500×100  |  Seeds: 3  |  Low-rank rank:
 - Test fraction: 20% of observed entries
 - Low-rank rank: 50
 - Lambda grid: 8 log-spaced values, 0.1×–10× heuristic
-- `lowrank_auto` λ is biased by factor ~n/r = 100/50 = 2.0×
-  (r-dim trace vs full n-dim); use `lowrank_grid` or `lowrank_cv` instead.
+- `lowrank_auto` λ is biased (diverges to ~m) because trace_Q uses only r dims;
+  use `iso_auto`, `lowrank_grid`, or `lowrank_cv` instead.
 - `lowrank_grid` = `matlap_grid_lowrank` (ELBO-based λ selection).
-  ELBO prefers lower λ than CV → tends to under-regularize.
-- `iso_auto`/`iso_cv` use `matlap_lowrank_isotropic` (lowrank+isotropic prior).
-  γ is set to λ̄ (auto) or λ (CV), regularizing off-subspace at the
-  same scale as in-subspace.  With γ=1e-3 (old default) off-subspace
-  directions are unregularised and the RMSE degrades to noise level.
+  ELBO prefers slightly lower λ than CV at low rank.
+- `iso_auto`/`iso_cv` use `matlap_lowrank_isotropic` (low-rank+isotropic prior).
+  δ is a variational parameter optimised each iteration (δ*=sqrt(Tr(Ψ⊥)/(n-r)));
+  γ=λ̄/δ is derived, not a hyperparameter.  `iso_auto` gives the same λ as
+  `matlap_auto` at O(mnr) cost (vs O(mn²) for full CAVI).
+  `iso_cv` grid selects λ that is slightly lower than auto-λ.
 
 - **`proximal_cv`**: proximal_cv    (FISTA + 3-fold CV)
 - **`matlap_auto`**: matlap_auto    (full CAVI, auto-λ)
 - **`lowrank_auto`**: lowrank_auto   (rank-r CAVI, auto-λ, biased)
 - **`lowrank_grid`**: lowrank_grid   (matlap_grid_lowrank, best ELBO)
 - **`lowrank_cv`**: lowrank_cv     (rank-r CAVI, grid+CV)
-- **`iso_auto`**: iso_auto       (lowrank+iso CAVI, auto-λ, γ=λ̄)
-- **`iso_cv`**: iso_cv         (lowrank+iso CAVI, grid+CV, γ=λ)
+- **`iso_auto`**: iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)
+- **`iso_cv`**: iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)

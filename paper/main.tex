@@ -262,17 +262,17 @@ Let $\gamma = \bar\lambda/\delta$ (off-subspace prior precision), $\tilde{p}_{ij
     \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V_r\,\tilde{B}_i^{-1}\,V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\
     \tilde{B}_i &= \mathrm{diag}(1/c_k) + V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V_r \;\in \mathbb{R}^{r\times r},
 \end{align}
-where $\tilde{B}_i \succ 0$ by the Schur complement of $\Lambda_i$. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V_r)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
+where $\tilde{B}_i$ is symmetric and invertible (since $\Lambda_i \succ 0$ implies $\det(\tilde{B}_i)\neq 0$ via the matrix determinant lemma), but need not be positive definite when $c_k < 0$; in practice we diagonalise $\tilde{B}_i = E\,\mathrm{diag}(\ell)\,E^\top$ via \texttt{eigh} rather than Cholesky. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V_r)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
 
 \paragraph{$Q$ and $\delta$ updates.}
 $\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ and $\gamma \leftarrow \bar\lambda/\delta^*$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$.
 
 \paragraph{ELBO.}
-By the matrix determinant lemma,
+By the matrix determinant lemma applied to $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$,
 \begin{equation}
-    \log|\Sigma_i| = \sum_{k=1}^r \log\!\frac{d_{r,k}}{\bar\lambda} - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
+    \log|\Sigma_i| = -\sum_{k=1}^r \log|c_k| - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
 \end{equation}
-an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy.
+an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. Absolute values are required because $c_k < 0$ in the typical case ($\delta < d_{r,k}$); since $\Lambda_i \succ 0$, the signs of $\prod_k c_k$ and $\det(\tilde{B}_i)$ agree, so $|\det(\Sigma_i)| = (\prod_j \tilde{p}_j)^{-1} \cdot |\prod_k c_k|^{-1} \cdot |\det(\tilde{B}_i)|^{-1}$ is real and positive.
 
 \paragraph{Summary.}
 At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) no new hyperparameters are introduced—$\delta$ is optimized from the data in closed form each iteration.
