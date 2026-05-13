@@ -87,7 +87,9 @@ METHOD_LABELS = {
 
 def simulate(seed: int, m: int, n: int, rank: int, missing_frac: float):
     key = jax.random.PRNGKey(seed)
-    scale = float(rank) ** 0.5
+    # scale = rank^0.25 keeps per-entry variance of X_true = 1 regardless of rank
+    # (Var(X[i,j]) = rank / scale^4 = 1), matching the noise level σ²≈1
+    scale = float(rank) ** 0.25
     U = jax.random.normal(key, (m, rank)) / scale
     V = jax.random.normal(jax.random.fold_in(key, 1), (n, rank)) / scale
     X_true = U @ V.T
