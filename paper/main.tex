@@ -291,9 +291,11 @@ To enable gradient-based optimization, we implement the approximation with a \te
 \subsection{Low-Rank Grid Search with Warm-Started Regularisation Path}
 \label{sec:grid-lowrank}
 
-Rather than estimating $\lambda$ jointly with $X$ via the empirical-Bayes update, one may instead search a discrete grid of candidate values and select the best by ELBO, as in \texttt{matlap\_grid}. We combine this with the low-rank CAVI (Section~\ref{sec:lowrank-cavi}) to obtain \texttt{matlap\_grid\_lowrank}, which is both scalable and avoids the misspecification of the automatic $\lambda$ in factor space.
+Rather than estimating $\lambda$ jointly with $X$ via the empirical-Bayes update, one may instead search a discrete grid of candidate values and select the best by ELBO or another post-hoc score, as in \texttt{matlap\_grid}. We combine this with the low-rank CAVI (Section~\ref{sec:lowrank-cavi}) to obtain \texttt{matlap\_grid\_lowrank}, which is both scalable and avoids the misspecification of the automatic $\lambda$ in factor space.
 
 The grid is traversed in \emph{decreasing} order of $\lambda$ (strong to weak regularisation). The solution at the previous (larger) $\lambda$ warm-starts the next grid point: the shared loading matrix $V_r$ and per-row factor means $\hat{z}_i$ are reused as the initial state. Because the previous solution is already near the new optimum (the signal grows smoothly as $\lambda$ decreases), each grid point typically converges in far fewer CAVI iterations than a cold start. After all grid points are evaluated, the $\lambda$ yielding the highest ELBO (computed in factor space, consistent with Section~\ref{sec:lowrank-cavi}) is selected.
+
+The same warm-started path is also used by \texttt{matlap\_grid\_lowrank\_isotropic}, which retains full $n$-dimensional entropy and can score $\lambda$ by ELBO, closed-form leave-one-out, Rényi $\alpha$-ELBO, or the $\alpha=0$ importance-style objective. In the lambda-selection study below, the Rényi score tracked cross-validation most closely, while the LOO score was consistently too conservative.
 
 This strategy costs $O(G \cdot mnr)$ in total, where $G$ is the number of grid points. On a GPU at $m=10{,}000$, $n=1{,}000$, $r=30$, a grid of $G=7$ points converges in under one second.
 
@@ -331,6 +333,7 @@ We benchmark all scalable methods on a synthetic matrix completion problem with 
 \texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (300 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
 \texttt{matlap\_lowrank} runs the rank-30 low-rank CAVI with automatic empirical-Bayes $\lambda$ (80 iterations, converged).
 \texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point).
+\texttt{matlap\_grid\_lowrank\_isotropic} runs the low-rank-plus-isotropic CAVI path and can score $\lambda$ by ELBO, LOO, or Rényi $\alpha$-ELBO ($\alpha=0$ is the importance-style limit).
 \texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; O($n^3$) per row, so slow at $n=1{,}000$).
 \texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (1000 steps, not converged).
 \texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (1000 steps, not converged).
@@ -364,6 +367,33 @@ Method & RMSE & Time (s) & Converged & Notes \\
 \texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
 
 The SVI methods (\texttt{vi\_diagonal}, \texttt{vi\_matrix\_factor}, \texttt{vi\_row\_lowrank}) have not converged at 1000 steps, and the rSVD nuclear-norm approximation introduces additional gradient noise at rank 30 that degrades the \texttt{approx} variants. With sufficient steps and a higher approximation rank, \texttt{vi\_diagonal} achieves competitive RMSE (0.207 at 1000 steps).
+
+\subsection{Lambda Selection Study}
+\label{sec:lambda-study}
+
+We also compared $\lambda$-selection rules on a $500\times 100$ synthetic problem under two sweeps: varying true rank ($1,3,5,10,20,40$) and varying SNR ($0.1,0.3,1,3,10$), with 3 seeds per setting. Table~\ref{tab:lambda-study-summary} reports mean test RMSE averaged over each sweep.
+
+\begin{table}[h]
+\centering
+\caption{Mean test RMSE across the rank and SNR sweeps.}
+\label{tab:lambda-study-summary}
+\begin{tabular}{lrr}
+\hline
+Method & Rank sweep & SNR sweep \\
+\hline
+\texttt{proximal\_cv} & 0.467 & 0.314 \\
+\texttt{matlap\_grid} & 0.615 & 0.450 \\
+\texttt{lowrank\_cv} & 0.600 & 0.485 \\
+\texttt{lowrank\_grid} & 0.637 & 0.634 \\
+\texttt{iso\_cv} & 0.585 & 0.445 \\
+\texttt{iso\_grid\_renyi} & 0.585 & 0.446 \\
+\texttt{iso\_grid\_is} & 0.587 & 0.464 \\
+\texttt{iso\_grid\_loo} & 0.631 & 0.476 \\
+\hline
+\end{tabular}
+\end{table}
+
+The key pattern is that \texttt{iso\_grid\_renyi} is essentially tied with \texttt{iso\_cv} across both sweeps, while \texttt{iso\_grid\_is} (\(\alpha=0\)) is close but degrades at higher SNR and \texttt{iso\_grid\_loo} is too conservative. The ELBO-based grids (\texttt{matlap\_grid} and \texttt{lowrank\_grid}) remain systematically worse than CV.
 
 \begin{thebibliography}{9}
 

@@ -11,6 +11,7 @@ from .core import (
 from .proximal import ProximalResult, proximal_cv, proximal_gradient
 from .vi import VIResult, fit_vi
 from .cv import cv_lambda
+from .scoring import closed_form_loo, renyi_elbo, compute_iso_prior_var
 
 __all__ = [
     # CAVI
@@ -37,4 +38,8 @@ __all__ = [
     "VIResult",
     # General CV
     "cv_lambda",
+    # Post-hoc scoring
+    "closed_form_loo",
+    "renyi_elbo",
+    "compute_iso_prior_var",
 ]

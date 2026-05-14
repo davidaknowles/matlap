@@ -1,6 +1,6 @@
 # matlap Lambda Selection Study — Rank Sweep
 
-Generated: 2026-05-14 00:11  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
+Generated: 2026-05-14 13:36  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
 
 ## Test RMSE (mean ± std over seeds)
 
@@ -15,6 +15,9 @@ Generated: 2026-05-14 00:11  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-
 | `iso_auto` | 0.259 ± 0.005 | 0.423 ± 0.009 | 0.523 ± 0.006 | 0.672 ± 0.015 | 0.810 ± 0.011 | 0.910 ± 0.011 |
 | `iso_grid` | 0.260 ± 0.004 | 0.436 ± 0.010 | 0.543 ± 0.006 | 0.700 ± 0.017 | 0.838 ± 0.013 | 0.929 ± 0.011 |
 | `iso_cv` | 0.245 ± 0.004 | 0.407 ± 0.009 | 0.505 ± 0.005 | 0.654 ± 0.016 | 0.796 ± 0.012 | 0.901 ± 0.011 |
+| `iso_grid_loo` | 0.337 ± 0.005 | 0.436 ± 0.010 | 0.543 ± 0.006 | 0.700 ± 0.017 | 0.838 ± 0.013 | 0.929 ± 0.011 |
+| `iso_grid_renyi` | 0.245 ± 0.004 | 0.407 ± 0.009 | 0.505 ± 0.005 | 0.654 ± 0.015 | 0.796 ± 0.012 | 0.901 ± 0.011 |
+| `iso_grid_is` | 0.260 ± 0.004 | 0.407 ± 0.009 | 0.505 ± 0.005 | 0.654 ± 0.015 | 0.796 ± 0.012 | 0.901 ± 0.011 |
 
 ## Chosen λ (mean ± std over seeds)
 
@@ -29,20 +32,26 @@ Generated: 2026-05-14 00:11  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-
 | `iso_auto` | 30.128 ± 0.526 | 26.368 ± 0.181 | 25.145 ± 0.180 | 23.711 ± 0.459 | 22.716 ± 0.187 | 22.429 ± 0.233 |
 | `iso_grid` | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 |
 | `iso_cv` | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 |
+| `iso_grid_loo` | 59.971 ± 0.074 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 |
+| `iso_grid_renyi` | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 |
+| `iso_grid_is` | 31.062 ± 0.038 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 |
 
 ## Runtime in seconds (mean over seeds)
 
 | Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
 |---|---|---|---|---|---|---|
-| `proximal_cv` | 35.0s | 31.5s | 34.3s | 37.7s | 43.3s | 38.2s |
-| `matlap_auto` | 1.7s | 1.5s | 1.3s | 1.1s | 1.3s | 1.1s |
-| `matlap_grid` | 6.1s | 5.6s | 5.7s | 4.8s | 4.7s | 5.0s |
-| `lowrank_auto` | 2.6s | 1.8s | 2.1s | 2.1s | 1.8s | 1.9s |
-| `lowrank_grid` | 4.7s | 3.5s | 3.2s | 3.3s | 3.2s | 2.6s |
-| `lowrank_cv` | 13.9s | 12.3s | 11.2s | 10.3s | 9.7s | 9.7s |
-| `iso_auto` | 2.3s | 1.9s | 1.9s | 1.8s | 1.8s | 1.7s |
-| `iso_grid` | 8.8s | 7.4s | 7.4s | 7.0s | 6.9s | 6.8s |
-| `iso_cv` | 33.7s | 29.7s | 28.6s | 27.5s | 27.0s | 26.9s |
+| `proximal_cv` | 31.2s | 30.2s | 32.0s | 36.9s | 42.3s | 38.5s |
+| `matlap_auto` | 1.7s | 1.3s | 1.2s | 1.1s | 1.1s | 1.1s |
+| `matlap_grid` | 6.3s | 5.7s | 5.3s | 4.8s | 4.9s | 4.5s |
+| `lowrank_auto` | 2.2s | 2.1s | 2.1s | 1.8s | 2.1s | 2.1s |
+| `lowrank_grid` | 5.0s | 3.1s | 3.1s | 3.2s | 2.7s | 2.5s |
+| `lowrank_cv` | 13.5s | 11.2s | 10.9s | 10.0s | 9.9s | 10.0s |
+| `iso_auto` | 2.3s | 1.9s | 1.9s | 1.8s | 1.7s | 1.7s |
+| `iso_grid` | 8.7s | 7.3s | 7.3s | 7.0s | 6.9s | 6.8s |
+| `iso_cv` | 33.4s | 29.6s | 28.3s | 27.3s | 26.7s | 26.8s |
+| `iso_grid_loo` | 8.8s | 7.4s | 7.3s | 7.0s | 6.9s | 6.8s |
+| `iso_grid_renyi` | 8.8s | 7.4s | 7.3s | 7.0s | 6.9s | 6.8s |
+| `iso_grid_is` | 8.8s | 7.4s | 7.3s | 7.0s | 6.9s | 6.8s |
 
 ## Notes
 
@@ -63,3 +72,6 @@ Generated: 2026-05-14 00:11  |  Matrix: 500×100  |  SNR=1  |  Seeds: 3  |  Low-
 - **`iso_auto`**: iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)
 - **`iso_grid`**: iso_grid       (lowrank+iso CAVI, best ELBO over grid)
 - **`iso_cv`**: iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)
+- **`iso_grid_loo`**: iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)
+- **`iso_grid_renyi`**: iso_grid_renyi (lowrank+iso CAVI, best Rényi α=0.5 over grid)
+- **`iso_grid_is`**: iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)

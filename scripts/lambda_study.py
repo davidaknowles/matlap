@@ -2,15 +2,20 @@
 """
 Lambda selection strategy comparison across matrices of varying true rank and SNR.
 
-Compares seven combinations of method × lambda-selection strategy:
+Compares lambda-selection strategies across methods:
 
   1. proximal_cv        Nuclear-norm FISTA with entry-wise 3-fold CV
-  2. matlap_auto        Full CAVI, automatic empirical-Bayes λ  (n=100 → feasible)
-  3. lowrank_auto       Low-rank CAVI (rank-r factor space), auto-λ  (biased by n/r)
-  4. lowrank_grid       Low-rank CAVI on λ-grid, best ELBO (= matlap_grid_lowrank)
-  5. lowrank_cv         Low-rank CAVI on λ-grid, best by 3-fold entry-wise CV
-  6. iso_auto           Low-rank+isotropic CAVI, auto-λ; δ is a variational parameter
-  7. iso_cv             Low-rank+isotropic CAVI on λ-grid; δ is a variational parameter
+  2. matlap_auto        Full CAVI, automatic empirical-Bayes λ
+  3. matlap_grid        Full CAVI on λ-grid, selected by ELBO
+  4. lowrank_auto       Low-rank CAVI (rank-r factor space), auto-λ
+  5. lowrank_grid       Low-rank CAVI on λ-grid, selected by ELBO
+  6. lowrank_cv         Low-rank CAVI on λ-grid, selected by 3-fold CV
+  7. iso_auto           Low-rank+isotropic CAVI, auto-λ; δ is variationally learned
+  8. iso_grid           Low-rank+isotropic CAVI on λ-grid, selected by ELBO
+  9. iso_cv             Low-rank+isotropic CAVI on λ-grid, selected by 3-fold CV
+ 10. iso_grid_loo       Low-rank+isotropic CAVI on λ-grid, selected by closed-form LOO
+ 11. iso_grid_renyi     Low-rank+isotropic CAVI on λ-grid, selected by Rényi α=0.5
+ 12. iso_grid_is        Low-rank+isotropic CAVI on λ-grid, selected by α=0 (IS objective)
 
 Experiment design
 -----------------
@@ -78,6 +83,9 @@ METHODS = [
     "iso_auto",
     "iso_grid",
     "iso_cv",
+    "iso_grid_loo",
+    "iso_grid_renyi",
+    "iso_grid_is",
 ]
 
 METHOD_LABELS = {
@@ -90,6 +98,9 @@ METHOD_LABELS = {
     "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)",
     "iso_grid":     "iso_grid       (lowrank+iso CAVI, best ELBO over grid)",
     "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)",
+    "iso_grid_loo": "iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)",
+    "iso_grid_renyi": "iso_grid_renyi (lowrank+iso CAVI, best Rényi α=0.5 over grid)",
+    "iso_grid_is": "iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)",
 }
 
 
@@ -185,6 +196,32 @@ def run_iso_grid(Y, S, lam_grid, rank=LOWRANK_RANK):
     return r.best_result.mu, float(r.best_lambda)
 
 
+def run_iso_grid_loo(Y, S, lam_grid, rank=LOWRANK_RANK):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(
+        Y, S, jnp.array(lam_grid), rank=rank, max_iter=LOWRANK_ITERS, score_fn="loo"
+    )
+    return r.best_result.mu, float(r.best_lambda)
+
+
+def run_iso_grid_renyi(Y, S, lam_grid, rank=LOWRANK_RANK, alpha: float = 0.5):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(
+        Y,
+        S,
+        jnp.array(lam_grid),
+        rank=rank,
+        max_iter=LOWRANK_ITERS,
+        score_fn="renyi",
+        alpha=alpha,
+    )
+    return r.best_result.mu, float(r.best_lambda)
+
+
+def run_iso_grid_is(Y, S, lam_grid, rank=LOWRANK_RANK):
+    return run_iso_grid_renyi(Y, S, lam_grid, rank=rank, alpha=0.0)
+
+
 def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
     """Grid+CV: δ is learned as a variational parameter for each fixed λ."""
     from matlap.core import matlap_lowrank_isotropic
@@ -219,6 +256,9 @@ def run_one_seed(seed: int, r_true: int, snr: float = 1.0) -> dict:
         ("iso_auto",     lambda: run_iso_auto(Y, S)),
         ("iso_grid",     lambda: run_iso_grid(Y, S, lam_grid)),
         ("iso_cv",       lambda: run_iso_cv(Y, S, lam_grid)),
+        ("iso_grid_loo", lambda: run_iso_grid_loo(Y, S, lam_grid)),
+        ("iso_grid_renyi", lambda: run_iso_grid_renyi(Y, S, lam_grid)),
+        ("iso_grid_is", lambda: run_iso_grid_is(Y, S, lam_grid)),
     ]
 
     label = f"r={r_true} snr={snr}"

@@ -28,6 +28,7 @@ from .linalg import (
     update_rows_lowrank, update_rows_lowrank_isotropic,
     rsvd,
 )
+from .scoring import closed_form_loo, compute_iso_prior_var, renyi_elbo
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +387,7 @@ class LowRankCAVIResult:
         lambda_bar:  E_q[lambda], scalar.
         a_N:         Gamma posterior shape, scalar.
         b_N:         Gamma posterior rate, scalar.
+        diag_sigma:  Diagonal posterior variances, shape (m, n).
         elbo_trace:  ELBO at the end of each iteration, list of floats.
         converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
         n_iter:      Number of iterations executed.
@@ -398,6 +400,7 @@ class LowRankCAVIResult:
     lambda_bar: float
     a_N: float
     b_N: float
+    diag_sigma: jax.Array | None = None
     elbo_trace: list[float] = field(default_factory=list)
     converged: bool = False
     n_iter: int = 0
@@ -420,6 +423,7 @@ class LowRankIsotropicResult:
         a_N:         Gamma posterior shape (= a0 + m*n), scalar.
         b_N:         Gamma posterior rate, scalar.
         delta:       Converged off-subspace Q eigenvalue δ* = sqrt(Tr(Ψ⊥)/(n-r)).
+        diag_sigma:  Diagonal posterior variances, shape (m, n).
         elbo_trace:  ELBO at the end of each iteration, list of floats.
         converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
         n_iter:      Number of iterations executed.
@@ -433,6 +437,7 @@ class LowRankIsotropicResult:
     a_N: float
     b_N: float
     delta: float
+    diag_sigma: jax.Array | None = None
     elbo_trace: list[float] = field(default_factory=list)
     converged: bool = False
     n_iter: int = 0
@@ -580,6 +585,7 @@ def matlap_lowrank(
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
+        diag_sigma=diag_sigs,
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),
@@ -745,6 +751,7 @@ def matlap_lowrank_isotropic(
         a_N=float(a_N),
         b_N=float(b_N),
         delta=float(delta),
+        diag_sigma=diag_sigs,
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),
@@ -889,13 +896,19 @@ def matlap_grid_lowrank(
     b0: float = 1e-3,
     max_iter: int = 50,
     tol: float = 1e-6,
+    score_fn: str = "elbo",
+    alpha: float = 0.5,
     verbose: bool = False,
 ) -> LowRankGridResult:
     """Grid search over lambda using low-rank CAVI with warm-started path.
 
     Calls :func:`matlap_lowrank` for each lambda in **decreasing** order,
-    passing the previous point's ``(V_r, d_r)`` as warm-start.  The best
-    lambda is selected by the highest ELBO.
+    passing the previous point's ``(V_r, d_r)`` as warm-start.
+
+    Selection score:
+      * ``score_fn="elbo"`` (default): final ELBO at each grid point.
+      * ``score_fn="loo"``: analytical Gaussian leave-one-out score.
+      * ``score_fn="renyi"``: analytical Rényi α-ELBO.
 
     Args:
         Y:            Observed matrix, shape (m, n). NaN/any value where missing.
@@ -906,18 +919,26 @@ def matlap_grid_lowrank(
         b0:           Gamma prior rate.
         max_iter:     Maximum CAVI iterations **per grid point** (default 50).
         tol:          Convergence tolerance on relative ELBO change.
+        score_fn:     One of ``{"elbo", "loo", "renyi"}``.
+        alpha:        Rényi order for ``score_fn="renyi"``; must satisfy 0≤α<1.
         verbose:      Print progress.
 
     Returns:
         :class:`LowRankGridResult` with best lambda and per-lambda results.
     """
+    score_mode = score_fn.lower()
+    if score_mode not in {"elbo", "loo", "renyi"}:
+        raise ValueError(f"Unknown score_fn={score_fn!r}; expected 'elbo', 'loo', or 'renyi'.")
+    if score_mode == "renyi" and not (0.0 <= alpha < 1.0):
+        raise ValueError(f"alpha must be in [0, 1) for Rényi scoring, got {alpha}")
+
     lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
 
     V_r: jax.Array | None = None
     d_r: jax.Array | None = None
 
     results: list[tuple[float, LowRankCAVIResult]] = []
-    best_elbo = -float("inf")
+    best_score = -float("inf")
     best_lam = lambda_vals[0]
     best_res: LowRankCAVIResult | None = None
 
@@ -930,16 +951,33 @@ def matlap_grid_lowrank(
         V_r = res.V_r
         d_r = res.d_r
 
-        elbo = res.elbo_trace[-1]
-        if elbo > best_elbo:
-            best_elbo = elbo
+        if score_mode == "elbo":
+            score = float(res.elbo_trace[-1])
+        else:
+            if res.diag_sigma is None:
+                raise ValueError("diag_sigma is required for score_fn != 'elbo'.")
+            if score_mode == "loo":
+                score = closed_form_loo(res.mu, res.diag_sigma, Y, S)
+            else:
+                prior_var = compute_iso_prior_var(
+                    res.V_r,
+                    res.d_r,
+                    delta=1e-6,
+                    lambda_bar=lam_val,
+                )
+                score = renyi_elbo(res.mu, res.diag_sigma, prior_var, Y, S, alpha=alpha)
+
+        if score > best_score:
+            best_score = score
             best_lam = lam_val
             best_res = res
 
         results.append((lam_val, res))
         if verbose:
-            print(f"  lambda={lam_val:.4f}  ELBO={elbo:.4f}  "
-                  f"iters={res.n_iter}  converged={res.converged}")
+            print(
+                f"  lambda={lam_val:.4f}  {score_mode.upper()}={score:.4f}  "
+                f"ELBO={res.elbo_trace[-1]:.4f}  iters={res.n_iter}  converged={res.converged}"
+            )
 
     results.sort(key=lambda x: x[0])
     return LowRankGridResult(
@@ -959,13 +997,19 @@ def matlap_grid_lowrank_isotropic(
     b0: float = 1e-3,
     max_iter: int = 50,
     tol: float = 1e-6,
+    score_fn: str = "elbo",
+    alpha: float = 0.5,
     verbose: bool = False,
 ) -> LowRankIsotropicGridResult:
     """Grid search over lambda using low-rank+isotropic CAVI with warm-started path.
 
     Calls :func:`matlap_lowrank_isotropic` for each lambda in **decreasing**
     order, passing the previous point's ``(V_r, d_r, delta)`` as warm-start.
-    The best lambda is selected by the highest ELBO.
+
+    Selection score:
+      * ``score_fn="elbo"`` (default): final ELBO.
+      * ``score_fn="loo"``: analytical Gaussian leave-one-out score.
+      * ``score_fn="renyi"``: analytical Rényi α-ELBO.
 
     Args:
         Y:            Observed matrix, shape (m, n). NaN/any value where missing.
@@ -976,11 +1020,19 @@ def matlap_grid_lowrank_isotropic(
         b0:           Gamma prior rate.
         max_iter:     Maximum CAVI iterations **per grid point** (default 50).
         tol:          Convergence tolerance on relative ELBO change.
+        score_fn:     One of ``{"elbo", "loo", "renyi"}``.
+        alpha:        Rényi order for ``score_fn="renyi"``; must satisfy 0≤α<1.
         verbose:      Print progress.
 
     Returns:
         :class:`LowRankIsotropicGridResult` with best lambda and per-lambda results.
     """
+    score_mode = score_fn.lower()
+    if score_mode not in {"elbo", "loo", "renyi"}:
+        raise ValueError(f"Unknown score_fn={score_fn!r}; expected 'elbo', 'loo', or 'renyi'.")
+    if score_mode == "renyi" and not (0.0 <= alpha < 1.0):
+        raise ValueError(f"alpha must be in [0, 1) for Rényi scoring, got {alpha}")
+
     lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
 
     V_r: jax.Array | None = None
@@ -988,7 +1040,7 @@ def matlap_grid_lowrank_isotropic(
     delta: float | None = None
 
     results: list[tuple[float, LowRankIsotropicResult]] = []
-    best_elbo = -float("inf")
+    best_score = -float("inf")
     best_lam = lambda_vals[0]
     best_res: LowRankIsotropicResult | None = None
 
@@ -1002,16 +1054,33 @@ def matlap_grid_lowrank_isotropic(
         d_r = res.d_r
         delta = res.delta
 
-        elbo = res.elbo_trace[-1]
-        if elbo > best_elbo:
-            best_elbo = elbo
+        if score_mode == "elbo":
+            score = float(res.elbo_trace[-1])
+        else:
+            if res.diag_sigma is None:
+                raise ValueError("diag_sigma is required for score_fn != 'elbo'.")
+            if score_mode == "loo":
+                score = closed_form_loo(res.mu, res.diag_sigma, Y, S)
+            else:
+                prior_var = compute_iso_prior_var(
+                    res.V_r,
+                    res.d_r,
+                    delta=res.delta,
+                    lambda_bar=lam_val,
+                )
+                score = renyi_elbo(res.mu, res.diag_sigma, prior_var, Y, S, alpha=alpha)
+
+        if score > best_score:
+            best_score = score
             best_lam = lam_val
             best_res = res
 
         results.append((lam_val, res))
         if verbose:
-            print(f"  lambda={lam_val:.4f}  ELBO={elbo:.4f}  "
-                  f"iters={res.n_iter}  converged={res.converged}")
+            print(
+                f"  lambda={lam_val:.4f}  {score_mode.upper()}={score:.4f}  "
+                f"ELBO={res.elbo_trace[-1]:.4f}  iters={res.n_iter}  converged={res.converged}"
+            )
 
     results.sort(key=lambda x: x[0])
     return LowRankIsotropicGridResult(

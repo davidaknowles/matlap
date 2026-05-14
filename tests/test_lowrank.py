@@ -128,6 +128,9 @@ def test_matlap_lowrank_returns_result():
     assert result.mu.shape == Y.shape
     assert result.z.shape[1] == 5
     assert result.V_r.shape == (10, 5)
+    assert result.diag_sigma is not None
+    assert result.diag_sigma.shape == Y.shape
+    assert jnp.all(result.diag_sigma > 0)
     assert len(result.elbo_trace) > 0
     assert jnp.all(jnp.isfinite(result.mu))
 
@@ -345,6 +348,9 @@ def test_matlap_lowrank_isotropic_returns_result():
     assert result.mu.shape == Y.shape
     assert result.z.shape == (20, 5)
     assert result.V_r.shape == (10, 5)
+    assert result.diag_sigma is not None
+    assert result.diag_sigma.shape == Y.shape
+    assert jnp.all(result.diag_sigma > 0)
     assert jnp.all(jnp.isfinite(result.mu))
     assert result.delta > 0
 
@@ -518,3 +524,49 @@ def test_matlap_grid_lowrank_iso_results_sorted_ascending():
     lams = [lam for lam, _ in result.results]
     assert lams == sorted(lams)
 
+
+def test_matlap_grid_lowrank_isotropic_runs_with_loo_score():
+    """LOO scoring path should run and return a valid grid result."""
+    rng = np.random.default_rng(88)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([1.0, 5.0, 20.0])
+    result = matlap_grid_lowrank_isotropic(
+        Y, S, grid, rank=5, max_iter=10, score_fn="loo"
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_lambda in [1.0, 5.0, 20.0]
+
+
+def test_matlap_grid_lowrank_isotropic_runs_with_renyi_score():
+    """Rényi scoring path should run and return a valid grid result."""
+    rng = np.random.default_rng(89)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([1.0, 5.0, 20.0])
+    result = matlap_grid_lowrank_isotropic(
+        Y, S, grid, rank=5, max_iter=10, score_fn="renyi", alpha=0.5
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_lambda in [1.0, 5.0, 20.0]
+
+
+def test_matlap_grid_lowrank_isotropic_runs_with_alpha_zero_score():
+    """Alpha-zero Rényi/IS scoring path should run and return a valid result."""
+    rng = np.random.default_rng(91)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([1.0, 5.0, 20.0])
+    result = matlap_grid_lowrank_isotropic(
+        Y, S, grid, rank=5, max_iter=10, score_fn="renyi", alpha=0.0
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_lambda in [1.0, 5.0, 20.0]
+
+
+def test_matlap_grid_lowrank_isotropic_rejects_bad_score_fn():
+    """Invalid score_fn should raise ValueError."""
+    rng = np.random.default_rng(90)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    grid = jnp.array([1.0, 5.0, 20.0])
+    with pytest.raises(ValueError, match="score_fn"):
+        _ = matlap_grid_lowrank_isotropic(
+            Y, S, grid, rank=5, max_iter=5, score_fn="not-a-score"
+        )

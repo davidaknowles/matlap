@@ -160,6 +160,27 @@ best_lam, result = cv_lambda(
 
 ---
 
+### `matlap_grid_lowrank_isotropic(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, score_fn="elbo", alpha=0.5, verbose=False) → LowRankIsotropicGridResult`
+
+Warm-started λ grid search for `matlap_lowrank_isotropic`. The grid is traversed from
+largest to smallest λ, reusing `(V_r, d_r, delta)` from the previous point. Selection
+supports `score_fn="elbo"` (default), `score_fn="loo"` (closed-form Gaussian LOO), or
+`score_fn="renyi"` (Rényi α-ELBO); `alpha=0` gives the importance-style objective.
+
+```python
+from matlap import matlap_grid_lowrank_isotropic
+import jax.numpy as jnp
+
+grid = jnp.logspace(-1, 2, 12)
+result = matlap_grid_lowrank_isotropic(Y, S, grid, rank=50, score_fn="renyi", alpha=0.5)
+print(result.best_lambda)
+print(result.best_result.mu)
+```
+
+**Memory:** same as `matlap_lowrank_isotropic`.
+
+---
+
 ### `matlap_lowrank(Y, S, lambda_val=None, *, rank, …) → LowRankCAVIResult`
 
 Low-rank CAVI that restricts the variational family to a rank-`r` factor subspace,
@@ -242,12 +263,13 @@ Peak memory is O(B·n²) — with B=64 and n=300 this is ~21 MB.
 
 ---
 
-### `matlap_grid_lowrank(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, verbose) → LowRankGridResult`
+### `matlap_grid_lowrank(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, score_fn, alpha, verbose) → LowRankGridResult`
 
 **Recommended for large matrices.** Combines the low-rank CAVI (rank-`r` factor subspace)
 with a warm-started regularisation path. The grid is traversed from largest to smallest
 `λ`; each grid point is warm-started from the previous solution so convergence is fast.
-The `λ` with the highest ELBO (computed in factor space) is selected.
+Selection supports `score_fn="elbo"` (default), `score_fn="loo"` (closed-form Gaussian
+LOO), or `score_fn="renyi"` (Rényi α-ELBO).
 
 ```python
 from matlap import matlap_grid_lowrank
@@ -257,6 +279,10 @@ grid = jnp.logspace(0, 3, 7)
 result = matlap_grid_lowrank(Y, S, lambda_grid=grid, rank=30)
 print(result.best_lambda)
 print(result.best_result.mu)   # shape (m, n)
+
+# Alternative selection criteria
+result_loo = matlap_grid_lowrank(Y, S, grid, rank=30, score_fn="loo")
+result_renyi = matlap_grid_lowrank(Y, S, grid, rank=30, score_fn="renyi", alpha=0.5)
 ```
 
 | Parameter | Default | Description |
@@ -269,6 +295,8 @@ print(result.best_result.mu)   # shape (m, n)
 | `b0` | `1e-3` | Gamma prior rate |
 | `max_iter` | `200` | Maximum CAVI iterations per grid point |
 | `tol` | `1e-6` | Relative ELBO convergence tolerance |
+| `score_fn` | `"elbo"` | Selection score: `"elbo"`, `"loo"`, or `"renyi"` |
+| `alpha` | `0.5` | Rényi order in `[0, 1)` used only when `score_fn="renyi"` (`0` = IS-style objective) |
 
 **Returns** `LowRankGridResult`:
 
@@ -481,52 +509,28 @@ and `results/benchmark_10k.csv` (raw numbers).
 python scripts/lambda_study.py
 ```
 
-Compares 7 λ-selection strategies on a 500×100 matrix with heteroscedastic noise
-across true ranks 1–40 (3 seeds each). Results written to `results/lambda_study.csv`
-and `results/lambda_study.md`.
+Compares 12 λ-selection strategies on a 500×100 matrix with heteroscedastic noise
+across true ranks 1–40 and SNR values 0.1–10 (3 seeds each). Results are written to
+`results/lambda_study.csv`, `results/lambda_study.md`, `results/snr_study.csv`, and
+`results/snr_study.md`.
 
-### Test RMSE (mean ± std over 3 seeds)
+### Mean test RMSE across sweeps
 
-| Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
-|---|---|---|---|---|---|---|
-| `proximal_cv` | 0.230 ± 0.004 | 0.292 ± 0.007 | 0.316 ± 0.003 | 0.310 ± 0.018 | 0.228 ± 0.004 | 0.163 ± 0.002 |
-| `matlap_auto` | 0.255 ± 0.005 | 0.392 ± 0.007 | 0.404 ± 0.004 | 0.319 ± 0.012 | 0.229 ± 0.004 | **0.162 ± 0.002** |
-| `lowrank_auto` | 1.055 ± 0.028 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.323 ± 0.012 | 0.230 ± 0.004 | **0.162 ± 0.002** |
-| `lowrank_grid` | 0.448 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.334 ± 0.008 | 0.267 ± 0.024 | 0.173 ± 0.002 |
-| `lowrank_cv` | 0.315 ± 0.006 | 0.383 ± 0.009 | 0.383 ± 0.004 | 0.315 ± 0.011 | 0.230 ± 0.004 | **0.162 ± 0.002** |
-| `iso_auto` | 1.042 ± 0.028 | 0.606 ± 0.013 | 0.466 ± 0.005 | 0.330 ± 0.012 | 0.233 ± 0.004 | 0.164 ± 0.002 |
-| `iso_cv` | 1.052 ± 0.030 | 0.595 ± 0.013 | 0.457 ± 0.005 | 0.324 ± 0.012 | 0.230 ± 0.004 | **0.162 ± 0.002** |
+| Method | Rank sweep | SNR sweep |
+|---|---:|---:|
+| `proximal_cv` | 0.467 | 0.314 |
+| `matlap_grid` | 0.615 | 0.450 |
+| `lowrank_cv` | 0.600 | 0.485 |
+| `lowrank_grid` | 0.637 | 0.634 |
+| `iso_cv` | 0.585 | 0.445 |
+| `iso_grid_renyi` | 0.585 | 0.446 |
+| `iso_grid_is` | 0.587 | 0.464 |
+| `iso_grid_loo` | 0.631 | 0.476 |
 
-`iso_*` = `matlap_lowrank_isotropic` (low-rank + isotropic prior); `lowrank_grid` = `matlap_grid_lowrank`.
-
-### Chosen λ (mean ± std)
-
-| Method | rank=1 | rank=3 | rank=5 | rank=10 | rank=20 | rank=40 |
-|---|---|---|---|---|---|---|
-| `proximal_cv` | 16.1 | 16.1 | 16.1 | 21.1 | 31.1 | 31.1 |
-| `matlap_auto` | 30.1 | 36.1 | 44.3 | 56.5 | 63.4 | 67.1 |
-| `lowrank_auto` | **343** | **462** | **481** | **499** | **500** | **500** |
-| `lowrank_grid` | 16.1 | 31.1 | 31.1 | 31.1 | 40.7 | 60.0 |
-| `lowrank_cv` | 31.1 | 31.1 | 31.1 | 60.0 | 115.8 | 223.5 |
-| `iso_auto` (γ=λ̄) | 80 | 91 | 93 | 94 | 95 | 95 |
-| `iso_cv` (γ=λ) | 2.2 | 2.2 | 224 | 224 | 224 | 224 |
-
-### Interpretation
-
-- **`matlap_auto`** (full CAVI, empirical-Bayes λ) is the best automatic method
-  for rank≥10, matching `proximal_cv` at ~10× less runtime.
-- **`lowrank_cv`** (rank-r CAVI, grid + CV) is the best scalable method: matches
-  `proximal_cv` for all ranks.
-- **`lowrank_grid`** (`matlap_grid_lowrank`, ELBO selection) systematically
-  under-regularises (ELBO prefers lower λ than CV), giving 5–20% worse RMSE.
-  Use `lowrank_cv` or `proximal_cv` when accuracy matters.
-- **`lowrank_auto`** is unusable: λ saturates at the grid max due to the r-dim
-  vs n-dim trace bias. Always use grid+CV for λ in the low-rank regime.
-- **`iso_auto`/`iso_cv`** are `matlap_lowrank_isotropic` (lowrank+isotropic prior)
-  with γ=λ. They match `lowrank_cv` for rank≥20 and run 7× faster. At low
-  true rank (rank=1–5) they lag because the isotropic prior cannot zero out the
-  in-subspace noise dimensions (rank=50 subspace contains many more dims than the
-  true signal rank, and γ only regularises directions *outside* the subspace).
+`iso_*` = `matlap_lowrank_isotropic`; `lowrank_*` = `matlap_lowrank`; `*_grid`
+means warm-started λ search. `iso_grid_renyi` is the best non-CV selector overall;
+`iso_grid_is` (α=0) is close but degrades at higher SNR, and `iso_grid_loo` is
+consistently too conservative.
 
 ## Scalability
 
