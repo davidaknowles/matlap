@@ -185,7 +185,7 @@ def run_iso_grid(Y, S, lam_grid, rank=LOWRANK_RANK):
     return r.best_result.mu, float(r.best_lambda)
 
 
-
+def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
     """Grid+CV: δ is learned as a variational parameter for each fixed λ."""
     from matlap.core import matlap_lowrank_isotropic
     from matlap.cv import cv_lambda
