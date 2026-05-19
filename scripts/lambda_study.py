@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Lambda selection strategy comparison across matrices of varying true rank and SNR.
+Lambda selection strategy comparison across matrices of varying true rank and missing fraction.
 
 Compares lambda-selection strategies across methods:
 
@@ -21,21 +21,29 @@ Compares lambda-selection strategies across methods:
 Experiment design
 -----------------
   Matrix size:    m=500, n=100
-  Rank sweep:     true ranks 1, 3, 5, 10, 20, 40  (SNR=1 fixed)
-  SNR sweep:      SNR 0.1, 0.3, 1, 3, 10           (rank=5 fixed)
+  Rank sweep:     true ranks 1, 3, 5, 10, 20, 40  (SNR=1, missing=20% fixed)
+  Missing sweep:  missing fractions 2%, 10%, 30%, 60%, 90%  (SNR=1, rank=5 fixed)
   Noise:          heteroscedastic σ_ij ~ Uniform(0.5, 1.5), mean σ ≈ 1
-  SNR definition: signal per-entry std / mean noise std  ≈  signal_scale / 1
-  Test fraction:  20% of observed entries held out
-  Lambda grid:    8 log-spaced values from 0.1 × heuristic to 10 × heuristic
+  Test fraction:  20% of observed entries held out (rank sweep);
+                  same as missing_frac in missing sweep (shares train/test mask)
+  Lambda grid:    12 log-spaced values from 0.01× heuristic to 100× heuristic
   Low-rank rank:  min(50, n-1) = 50
   Seeds:          3
 
+Why missing fraction?
+---------------------
+  The noise heuristic λ̄ = √max(m,n) / √median_precision depends only on the
+  noise level of observed entries — it is blind to how many entries are
+  observed.  As missingness increases the posterior becomes less informed and
+  a larger λ is needed to prevent over-fitting, so the oracle-optimal λ/λ̄ ratio
+  rises with missing fraction, creating genuine variation across conditions.
+
 Outputs
 -------
-  results/lambda_study.csv   — rank sweep raw results
-  results/lambda_study.md    — rank sweep formatted tables
-  results/snr_study.csv      — SNR sweep raw results
-  results/snr_study.md       — SNR sweep formatted tables
+  results/lambda_study.csv     — rank sweep raw results
+  results/lambda_study.md      — rank sweep formatted tables
+  results/missing_study.csv    — missing-fraction sweep raw results
+  results/missing_study.md     — missing-fraction sweep formatted tables
 """
 
 from __future__ import annotations
@@ -65,14 +73,19 @@ TRUE_RANKS = [1, 3, 5, 10, 20, 40]
 N_SEEDS = 3
 MISSING_FRAC = 0.20
 LOWRANK_RANK = 50
-GRID_POINTS = 8
+GRID_POINTS = 12          # wider grid: 12 log-spaced points, 0.01×–100× heuristic
+GRID_LOG_LO  = -2.0       # 10^-2 × heuristic (was -1)
+GRID_LOG_HI  =  2.0       # 10^+2 × heuristic (was +1)
 N_FOLDS = 3
 MAX_ITER = 50   # full CAVI converges quickly at m=500, n=100
 LOWRANK_ITERS = 50
 
-# SNR sweep: fix rank, vary signal strength (signal std / mean noise std)
-SNR_VALUES = [0.1, 0.3, 1.0, 3.0, 10.0]
-SNR_RANK = 5
+# Missing-fraction sweep: fix rank and SNR, vary fraction of missing entries.
+# The noise heuristic is blind to missingness (it only uses observed-entry σ),
+# so the optimal λ genuinely shifts relative to the heuristic as sparsity changes.
+MISSING_FRACS = [0.02, 0.10, 0.30, 0.60, 0.90]
+MISSING_SNR   = 1.0
+MISSING_RANK  = 5
 
 METHODS = [
     "proximal_cv",
@@ -249,11 +262,12 @@ def run_iso_adaptive(Y, S, rank=LOWRANK_RANK, alpha: float = 0.5):
 # Single-seed benchmark
 # ---------------------------------------------------------------------------
 
-def run_one_seed(seed: int, r_true: int, snr: float = 1.0) -> dict:
-    X_true, Y, S, mask, _ = simulate(seed, M, N, r_true, MISSING_FRAC, snr=snr)
+def run_one_seed(seed: int, r_true: int, snr: float = 1.0,
+                 missing_frac: float = MISSING_FRAC) -> dict:
+    X_true, Y, S, mask, _ = simulate(seed, M, N, r_true, missing_frac, snr=snr)
 
     lam_heuristic = heuristic_lambda(S)
-    lam_grid = list(float(lam_heuristic) * np.logspace(-1.0, 1.0, GRID_POINTS))
+    lam_grid = list(float(lam_heuristic) * np.logspace(GRID_LOG_LO, GRID_LOG_HI, GRID_POINTS))
 
     results = {}
 
@@ -342,9 +356,10 @@ def build_report(all_data: list[dict]) -> str:
     lines.append("# matlap Lambda Selection Study — Rank Sweep")
     lines.append("")
     lines.append(
-        f"Generated: {ts}  |  Matrix: {M}×{N}  |  SNR=1  |  "
+        f"Generated: {ts}  |  Matrix: {M}×{N}  |  SNR=1  |  missing={MISSING_FRAC:.0%}  |  "
         f"Seeds: {N_SEEDS}  |  Low-rank rank: {LOWRANK_RANK}  |  "
-        f"CV folds: {N_FOLDS}  |  Grid points: {GRID_POINTS}"
+        f"CV folds: {N_FOLDS}  |  Grid: {GRID_POINTS} pts, "
+        f"10^{GRID_LOG_LO:.0f}×–10^{GRID_LOG_HI:.0f}× heuristic"
     )
     lines.append("")
     _make_tables(all_data, "r_true", TRUE_RANKS, "rank", lines)
@@ -352,21 +367,27 @@ def build_report(all_data: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def build_snr_report(all_data: list[dict]) -> str:
-    """SNR-sweep report.  all_data rows have key 'snr'."""
+def build_missing_report(all_data: list[dict]) -> str:
+    """Missing-fraction sweep report.  all_data rows have key 'missing_frac'."""
     lines = []
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    lines.append("# matlap Lambda Selection Study — SNR Sweep")
+    lines.append("# matlap Lambda Selection Study — Missing-Fraction Sweep")
     lines.append("")
     lines.append(
-        f"Generated: {ts}  |  Matrix: {M}×{N}  |  rank={SNR_RANK}  |  "
-        f"Seeds: {N_SEEDS}  |  Low-rank rank: {LOWRANK_RANK}  |  "
-        f"CV folds: {N_FOLDS}  |  Grid points: {GRID_POINTS}"
+        f"Generated: {ts}  |  Matrix: {M}×{N}  |  SNR={MISSING_SNR}  |  "
+        f"rank={MISSING_RANK}  |  Seeds: {N_SEEDS}  |  Low-rank rank: {LOWRANK_RANK}  |  "
+        f"CV folds: {N_FOLDS}  |  Grid: {GRID_POINTS} pts, "
+        f"10^{GRID_LOG_LO:.0f}×–10^{GRID_LOG_HI:.0f}× heuristic"
     )
     lines.append("")
-    lines.append(f"SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1")
+    lines.append(
+        "The noise heuristic λ̄ = √max(m,n) / √median_precision depends only on "
+        "the *noise level* of observed entries, not on how many are observed.  "
+        "The optimal λ/λ̄ ratio therefore rises with missing fraction, providing "
+        "genuine variation for comparing λ-selection strategies."
+    )
     lines.append("")
-    _make_tables(all_data, "snr", SNR_VALUES, "SNR", lines)
+    _make_tables(all_data, "missing_frac", MISSING_FRACS, "miss", lines)
     _add_notes(lines)
     return "\n".join(lines)
 
@@ -375,10 +396,10 @@ def _add_notes(lines):
     lines.append("## Notes")
     lines.append("")
     lines.append(f"- Matrix: {M}×{N}, heteroscedastic noise σ ~ Uniform(0.5, 1.5)")
-    lines.append(f"- Signal scale = rank^0.25 / snr → Var(X_entry) = snr² (std = snr, noise std ≈ 1)")
-    lines.append(f"- Test fraction: {MISSING_FRAC:.0%} of observed entries")
+    lines.append(f"- Signal scale = rank^0.25 / SNR → per-entry signal std = SNR, noise std ≈ 1")
+    lines.append(f"- Lambda grid: {GRID_POINTS} log-spaced values, "
+                 f"10^{GRID_LOG_LO:.0f}×–10^{GRID_LOG_HI:.0f}× heuristic")
     lines.append(f"- Low-rank rank: {LOWRANK_RANK}")
-    lines.append(f"- Lambda grid: {GRID_POINTS} log-spaced values, 0.1×–10× heuristic")
     lines.append(f"- `lowrank_auto` λ diverges (~m) due to rank-r trace; use iso_auto instead.")
     lines.append(f"- `iso_auto`/`iso_cv`: δ* = sqrt(Tr(Ψ⊥)/(n−r)) each iteration; γ = λ̄/δ.")
     lines.append("")
@@ -429,40 +450,40 @@ def main():
     print()
     print(report)
 
-    # ── SNR sweep ─────────────────────────────────────────────────────────────
-    snr_csv_path = "results/snr_study.csv"
-    snr_fieldnames = ["snr", "seed", "method", "rmse", "lambda", "time", "error"]
+    # ── Missing-fraction sweep ────────────────────────────────────────────────
+    missing_csv_path = "results/missing_study.csv"
+    missing_fieldnames = ["missing_frac", "seed", "method", "rmse", "lambda", "time", "error"]
 
-    snr_csv_file = open(snr_csv_path, "w", newline="")  # noqa: SIM115
-    snr_writer = csv.DictWriter(snr_csv_file, fieldnames=snr_fieldnames)
-    snr_writer.writeheader()
-    snr_csv_file.flush()
+    missing_csv_file = open(missing_csv_path, "w", newline="")  # noqa: SIM115
+    missing_writer = csv.DictWriter(missing_csv_file, fieldnames=missing_fieldnames)
+    missing_writer.writeheader()
+    missing_csv_file.flush()
 
-    snr_flat: list[dict] = []
+    missing_flat: list[dict] = []
 
-    for snr in SNR_VALUES:
+    for mfrac in MISSING_FRACS:
         print(f"\n{'='*60}")
-        print(f"SNR = {snr}  (rank={SNR_RANK})")
+        print(f"Missing fraction = {mfrac:.0%}  (rank={MISSING_RANK}, SNR={MISSING_SNR})")
         print(f"{'='*60}")
         for seed in range(N_SEEDS):
-            res = run_one_seed(seed, SNR_RANK, snr=snr)
+            res = run_one_seed(seed, MISSING_RANK, snr=MISSING_SNR, missing_frac=mfrac)
             for method, info in res.items():
-                row = {"snr": snr, "seed": seed, "method": method,
+                row = {"missing_frac": mfrac, "seed": seed, "method": method,
                        "rmse": info["rmse"], "lambda": info["lambda"],
                        "time": info["time"], "error": info.get("error") or ""}
-                snr_writer.writerow(row)
-                snr_csv_file.flush()
-                snr_flat.append(row)
+                missing_writer.writerow(row)
+                missing_csv_file.flush()
+                missing_flat.append(row)
 
-    snr_csv_file.close()
-    print(f"\nSaved SNR raw results to {snr_csv_path}")
-    snr_md_path = "results/snr_study.md"
-    snr_report = build_snr_report(snr_flat)
-    with open(snr_md_path, "w") as f:
-        f.write(snr_report)
-    print(f"Saved SNR report to {snr_md_path}")
+    missing_csv_file.close()
+    print(f"\nSaved missing-fraction raw results to {missing_csv_path}")
+    missing_md_path = "results/missing_study.md"
+    missing_report = build_missing_report(missing_flat)
+    with open(missing_md_path, "w") as f:
+        f.write(missing_report)
+    print(f"Saved report to {missing_md_path}")
     print()
-    print(snr_report)
+    print(missing_report)
 
 
 if __name__ == "__main__":
