@@ -1,5 +1,6 @@
 """matlap: Bayesian matrix denoising via CAVI with a Matrix Laplace prior."""
 
+from .faem import FAEMResult, GradMLResult, matlap_faem, matlap_gradml
 from .core import (
     CAVIResult, BatchedCAVIResult, GridResult,
     LowRankCAVIResult, LowRankGridResult,
@@ -20,6 +21,11 @@ from .scoring import (
 from .adaptive import adaptive_lambda_search, iso_warm_state, lowrank_warm_state
 
 __all__ = [
+    # FA EM and gradient marginal likelihood
+    "matlap_faem",
+    "matlap_gradml",
+    "FAEMResult",
+    "GradMLResult",
     # CAVI
     "matlap",
     "matlap_batched",
