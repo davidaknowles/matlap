@@ -191,42 +191,39 @@ The model naturally accommodates missing observations. If entry $(i,j)$ is unobs
 \subsection{Invariance of the Optimal Regularisation to Observation Density}
 \label{sec:lambda-invariance}
 
-A practically important consequence of the Bayesian formulation is that the heuristic initialisation $\bar\lambda = mn/\|Y_\Omega\|_*$ tracks the oracle-optimal regularisation as the observation density varies.  We argue this holds in the signal-dominated regime and explain why the analogous proximal estimator does not enjoy this property.
+A practically important consequence of the Bayesian formulation is that the oracle-optimal regularisation strength is approximately invariant to the fraction of missing observations, while the analogous proximal estimator is not.
 
 \paragraph{Setup.}
-Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix with nuclear norm $\|X_{\mathrm{true}}\|_* = \sum_k \sigma_k$.  Each entry is independently observed with probability $f$; observed entries carry homoscedastic Gaussian noise with variance $s^2$.  Let $Y_\Omega$ denote the $m \times n$ matrix with observed entries set to $y_{ij}$ and missing entries set to zero.
+Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix.  Each entry is independently observed with probability $f$; observed entries carry heteroscedastic Gaussian noise $y_{ij} = x_{ij} + \varepsilon_{ij}$, $\varepsilon_{ij} \sim \mathcal{N}(0, s_{ij}^2)$.  We use the noise-calibrated heuristic
+\begin{equation}
+  \bar\lambda \;=\; \frac{\sqrt{\max(m,n)}}{\sqrt{\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)}}, \label{eq:lambda-heuristic}
+\end{equation}
+which estimates the typical noise singular-value scale of an $m\times n$ Gaussian matrix with the observed noise distribution (cf.\ the Marchenko--Pastur bulk edge $\approx (1+\sqrt{n/m})\,s\sqrt{m}$ in the homoscedastic case).
 
-\paragraph{The heuristic scales as $1/f$.}
-In the signal-dominated regime ($\|X_{\mathrm{true}}\|_F \gg s\sqrt{fmn}$) the nuclear norm concentrates:
-\begin{equation}
-\|Y_\Omega\|_* \;\approx\; f\,\|X_{\mathrm{true}}\|_*, \label{eq:nuc-scaling}
-\end{equation}
-because $\mathbb{E}[Y_\Omega] = f\,X_{\mathrm{true}}$ and the noise contribution to singular values is $O(\sqrt{f}\,s\sqrt{n})$, which is sub-leading.  Therefore
-\begin{equation}
-\bar\lambda = \frac{mn}{\|Y_\Omega\|_*} \;\approx\; \frac{mn}{f\,\|X_{\mathrm{true}}\|_*} \;\propto\; \frac{1}{f}. \label{eq:lambda-bar-scaling}
-\end{equation}
+\paragraph{The heuristic is independent of $f$.}
+For a random Bernoulli$(f)$ mask applied to noise variances $\{s_{ij}^2\}$ drawn iid from any distribution, the observed entries $\{(i,j)\in\Omega\}$ are a uniformly random subsample of all entries.  Therefore $\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)$ converges to the population median by the law of large numbers, and $\bar\lambda$ in~\eqref{eq:lambda-heuristic} is independent of $f$.  This holds for arbitrary heteroscedastic noise.
 
-\paragraph{The oracle Bayesian regularisation also scales as $1/f$.}
-Each row posterior depends on the effective data precision $D_i = \operatorname{diag}(p_{ij}/s^2)$.  With iid Bernoulli$(f)$ mask, by the law of large numbers the effective precision per factor is $\beta_k = fn\,d_{r,k}^2/s^2$, where $d_{r,k}$ are the factor scales in $Q$.
-
-In the factor representation $z_i \sim \mathcal{N}(0,\,D_r^{-1}/\lambda)$ with $D_r = \operatorname{diag}(d_{r,k})$, the per-factor posterior mean is shrunk by $(1 + \lambda/(d_{r,k}\beta_k))^{-1}$.  The bias--variance optimal $\lambda$ for factor $k$ satisfies
+\paragraph{The oracle Bayesian regularisation is also independent of $f$.}
+In the factor representation, each latent row score $z_i \in \mathbb{R}^r$ has prior $z_{ik} \sim \mathcal{N}(0,\,d_{r,k}/\lambda)$.  The effective data precision for factor $k$ in row $i$ is
 \begin{equation}
-  \frac{\lambda^*}{d_{r,k}} \;\approx\; \frac{\beta_k}{\beta_k \|z_i^{\mathrm{true}}\|^2/s^2 - 1}
-  \;\approx\; \frac{1}{\|z_i^{\mathrm{true}}\|^2/s^2} \cdot \beta_k^{-1} \cdot \beta_k
-  = \frac{d_{r,k}}{\|z_i^{\mathrm{true}}\|^2},
+  \beta_k^{(i)} \;=\; \sum_j p_{ij}\,v_{kj}^2/s_{ij}^2 \;=\; f\,B_k^{(i)},
 \end{equation}
-which in the dense limit ($\beta_k \gg 1$) reduces to $\lambda^* \approx d_{r,k}^2/\|z_i^{\mathrm{true}}\|^2$.  Substituting $\beta_k = fn\,d_{r,k}^2/s^2$ and aggregating over rows and factors gives
+where $B_k^{(i)} = \sum_j v_{kj}^2/s_{ij}^2$ is the full-data precision (independent of $f$).  The posterior mean is $\hat z_{ik} = \gamma_{ik}\,z_{ik}^{\mathrm{true}} + \text{noise}$ with shrinkage $\gamma_{ik} = \beta_k^{(i)}/(\beta_k^{(i)} + \lambda/d_{r,k})$.  Setting $A = (z_{ik}^{\mathrm{true}})^2$, the MSE for factor $(i,k)$ is
 \begin{equation}
-\lambda^* \;\propto\; \frac{s^2}{f n\,\bar\sigma}, \label{eq:oracle-bayes-scaling}
+  \mathrm{MSE}_{ik}(\gamma) \;=\; (1-\gamma)^2 A \;+\; \gamma^2/\beta_k^{(i)},
 \end{equation}
-where $\bar\sigma$ is the mean signal singular value.  Since $\|X_{\mathrm{true}}\|_* = r\,\bar\sigma$, equations~\eqref{eq:lambda-bar-scaling} and~\eqref{eq:oracle-bayes-scaling} give
+which is minimised at $\gamma_{ik}^* = A\beta_k^{(i)}/(1 + A\beta_k^{(i)})$.  The corresponding optimal regularisation satisfies
 \begin{equation}
-  \frac{\lambda^*}{\bar\lambda} \;\approx\; \frac{s^2 r}{m n^2} \;=\; \mathrm{const.}, \label{eq:invariance}
+  \frac{\lambda^*}{d_{r,k}} \;=\; \beta_k^{(i)}\,\frac{1-\gamma_{ik}^*}{\gamma_{ik}^*} \;=\; \beta_k^{(i)} \cdot \frac{1}{\beta_k^{(i)}\,A} \;=\; \frac{1}{(z_{ik}^{\mathrm{true}})^2}, \label{eq:lambda-opt}
 \end{equation}
-independent of $f$.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across observation densities from 2\% to 90\% (see Section~\ref{sec:experiments}).
+since $\beta_k^{(i)}$ cancels exactly.  Critically, $f$ (which enters only through $\beta_k^{(i)} = f\,B_k^{(i)}$) also cancels.  The oracle $\lambda^*$ is therefore independent of both $f$ and the noise heteroscedasticity $\{s_{ij}^2\}$.  Since $\bar\lambda$ from~\eqref{eq:lambda-heuristic} is also independent of $f$, we have
+\begin{equation}
+  \frac{\lambda^*}{\bar\lambda} \;=\; \mathrm{const.,} \label{eq:invariance}
+\end{equation}
+independent of observation density.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across densities from 2\% to 90\% observed (see Section~\ref{sec:experiments}).
 
 \paragraph{Why the proximal estimator is not invariant.}
-For the nuclear-norm penalised least squares problem, $\min_X \tfrac{1}{2}\sum_{\Omega}(Y_{ij}-X_{ij})^2/s^2 + \lambda\|X\|_*$, the data term scales as $f \cdot mn$ while the regulariser applies globally to all $mn$ entries.  By random matrix theory, the noise edge of $Y_\Omega$ scales as $\sqrt{f}\cdot s\sqrt{n}$ (the spectral radius of a $\sqrt{f}$-subsampled Gaussian matrix), so the oracle threshold is $\lambda^*_{\mathrm{prox}} \propto \sqrt{f}$.  Combined with $\bar\lambda \propto 1/f$, the ratio satisfies $\lambda^*_{\mathrm{prox}}/\bar\lambda \propto f^{3/2}$, which is not constant.  The Bayesian model avoids this by applying regularisation only to the likelihood term for each observed entry through the precision matrix $D_i$, so the effective regularisation per entry is preserved as $f$ varies.
+For the nuclear-norm penalised least squares problem, the appropriate threshold is the largest singular value of the noise component of $Y_\Omega$.  Under a Bernoulli$(f)$ mask, the noise matrix $E_\Omega = \varepsilon \odot P$ has entry variances $f\,s_{ij}^2$, so its spectral norm scales as $\sqrt{f}\cdot s_{\mathrm{rms}}\sqrt{\max(m,n)}$ (Marchenko--Pastur bulk edge for the sparse noise matrix).  The oracle proximal threshold therefore satisfies $\lambda^*_{\mathrm{prox}} \propto \sqrt{f}$, which decreases with $f$.  Relative to the $f$-independent heuristic~\eqref{eq:lambda-heuristic}, the ratio $\lambda^*_{\mathrm{prox}}/\bar\lambda \propto \sqrt{f}$ is not constant, so the same grid centre becomes increasingly misspecified as observations become sparse.  The Bayesian model avoids this because $f$ enters symmetrically into both the data precision $\beta_k^{(i)}$ and the posterior variance $1/\beta_k^{(i)}$, and these cancel in the bias--variance optimum~\eqref{eq:lambda-opt}.
 
 \section{Implementation}
 
