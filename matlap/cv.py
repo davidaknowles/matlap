@@ -136,3 +136,97 @@ def cv_lambda(
     # Final fit on all observed entries
     final_result = fit_fn(Y, S, best_lambda, **fit_kwargs)
     return best_lambda, final_result
+
+
+def cv_score_single(
+    Y,
+    S,
+    lam: float,
+    fit_fn: Callable,
+    get_mu: Callable | None = None,
+    *,
+    n_folds: int = 3,
+    **fit_kwargs,
+) -> float:
+    """Cross-validation score for a **single** lambda value (higher = better).
+
+    Runs K-fold CV with the given ``fit_fn`` at the fixed ``lam`` and returns
+    the negative mean squared prediction error averaged over held-out folds.
+    A higher (less negative) value indicates a better fit.
+
+    Args:
+        Y:          Observed matrix, shape (m, n).
+        S:          Noise std matrix, shape (m, n). ``jnp.inf`` marks missing.
+        lam:        Lambda value to evaluate.
+        fit_fn:     ``fit_fn(Y, S, lam, **fit_kwargs) -> result``
+        get_mu:     Extracts the ``(m, n)`` estimate from ``result``.
+                    Defaults to ``result.mu`` then ``result.X``.
+        n_folds:    Number of CV folds (default 3).
+        **fit_kwargs: Forwarded to ``fit_fn``.
+
+    Returns:
+        Negative mean normalised MSE over held-out folds (higher = better).
+    """
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+
+    if get_mu is None:
+        def get_mu(result):
+            if hasattr(result, "mu"):
+                return result.mu
+            if hasattr(result, "X"):
+                return result.X
+            raise AttributeError(
+                "Result has neither .mu nor .X; supply a custom get_mu extractor."
+            )
+
+    obs_mask_np = np.array(jnp.isfinite(S) & jnp.isfinite(Y))
+    obs_idx = np.argwhere(obs_mask_np)
+    n_obs = len(obs_idx)
+
+    if n_obs == 0:
+        raise ValueError("No observed entries (all S are inf).")
+    if n_folds < 2:
+        raise ValueError("n_folds must be >= 2.")
+
+    rng = np.random.default_rng(42)
+    perm = rng.permutation(n_obs)
+    fold_ids = perm % n_folds
+
+    total_mse = 0.0
+    for fold in range(n_folds):
+        val_pos = obs_idx[perm[fold_ids == fold]]
+        S_train = S.at[val_pos[:, 0], val_pos[:, 1]].set(jnp.inf)
+        res = fit_fn(Y, S_train, float(lam), **fit_kwargs)
+        mu_hat = get_mu(res)
+        i_val, j_val = val_pos[:, 0], val_pos[:, 1]
+        mse = float(jnp.mean(((mu_hat[i_val, j_val] - Y[i_val, j_val]) / S[i_val, j_val]) ** 2))
+        total_mse += mse / n_folds
+
+    return -total_mse
+
+
+def make_cv_scorer(
+    fit_fn: Callable,
+    n_folds: int = 3,
+    get_mu: Callable | None = None,
+    **fit_kwargs,
+) -> Callable:
+    """Return a CV scorer compatible with :func:`~matlap.adaptive.adaptive_lambda_search`.
+
+    The returned ``score_fn(result, Y, S, lam)`` ignores ``result`` and instead
+    re-fits ``fit_fn`` from scratch across ``n_folds`` folds.  This is expensive
+    (K fits per λ step) but unbiased.
+
+    Args:
+        fit_fn:     ``fit_fn(Y, S, lam, **fit_kwargs) -> result``
+        n_folds:    Number of CV folds (default 3).
+        get_mu:     Custom estimator extractor; defaults to ``.mu`` / ``.X``.
+        **fit_kwargs: Extra kwargs forwarded to ``fit_fn``.
+
+    Returns:
+        ``score_fn(result, Y, S, lam) -> float`` (higher = better).
+    """
+    def score(result: Any, Y, S, lam: float) -> float:
+        return cv_score_single(Y, S, lam, fit_fn, get_mu=get_mu, n_folds=n_folds, **fit_kwargs)
+    return score

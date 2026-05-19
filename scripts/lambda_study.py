@@ -16,6 +16,7 @@ Compares lambda-selection strategies across methods:
  10. iso_grid_loo       Low-rank+isotropic CAVI on λ-grid, selected by closed-form LOO
  11. iso_grid_renyi     Low-rank+isotropic CAVI on λ-grid, selected by Rényi α=0.5
  12. iso_grid_is        Low-rank+isotropic CAVI on λ-grid, selected by α=0 (IS objective)
+ 13. iso_adaptive       Low-rank+isotropic CAVI, adaptive golden-ratio λ search, Rényi α=0.5
 
 Experiment design
 -----------------
@@ -86,6 +87,7 @@ METHODS = [
     "iso_grid_loo",
     "iso_grid_renyi",
     "iso_grid_is",
+    "iso_adaptive",
 ]
 
 METHOD_LABELS = {
@@ -101,6 +103,7 @@ METHOD_LABELS = {
     "iso_grid_loo": "iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)",
     "iso_grid_renyi": "iso_grid_renyi (lowrank+iso CAVI, best Rényi α=0.5 over grid)",
     "iso_grid_is": "iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)",
+    "iso_adaptive": "iso_adaptive   (lowrank+iso CAVI, adaptive golden-ratio λ, Rényi α=0.5)",
 }
 
 
@@ -234,6 +237,14 @@ def run_iso_cv(Y, S, lam_grid, rank=LOWRANK_RANK, n_folds=N_FOLDS):
     return r.mu, float(best_lam)
 
 
+def run_iso_adaptive(Y, S, rank=LOWRANK_RANK, alpha: float = 0.5):
+    from matlap.core import matlap_adaptive_lowrank_isotropic
+    r = matlap_adaptive_lowrank_isotropic(
+        Y, S, rank=rank, max_iter=LOWRANK_ITERS, alpha=alpha, patience=2
+    )
+    return r.best_result.mu, float(r.best_lambda)
+
+
 # ---------------------------------------------------------------------------
 # Single-seed benchmark
 # ---------------------------------------------------------------------------
@@ -259,6 +270,7 @@ def run_one_seed(seed: int, r_true: int, snr: float = 1.0) -> dict:
         ("iso_grid_loo", lambda: run_iso_grid_loo(Y, S, lam_grid)),
         ("iso_grid_renyi", lambda: run_iso_grid_renyi(Y, S, lam_grid)),
         ("iso_grid_is", lambda: run_iso_grid_is(Y, S, lam_grid)),
+        ("iso_adaptive", lambda: run_iso_adaptive(Y, S)),
     ]
 
     label = f"r={r_true} snr={snr}"

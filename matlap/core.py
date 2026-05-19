@@ -1088,3 +1088,161 @@ def matlap_grid_lowrank_isotropic(
         best_result=best_res,
         results=results,
     )
+
+
+from .adaptive import adaptive_lambda_search, iso_warm_state, lowrank_warm_state
+from .scoring import make_elbo_scorer, make_loo_scorer, make_renyi_scorer
+
+
+def matlap_adaptive_lowrank_isotropic(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    lambda_start: float | None = None,
+    lambda_min: float = 1e-4,
+    rank: int = 50,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 50,
+    tol: float = 1e-6,
+    score_fn: str = "renyi",
+    alpha: float = 0.5,
+    n_folds: int = 3,
+    patience: int = 2,
+    verbose: bool = False,
+) -> LowRankIsotropicGridResult:
+    """Adaptive golden-ratio λ search for the low-rank+isotropic CAVI model.
+
+    Starts from a high ``lambda_start`` and repeatedly multiplies λ by
+    1/φ ≈ 0.618, scoring each converged CAVI run and stopping when the score
+    fails to improve for ``patience`` consecutive steps.  Each run is
+    warm-started from the previous λ.
+
+    Compared with :func:`matlap_grid_lowrank_isotropic`, this avoids the need
+    to specify a grid and automatically adapts to the scale of the problem.
+
+    The search strategy is fully modular: supply any
+    :func:`~matlap.adaptive.adaptive_lambda_search`-compatible ``fit_fn`` and
+    ``score_fn`` for custom use cases.
+
+    Args:
+        Y:             Observed matrix, shape (m, n). NaN/any value where missing.
+        S:             Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_start:  Starting λ. If None, set to 100 × data heuristic.
+        lambda_min:    Hard lower bound on λ (safety stop).
+        rank:          Rank of the factor subspace (default 50).
+        a0:            Gamma prior shape.
+        b0:            Gamma prior rate.
+        max_iter:      Maximum CAVI iterations per λ value.
+        tol:           Convergence tolerance on relative ELBO change.
+        score_fn:      One of ``{"renyi", "elbo", "loo", "cv"}`` (default ``"renyi"``).
+        alpha:         Rényi order for ``score_fn="renyi"``; must satisfy 0 ≤ α < 1.
+        n_folds:       Number of CV folds for ``score_fn="cv"``.
+        patience:      Stop after this many consecutive non-improving reductions.
+        verbose:       Print progress per λ step.
+
+    Returns:
+        :class:`LowRankIsotropicGridResult` with best lambda and per-lambda results.
+    """
+    def fit_fn(Y_, S_, lam, **warm):
+        return matlap_lowrank_isotropic(
+            Y_, S_, lam, rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol, **warm
+        )
+
+    scorer = _make_scorer(score_fn, alpha=alpha, n_folds=n_folds, fit_fn=fit_fn)
+
+    best_lam, best_res, results = adaptive_lambda_search(
+        Y, S, fit_fn, scorer,
+        extract_warm_state=iso_warm_state,
+        lambda_start=lambda_start,
+        lambda_min=lambda_min,
+        patience=patience,
+        verbose=verbose,
+    )
+    return LowRankIsotropicGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
+    )
+
+
+def matlap_adaptive_lowrank(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    lambda_start: float | None = None,
+    lambda_min: float = 1e-4,
+    rank: int = 50,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 50,
+    tol: float = 1e-6,
+    score_fn: str = "renyi",
+    alpha: float = 0.5,
+    n_folds: int = 3,
+    patience: int = 2,
+    verbose: bool = False,
+) -> LowRankGridResult:
+    """Adaptive golden-ratio λ search for the low-rank CAVI model.
+
+    Identical strategy to :func:`matlap_adaptive_lowrank_isotropic` but uses
+    :func:`matlap_lowrank` as the fitting function (no isotropic component).
+    When ``score_fn="renyi"`` the off-subspace prior variance uses
+    ``delta=1e-6`` as an approximation.
+
+    Args:
+        Y:             Observed matrix, shape (m, n). NaN/any value where missing.
+        S:             Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        lambda_start:  Starting λ. If None, set to 100 × data heuristic.
+        lambda_min:    Hard lower bound on λ (safety stop).
+        rank:          Rank of the factor subspace (default 50).
+        a0:            Gamma prior shape.
+        b0:            Gamma prior rate.
+        max_iter:      Maximum CAVI iterations per λ value.
+        tol:           Convergence tolerance on relative ELBO change.
+        score_fn:      One of ``{"renyi", "elbo", "loo", "cv"}`` (default ``"renyi"``).
+        alpha:         Rényi order for ``score_fn="renyi"``; must satisfy 0 ≤ α < 1.
+        n_folds:       Number of CV folds for ``score_fn="cv"``.
+        patience:      Stop after this many consecutive non-improving reductions.
+        verbose:       Print progress per λ step.
+
+    Returns:
+        :class:`LowRankGridResult` with best lambda and per-lambda results.
+    """
+    def fit_fn(Y_, S_, lam, **warm):
+        return matlap_lowrank(
+            Y_, S_, lam, rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol, **warm
+        )
+
+    scorer = _make_scorer(score_fn, alpha=alpha, n_folds=n_folds, fit_fn=fit_fn)
+
+    best_lam, best_res, results = adaptive_lambda_search(
+        Y, S, fit_fn, scorer,
+        extract_warm_state=lowrank_warm_state,
+        lambda_start=lambda_start,
+        lambda_min=lambda_min,
+        patience=patience,
+        verbose=verbose,
+    )
+    return LowRankGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
+    )
+
+
+def _make_scorer(score_fn: str, *, alpha: float, n_folds: int, fit_fn):
+    """Resolve a score_fn string to a callable scorer."""
+    mode = score_fn.lower()
+    if mode == "renyi":
+        return make_renyi_scorer(alpha=alpha)
+    if mode == "elbo":
+        return make_elbo_scorer()
+    if mode == "loo":
+        return make_loo_scorer()
+    if mode == "cv":
+        from .cv import make_cv_scorer
+        return make_cv_scorer(fit_fn, n_folds=n_folds)
+    raise ValueError(
+        f"Unknown score_fn={score_fn!r}; expected one of 'renyi', 'elbo', 'loo', 'cv'."
+    )

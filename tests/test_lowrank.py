@@ -9,7 +9,10 @@ import matlap
 from matlap import (
     matlap_lowrank, matlap_lowrank_isotropic, matlap as run_matlap,
     matlap_grid_lowrank, matlap_grid_lowrank_isotropic,
-    LowRankIsotropicGridResult,
+    matlap_adaptive_lowrank_isotropic, matlap_adaptive_lowrank,
+    LowRankIsotropicGridResult, LowRankGridResult,
+    adaptive_lambda_search, iso_warm_state, lowrank_warm_state,
+    make_elbo_scorer, make_loo_scorer, make_renyi_scorer,
 )
 from matlap.linalg import (
     update_row_lowrank, update_rows_lowrank,
@@ -570,3 +573,187 @@ def test_matlap_grid_lowrank_isotropic_rejects_bad_score_fn():
         _ = matlap_grid_lowrank_isotropic(
             Y, S, grid, rank=5, max_iter=5, score_fn="not-a-score"
         )
+
+
+# ---------------------------------------------------------------------------
+# matlap_adaptive_lowrank_isotropic
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_adaptive_returns_result_type():
+    """matlap_adaptive_lowrank_isotropic should return LowRankIsotropicGridResult."""
+    rng = np.random.default_rng(101)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=15, patience=2
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_result.mu.shape == Y.shape
+    assert len(result.results) >= 1
+
+
+def test_matlap_adaptive_best_lambda_in_explored():
+    """best_lambda must be one of the explored lambda values."""
+    rng = np.random.default_rng(102)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=15, patience=2
+    )
+    explored_lams = {lam for lam, _ in result.results}
+    assert result.best_lambda in explored_lams
+
+
+def test_matlap_adaptive_stops_early():
+    """Adaptive search with patience=1 should stop after one non-improvement."""
+    rng = np.random.default_rng(103)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    # With patience=1 the search will stop as soon as score stops improving.
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, patience=1
+    )
+    # Should evaluate at most a handful of lambda values (not hundreds)
+    assert len(result.results) <= 30
+
+
+def test_matlap_adaptive_fewer_evals_than_exhaustive():
+    """Adaptive search should evaluate fewer lambdas than a large exhaustive grid."""
+    rng = np.random.default_rng(104)
+    Y, S, _ = make_low_rank(40, 15, rank=3, noise_std=0.5, rng=rng)
+    # Exhaustive grid: 20 points
+    large_grid = jnp.logspace(-1, 3, 20)
+    grid_result = matlap_grid_lowrank_isotropic(
+        Y, S, large_grid, rank=5, max_iter=10, score_fn="renyi", alpha=0.5
+    )
+    adaptive_result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=1000.0, rank=5, max_iter=10, alpha=0.5, patience=2
+    )
+    assert len(adaptive_result.results) < len(grid_result.results)
+
+
+def test_matlap_adaptive_auto_lambda_start():
+    """Auto-computed lambda_start (None) should produce a valid result."""
+    rng = np.random.default_rng(105)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(Y, S, rank=5, max_iter=10)
+    assert isinstance(result, LowRankIsotropicGridResult)
+    assert result.best_lambda > 0.0
+
+
+def test_matlap_adaptive_rejects_bad_alpha():
+    """Alpha outside [0, 1) should raise ValueError."""
+    rng = np.random.default_rng(106)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    with pytest.raises(ValueError, match="alpha"):
+        matlap_adaptive_lowrank_isotropic(Y, S, alpha=1.0)
+
+
+def test_matlap_adaptive_results_sorted_ascending():
+    """results list should be sorted by lambda ascending."""
+    rng = np.random.default_rng(107)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, patience=2
+    )
+    lams = [lam for lam, _ in result.results]
+    assert lams == sorted(lams)
+
+
+def test_matlap_adaptive_score_fn_elbo():
+    """score_fn='elbo' should run without error."""
+    rng = np.random.default_rng(108)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, score_fn="elbo"
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+
+
+def test_matlap_adaptive_score_fn_loo():
+    """score_fn='loo' should run without error."""
+    rng = np.random.default_rng(109)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank_isotropic(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, score_fn="loo"
+    )
+    assert isinstance(result, LowRankIsotropicGridResult)
+
+
+def test_matlap_adaptive_score_fn_bad():
+    """Unknown score_fn should raise ValueError."""
+    rng = np.random.default_rng(110)
+    Y, S, _ = make_low_rank(20, 10, rank=2, noise_std=0.5, rng=rng)
+    with pytest.raises(ValueError, match="score_fn"):
+        matlap_adaptive_lowrank_isotropic(Y, S, score_fn="bogus")
+
+
+# ---------------------------------------------------------------------------
+# matlap_adaptive_lowrank
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_adaptive_lowrank_returns_result():
+    """matlap_adaptive_lowrank should return LowRankGridResult."""
+    rng = np.random.default_rng(111)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, patience=2
+    )
+    assert isinstance(result, LowRankGridResult)
+    assert result.best_result.mu.shape == Y.shape
+    assert result.best_lambda > 0.0
+
+
+def test_matlap_adaptive_lowrank_best_in_explored():
+    """best_lambda must be one of the explored lambda values."""
+    rng = np.random.default_rng(112)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+    result = matlap_adaptive_lowrank(
+        Y, S, lambda_start=50.0, rank=5, max_iter=10, patience=2
+    )
+    explored = {lam for lam, _ in result.results}
+    assert result.best_lambda in explored
+
+
+# ---------------------------------------------------------------------------
+# adaptive_lambda_search generic API
+# ---------------------------------------------------------------------------
+
+
+def test_adaptive_lambda_search_custom_fit_and_score():
+    """generic adaptive_lambda_search should work with arbitrary fit/score callables."""
+    rng = np.random.default_rng(113)
+    Y, S, _ = make_low_rank(30, 12, rank=2, noise_std=0.5, rng=rng)
+
+    def fit_fn(Y_, S_, lam, **warm):
+        return matlap_lowrank_isotropic(Y_, S_, lam, rank=5, max_iter=10, **warm)
+
+    scorer = make_renyi_scorer(alpha=0.5)
+    best_lam, best_res, results = adaptive_lambda_search(
+        Y, S, fit_fn, scorer,
+        extract_warm_state=iso_warm_state,
+        lambda_start=50.0,
+        patience=2,
+    )
+    assert best_lam > 0.0
+    assert best_res is not None
+    assert len(results) >= 1
+    lams = [lam for lam, _ in results]
+    assert lams == sorted(lams)
+
+
+def test_score_factories_all_return_floats():
+    """All three score factories should return finite floats."""
+    rng = np.random.default_rng(114)
+    Y, S, _ = make_low_rank(25, 10, rank=2, noise_std=0.5, rng=rng)
+    res = matlap_lowrank_isotropic(Y, S, 5.0, rank=5, max_iter=20)
+
+    for factory, kwargs in [
+        (make_elbo_scorer, {}),
+        (make_loo_scorer, {}),
+        (make_renyi_scorer, {"alpha": 0.5}),
+    ]:
+        scorer = factory(**kwargs)
+        score = scorer(res, Y, S, 5.0)
+        assert isinstance(score, float)
+        assert np.isfinite(score)
+

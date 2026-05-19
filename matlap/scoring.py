@@ -4,9 +4,17 @@ All scores are O(mn) and analytical (no Monte Carlo):
 
 1. ``closed_form_loo``: exact Gaussian leave-one-out log predictive density.
 2. ``renyi_elbo``: analytical Rényi α-ELBO for factored Gaussian q.
+
+Score factories (for use with :func:`~matlap.adaptive.adaptive_lambda_search`):
+
+3. ``make_elbo_scorer``: returns a scorer that reads ``result.elbo_trace[-1]``.
+4. ``make_loo_scorer``: returns a scorer using ``closed_form_loo``.
+5. ``make_renyi_scorer``: returns a scorer using ``renyi_elbo``.
 """
 
 from __future__ import annotations
+
+from typing import Any, Callable
 
 import jax
 import jax.numpy as jnp
@@ -141,3 +149,62 @@ def renyi_elbo(
     correction = beta ** 2 * f ** 2 / (2.0 * denom) - 0.5 * jnp.log(denom)
 
     return float(elbo + (1.0 / beta) * correction.sum())
+
+
+# ---------------------------------------------------------------------------
+# Score factories — return callables compatible with adaptive_lambda_search
+# ---------------------------------------------------------------------------
+
+
+def make_elbo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:
+    """Return a scorer that reads ``result.elbo_trace[-1]``.
+
+    Works with any result object that has an ``elbo_trace`` attribute.
+
+    Returns:
+        ``score_fn(result, Y, S, lam) -> float``
+    """
+    def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
+        return float(result.elbo_trace[-1])
+    return score
+
+
+def make_loo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:
+    """Return a scorer that computes the analytical closed-form LOO score.
+
+    The result must expose ``.mu`` and ``.diag_sigma`` arrays.
+
+    Returns:
+        ``score_fn(result, Y, S, lam) -> float``
+    """
+    def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
+        return closed_form_loo(result.mu, result.diag_sigma, Y, S)
+    return score
+
+
+def make_renyi_scorer(
+    alpha: float = 0.5,
+    delta_fallback: float = 1e-6,
+) -> Callable[[Any, jax.Array, jax.Array, float], float]:
+    """Return a scorer that computes the analytical Rényi α-ELBO.
+
+    Works with both :class:`~matlap.core.LowRankIsotropicResult` (uses
+    ``result.delta``) and :class:`~matlap.core.LowRankCAVIResult` (falls back
+    to ``delta_fallback`` for the off-subspace component).
+
+    Args:
+        alpha:          Rényi order; must satisfy 0 ≤ α < 1 (default 0.5).
+        delta_fallback: Off-subspace scale used when ``result`` has no ``.delta``
+                        attribute (e.g. plain low-rank model).
+
+    Returns:
+        ``score_fn(result, Y, S, lam) -> float``
+    """
+    if not (0.0 <= alpha < 1.0):
+        raise ValueError(f"alpha must be in [0, 1), got {alpha}")
+
+    def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
+        delta = getattr(result, "delta", delta_fallback)
+        prior_var = compute_iso_prior_var(result.V_r, result.d_r, delta=delta, lambda_bar=lam)
+        return renyi_elbo(result.mu, result.diag_sigma, prior_var, Y, S, alpha=alpha)
+    return score
