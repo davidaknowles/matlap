@@ -188,6 +188,46 @@ where $\mathcal{O}$ is the set of observed entries and
 
 The model naturally accommodates missing observations. If entry $(i,j)$ is unobserved, we set $s_{ij} = \infty$, making the noise precision $1/s_{ij}^2 = 0$. The entry then contributes nothing to the likelihood, the row posterior update for $\mu_i$, or the ELBO. Observed and missing entries can be arbitrarily interleaved.
 
+\subsection{Invariance of the Optimal Regularisation to Observation Density}
+\label{sec:lambda-invariance}
+
+A practically important consequence of the Bayesian formulation is that the heuristic initialisation $\bar\lambda = mn/\|Y_\Omega\|_*$ tracks the oracle-optimal regularisation as the observation density varies.  We argue this holds in the signal-dominated regime and explain why the analogous proximal estimator does not enjoy this property.
+
+\paragraph{Setup.}
+Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix with nuclear norm $\|X_{\mathrm{true}}\|_* = \sum_k \sigma_k$.  Each entry is independently observed with probability $f$; observed entries carry homoscedastic Gaussian noise with variance $s^2$.  Let $Y_\Omega$ denote the $m \times n$ matrix with observed entries set to $y_{ij}$ and missing entries set to zero.
+
+\paragraph{The heuristic scales as $1/f$.}
+In the signal-dominated regime ($\|X_{\mathrm{true}}\|_F \gg s\sqrt{fmn}$) the nuclear norm concentrates:
+\begin{equation}
+\|Y_\Omega\|_* \;\approx\; f\,\|X_{\mathrm{true}}\|_*, \label{eq:nuc-scaling}
+\end{equation}
+because $\mathbb{E}[Y_\Omega] = f\,X_{\mathrm{true}}$ and the noise contribution to singular values is $O(\sqrt{f}\,s\sqrt{n})$, which is sub-leading.  Therefore
+\begin{equation}
+\bar\lambda = \frac{mn}{\|Y_\Omega\|_*} \;\approx\; \frac{mn}{f\,\|X_{\mathrm{true}}\|_*} \;\propto\; \frac{1}{f}. \label{eq:lambda-bar-scaling}
+\end{equation}
+
+\paragraph{The oracle Bayesian regularisation also scales as $1/f$.}
+Each row posterior depends on the effective data precision $D_i = \operatorname{diag}(p_{ij}/s^2)$.  With iid Bernoulli$(f)$ mask, by the law of large numbers the effective precision per factor is $\beta_k = fn\,d_{r,k}^2/s^2$, where $d_{r,k}$ are the factor scales in $Q$.
+
+In the factor representation $z_i \sim \mathcal{N}(0,\,D_r^{-1}/\lambda)$ with $D_r = \operatorname{diag}(d_{r,k})$, the per-factor posterior mean is shrunk by $(1 + \lambda/(d_{r,k}\beta_k))^{-1}$.  The bias--variance optimal $\lambda$ for factor $k$ satisfies
+\begin{equation}
+  \frac{\lambda^*}{d_{r,k}} \;\approx\; \frac{\beta_k}{\beta_k \|z_i^{\mathrm{true}}\|^2/s^2 - 1}
+  \;\approx\; \frac{1}{\|z_i^{\mathrm{true}}\|^2/s^2} \cdot \beta_k^{-1} \cdot \beta_k
+  = \frac{d_{r,k}}{\|z_i^{\mathrm{true}}\|^2},
+\end{equation}
+which in the dense limit ($\beta_k \gg 1$) reduces to $\lambda^* \approx d_{r,k}^2/\|z_i^{\mathrm{true}}\|^2$.  Substituting $\beta_k = fn\,d_{r,k}^2/s^2$ and aggregating over rows and factors gives
+\begin{equation}
+\lambda^* \;\propto\; \frac{s^2}{f n\,\bar\sigma}, \label{eq:oracle-bayes-scaling}
+\end{equation}
+where $\bar\sigma$ is the mean signal singular value.  Since $\|X_{\mathrm{true}}\|_* = r\,\bar\sigma$, equations~\eqref{eq:lambda-bar-scaling} and~\eqref{eq:oracle-bayes-scaling} give
+\begin{equation}
+  \frac{\lambda^*}{\bar\lambda} \;\approx\; \frac{s^2 r}{m n^2} \;=\; \mathrm{const.}, \label{eq:invariance}
+\end{equation}
+independent of $f$.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across observation densities from 2\% to 90\% (see Section~\ref{sec:experiments}).
+
+\paragraph{Why the proximal estimator is not invariant.}
+For the nuclear-norm penalised least squares problem, $\min_X \tfrac{1}{2}\sum_{\Omega}(Y_{ij}-X_{ij})^2/s^2 + \lambda\|X\|_*$, the data term scales as $f \cdot mn$ while the regulariser applies globally to all $mn$ entries.  By random matrix theory, the noise edge of $Y_\Omega$ scales as $\sqrt{f}\cdot s\sqrt{n}$ (the spectral radius of a $\sqrt{f}$-subsampled Gaussian matrix), so the oracle threshold is $\lambda^*_{\mathrm{prox}} \propto \sqrt{f}$.  Combined with $\bar\lambda \propto 1/f$, the ratio satisfies $\lambda^*_{\mathrm{prox}}/\bar\lambda \propto f^{3/2}$, which is not constant.  The Bayesian model avoids this by applying regularisation only to the likelihood term for each observed entry through the precision matrix $D_i$, so the effective regularisation per entry is preserved as $f$ varies.
+
 \section{Implementation}
 
 A reference implementation is provided in the \texttt{matlap} Python package using JAX \cite{jax2018github} for JIT compilation and automatic differentiation.
