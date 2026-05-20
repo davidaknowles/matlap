@@ -3,13 +3,14 @@
 All scores are O(mn) and analytical (no Monte Carlo):
 
 1. ``closed_form_loo``: exact Gaussian leave-one-out log predictive density.
-2. ``renyi_elbo``: analytical Rényi α-ELBO for factored Gaussian q.
+2. ``renyi_elbo``: analytical Rényi α-ELBO for factored Gaussian q (JAX array).
+3. ``renyi_lambda_opt``: argmax_λ R_α(λ | q) via BFGS on log λ.
 
 Score factories (for use with :func:`~matlap.adaptive.adaptive_lambda_search`):
 
-3. ``make_elbo_scorer``: returns a scorer that reads ``result.elbo_trace[-1]``.
-4. ``make_loo_scorer``: returns a scorer using ``closed_form_loo``.
-5. ``make_renyi_scorer``: returns a scorer using ``renyi_elbo``.
+4. ``make_elbo_scorer``: returns a scorer that reads ``result.elbo_trace[-1]``.
+5. ``make_loo_scorer``: returns a scorer using ``closed_form_loo``.
+6. ``make_renyi_scorer``: returns a scorer using ``renyi_elbo``.
 """
 
 from __future__ import annotations
@@ -148,12 +149,61 @@ def renyi_elbo(
     denom = jnp.maximum(1.0 - 2.0 * beta * g, 1e-12)
     correction = beta ** 2 * f ** 2 / (2.0 * denom) - 0.5 * jnp.log(denom)
 
-    return float(elbo + (1.0 / beta) * correction.sum())
+    return elbo + (1.0 / beta) * correction.sum()
+
+def renyi_lambda_opt(
+    V_r: jax.Array,
+    d_r: jax.Array,
+    delta: float,
+    mu: jax.Array,
+    diag_sigma: jax.Array,
+    Y: jax.Array,
+    S: jax.Array,
+    alpha: float = 0.5,
+    lambda_init: float = 1.0,
+) -> float:
+    """Find λ* = argmax_λ R_α(λ | q) by BFGS on log λ.
+
+    Given a fixed variational posterior q(X) = N(mu, diag_sigma) from the
+    low-rank+isotropic CAVI, finds the λ that maximises the Rényi α-ELBO.
+    Optimises in log space to keep λ > 0.
+
+    Args:
+        V_r:          Factor loadings, shape (n, r); orthonormal columns.
+        d_r:          Sqrt-eigenvalues of Ψ_r, shape (r,).
+        delta:        Off-subspace scale δ (scalar > 0).
+        mu:           Posterior mean, shape (m, n).
+        diag_sigma:   Diagonal posterior variances, shape (m, n).
+        Y:            Observations, shape (m, n).  NaN where missing.
+        S:            Noise std devs, shape (m, n).  inf where missing.
+        alpha:        Rényi order; must satisfy 0 ≤ α < 1 (default 0.5).
+        lambda_init:  Starting λ for the optimiser (default 1.0).
+
+    Returns:
+        Optimal λ* as a Python float.
+    """
+    V_r = jnp.asarray(V_r, dtype=jnp.float32)
+    d_r = jnp.asarray(d_r, dtype=jnp.float32)
+    mu = jnp.asarray(mu, dtype=jnp.float32)
+    diag_sigma = jnp.asarray(diag_sigma, dtype=jnp.float32)
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+    delta_f = float(delta)
+
+    def neg_score(log_lam_arr: jax.Array) -> jax.Array:
+        lam = jnp.exp(log_lam_arr[0])
+        prior_var = compute_iso_prior_var(V_r, d_r, delta=delta_f, lambda_bar=lam)
+        return -renyi_elbo(mu, diag_sigma, prior_var, Y, S, alpha=alpha)
+
+    log_lam_min = jnp.log(jnp.asarray(1e-3))   # λ ≥ 1e-3
+    log_lam_max = jnp.log(jnp.asarray(1e5))    # λ ≤ 1e5
+    x0 = jnp.array([jnp.clip(jnp.log(jnp.maximum(jnp.asarray(lambda_init), 1e-6)),
+                              log_lam_min, log_lam_max)])
+    opt = jax.scipy.optimize.minimize(neg_score, x0, method="BFGS")
+    log_lam_opt = jnp.clip(opt.x[0], log_lam_min, log_lam_max)
+    return float(jnp.exp(log_lam_opt))
 
 
-# ---------------------------------------------------------------------------
-# Score factories — return callables compatible with adaptive_lambda_search
-# ---------------------------------------------------------------------------
 
 
 def make_elbo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:

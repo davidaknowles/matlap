@@ -1,0 +1,35 @@
+nohup: ignoring input
+
+missing=2%  seed=0
+Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 201, in _version_check
+    version = get_version()
+              ^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:85: operation cusparseGetProperty(MAJOR_VERSION, &major) failed: The cuSPARSE library was not found.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 497, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 348, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 266, in _check_cuda_versions
+    _version_check("cuSPARSE", cuda_versions.cusparse_get_version,
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 205, in _version_check
+    raise RuntimeError(err_msg) from e
+RuntimeError: Unable to load cuSPARSE. Is it installed?
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+    proximal_cv     RMSE=0.5391  λ=8.3458  t=9.9s
+    batched_auto    RMSE=0.6972  λ=15.6625  t=2.7s
+Traceback (most recent call last):
+  File "/home/david/projects/matlap/scripts/fa_comparison.py", line 245, in <module>
+    main()
+  File "/home/david/projects/matlap/scripts/fa_comparison.py", line 197, in main
+    all_rows.extend(run_one_seed(seed, mfrac))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/david/projects/matlap/scripts/fa_comparison.py", line 138, in run_one_seed
+    record("batched_grid", r_bg.best_result.mu, r_bg.best_lambda, time.perf_counter() - t0)
+                           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'mu'

@@ -31,7 +31,7 @@ from .linalg import (
     update_rows_lowrank, update_rows_lowrank_isotropic,
     rsvd,
 )
-from .scoring import closed_form_loo, compute_iso_prior_var, renyi_elbo
+from .scoring import closed_form_loo, compute_iso_prior_var, renyi_elbo, renyi_lambda_opt
 
 
 # ---------------------------------------------------------------------------
@@ -1027,9 +1027,113 @@ def matlap_iso_warmstart(
     )
 
 
+
 # ---------------------------------------------------------------------------
-# Low-rank and isotropic grid search (warm-started regularisation paths)
+# Low-rank+isotropic CAVI with Rényi α-ELBO λ learning
 # ---------------------------------------------------------------------------
+
+
+def matlap_iso_renyi_lambda(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    rank: int = 50,
+    alpha: float = 0.5,
+    n_outer: int = 20,
+    outer_tol: float = 5e-3,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    verbose: bool = False,
+) -> LowRankIsotropicResult:
+    """Low-rank+isotropic CAVI with Rényi α-ELBO λ selection.
+
+    Alternates between two steps until λ converges:
+
+    1. **CAVI** (inner loop, fixed λ, warm-started from the previous outer step):
+       update q(X) = N(μ, Σ) via :func:`matlap_lowrank_isotropic`.
+    2. **Rényi λ update**: given the current q, find
+       λ* = argmax_λ R_α(λ | q) via BFGS on log λ.
+
+    The Rényi α-ELBO is a tighter bound on the marginal likelihood than the
+    standard ELBO (for α < 1), so the resulting λ is closer to the marginal-
+    likelihood estimate and better calibrated for prediction than the ELBO
+    auto-λ (which over-regularises).
+
+    Initialised with one auto-λ CAVI run, so the first Rényi update starts
+    from a good posterior approximation.
+
+    Args:
+        Y:          Observed matrix, shape (m, n).  NaN/any value where missing.
+        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        rank:       Rank of the factor subspace (default 50).
+        alpha:      Rényi order; 0 ≤ α < 1 (default 0.5).  Smaller α gives a
+                    tighter bound and stronger correction toward MLE of λ.
+        n_outer:    Maximum number of outer CAVI ↔ Rényi-λ iterations (default 20).
+        outer_tol:  Convergence threshold on relative λ change (default 5e-3).
+        a0, b0:     Gamma prior hyperparameters for λ (default: 1e-3).
+        max_iter:   Maximum inner CAVI iterations per outer step (default 200).
+        tol:        Inner CAVI convergence tolerance (default 1e-6).
+        verbose:    Print λ at each outer iteration.
+
+    Returns:
+        :class:`LowRankIsotropicResult` with the Rényi-optimal λ stored in
+        ``lambda_bar`` and the converged posterior in ``mu``, ``V_r``, etc.
+    """
+    # --- Initialise: one auto-λ CAVI run to get a warm posterior and λ ---
+    result = matlap_lowrank_isotropic(
+        Y, S,
+        rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol, verbose=False,
+    )
+    current_lambda = result.lambda_bar
+
+    if verbose:
+        print(f"  init  lambda={current_lambda:.4f}")
+
+    for outer in range(n_outer):
+        # --- Rényi λ update (M-step): given q, find argmax R_α(λ | q) ---
+        new_lambda = renyi_lambda_opt(
+            result.V_r, result.d_r, result.delta,
+            result.mu, result.diag_sigma,
+            Y, S, alpha=alpha, lambda_init=current_lambda,
+        )
+
+        rel_change = abs(new_lambda - current_lambda) / max(current_lambda, 1e-10)
+        if verbose:
+            print(f"  outer {outer + 1:2d}  lambda: {current_lambda:.4f} → {new_lambda:.4f}"
+                  f"  (rel Δ={rel_change:.2e})")
+        current_lambda = new_lambda
+
+        # --- CAVI E-step: update q with fixed λ, warm-started ---
+        result = matlap_lowrank_isotropic(
+            Y, S, current_lambda,
+            rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol, verbose=False,
+            V_r_init=result.V_r, d_r_init=result.d_r, delta_init=result.delta,
+        )
+
+        if rel_change < outer_tol:
+            if verbose:
+                print(f"  converged at outer iter {outer + 1}")
+            break
+
+    # Return result with the Rényi-optimal lambda_bar
+    return LowRankIsotropicResult(
+        mu=result.mu,
+        z=result.z,
+        V_r=result.V_r,
+        d_r=result.d_r,
+        lambda_bar=current_lambda,
+        a_N=result.a_N,
+        b_N=result.b_N,
+        delta=result.delta,
+        diag_sigma=result.diag_sigma,
+        elbo_trace=result.elbo_trace,
+        converged=result.converged,
+        n_iter=result.n_iter,
+    )
+
+
 
 
 def matlap_grid_lowrank(

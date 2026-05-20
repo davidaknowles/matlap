@@ -1,6 +1,6 @@
 # matlap Lambda Selection Study — SNR Sweep
 
-Generated: 2026-05-14 14:15  |  Matrix: 500×100  |  rank=5  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
+Generated: 2026-05-19 01:33  |  Matrix: 500×100  |  rank=5  |  Seeds: 3  |  Low-rank rank: 50  |  CV folds: 3  |  Grid points: 8
 
 SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1
 
@@ -20,6 +20,7 @@ SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1
 | `iso_grid_loo` | 0.102 ± 0.001 | 0.299 ± 0.003 | 0.543 ± 0.006 | 0.645 ± 0.009 | 0.788 ± 0.017 |
 | `iso_grid_renyi` | 0.108 ± 0.001 | 0.274 ± 0.002 | 0.505 ± 0.005 | 0.600 ± 0.008 | 0.744 ± 0.017 |
 | `iso_grid_is` | 0.108 ± 0.001 | 0.274 ± 0.002 | 0.505 ± 0.005 | 0.645 ± 0.009 | 0.788 ± 0.017 |
+| `iso_adaptive` | 0.107 ± 0.001 | 0.275 ± 0.002 | 0.507 ± 0.005 | 0.602 ± 0.008 | 0.746 ± 0.017 |
 
 ## Chosen λ (mean ± std over seeds)
 
@@ -37,23 +38,25 @@ SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1
 | `iso_grid_loo` | 223.548 ± 0.276 | 59.971 ± 0.074 | 31.062 ± 0.038 | 31.062 ± 0.038 | 31.062 ± 0.038 |
 | `iso_grid_renyi` | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 |
 | `iso_grid_is` | 16.088 ± 0.020 | 16.088 ± 0.020 | 16.088 ± 0.020 | 31.062 ± 0.038 | 31.062 ± 0.038 |
+| `iso_adaptive` | 18.176 ± 0.022 | 18.176 ± 0.022 | 18.176 ± 0.022 | 18.176 ± 0.022 | 18.176 ± 0.022 |
 
 ## Runtime in seconds (mean over seeds)
 
 | Method | SNR=0.1 | SNR=0.3 | SNR=1.0 | SNR=3.0 | SNR=10.0 |
 |---|---|---|---|---|---|
-| `proximal_cv` | 30.6s | 32.4s | 37.6s | 38.5s | 44.0s |
-| `matlap_auto` | 3.7s | 3.2s | 1.2s | 0.7s | 0.6s |
-| `matlap_grid` | 4.3s | 4.3s | 5.2s | 10.9s | 12.2s |
-| `lowrank_auto` | 0.1s | 0.1s | 1.8s | 1.0s | 0.6s |
-| `lowrank_grid` | 2.1s | 2.4s | 3.3s | 5.8s | 6.3s |
-| `lowrank_cv` | 9.3s | 9.4s | 12.4s | 22.4s | 31.9s |
-| `iso_auto` | 4.6s | 4.7s | 1.9s | 1.2s | 1.4s |
-| `iso_grid` | 6.1s | 6.1s | 7.2s | 13.9s | 21.8s |
-| `iso_cv` | 25.6s | 25.8s | 28.3s | 57.2s | 79.6s |
-| `iso_grid_loo` | 6.1s | 6.2s | 7.3s | 14.0s | 21.8s |
-| `iso_grid_renyi` | 6.1s | 6.2s | 7.2s | 13.9s | 21.9s |
-| `iso_grid_is` | 6.1s | 6.2s | 7.2s | 13.9s | 21.8s |
+| `proximal_cv` | 27.2s | 29.5s | 30.2s | 34.0s | 38.9s |
+| `matlap_auto` | 3.5s | 3.8s | 1.1s | 0.6s | 0.6s |
+| `matlap_grid` | 4.1s | 3.8s | 4.9s | 10.1s | 11.2s |
+| `lowrank_auto` | 0.1s | 0.1s | 2.0s | 0.9s | 0.6s |
+| `lowrank_grid` | 2.0s | 2.0s | 3.2s | 5.1s | 5.7s |
+| `lowrank_cv` | 9.0s | 9.1s | 10.1s | 20.5s | 29.6s |
+| `iso_auto` | 4.6s | 4.6s | 1.9s | 1.2s | 1.4s |
+| `iso_grid` | 6.1s | 6.1s | 7.2s | 13.7s | 21.6s |
+| `iso_cv` | 25.3s | 25.7s | 28.0s | 56.5s | 78.8s |
+| `iso_grid_loo` | 6.1s | 6.1s | 7.2s | 13.8s | 21.5s |
+| `iso_grid_renyi` | 6.1s | 6.1s | 7.2s | 13.8s | 21.5s |
+| `iso_grid_is` | 6.1s | 6.1s | 7.2s | 13.8s | 21.6s |
+| `iso_adaptive` | 12.7s | 12.6s | 13.7s | 26.5s | 42.5s |
 
 ## Notes
 
@@ -77,3 +80,4 @@ SNR = signal per-entry std / mean noise std  ≈  signal_scale / 1
 - **`iso_grid_loo`**: iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)
 - **`iso_grid_renyi`**: iso_grid_renyi (lowrank+iso CAVI, best Rényi α=0.5 over grid)
 - **`iso_grid_is`**: iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)
+- **`iso_adaptive`**: iso_adaptive   (lowrank+iso CAVI, adaptive golden-ratio λ, Rényi α=0.5)

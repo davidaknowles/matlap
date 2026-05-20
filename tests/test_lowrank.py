@@ -754,8 +754,7 @@ def test_score_factories_all_return_floats():
     ]:
         scorer = factory(**kwargs)
         score = scorer(res, Y, S, 5.0)
-        assert isinstance(score, float)
-        assert np.isfinite(score)
+        assert np.isfinite(float(score))
 
 
 
@@ -806,3 +805,73 @@ def test_matlap_iso_warmstart_rank_expansion():
     result = matlap_iso_warmstart(Y, S, faem_rank=3, faem_iters=20, rank=6, max_iter=50)
     assert result.mu.shape == (30, 15)
     assert result.V_r.shape == (15, 6)
+
+
+# ---------------------------------------------------------------------------
+# matlap_iso_renyi_lambda tests
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_iso_renyi_lambda_basic():
+    """Basic smoke test: returns valid result with Rényi-corrected lambda."""
+    from matlap import matlap_iso_renyi_lambda
+    rng = np.random.default_rng(300)
+    m, n, rank = 40, 20, 4
+    Y, S, X_true = make_low_rank(m, n, rank, noise_std=0.4, rng=rng)
+    result = matlap_iso_renyi_lambda(Y, S, rank=rank, alpha=0.5, n_outer=10)
+    assert result.mu.shape == (m, n)
+    assert result.V_r.shape == (n, rank)
+    assert result.d_r.shape == (rank,)
+    assert np.isfinite(result.lambda_bar) and result.lambda_bar > 0
+    err_mu = float(jnp.mean((result.mu - X_true) ** 2))
+    err_Y = float(jnp.mean((Y - X_true) ** 2))
+    assert err_mu < err_Y, f"Rényi MSE {err_mu:.4f} >= noisy Y MSE {err_Y:.4f}"
+
+
+def test_matlap_iso_renyi_lambda_smaller_than_elbo():
+    """Rényi λ should differ from the ELBO auto-λ (Rényi correction is non-trivial)."""
+    from matlap import matlap_iso_renyi_lambda
+    rng = np.random.default_rng(301)
+    m, n, rank = 60, 25, 5
+    Y, S, _ = make_low_rank(m, n, rank, noise_std=0.4, rng=rng)
+    iso = matlap_lowrank_isotropic(Y, S, rank=rank)
+    renyi = matlap_iso_renyi_lambda(Y, S, rank=rank, alpha=0.5, n_outer=10)
+    assert np.isfinite(renyi.lambda_bar) and renyi.lambda_bar > 0
+    # Rényi and ELBO auto-λ should differ (Rényi correction is non-zero)
+    assert abs(renyi.lambda_bar - iso.lambda_bar) / iso.lambda_bar > 1e-3, (
+        f"Rényi lambda ({renyi.lambda_bar:.4f}) unexpectedly equals auto-lambda ({iso.lambda_bar:.4f})"
+    )
+
+
+def test_matlap_iso_renyi_lambda_with_missing():
+    """Should handle missing data correctly (no NaN in output)."""
+    from matlap import matlap_iso_renyi_lambda
+    rng = np.random.default_rng(302)
+    m, n, rank = 40, 20, 4
+    # Use numpy arrays so in-place assignment works before converting to JAX
+    Y_np, S_np, _ = [np.array(a) for a in make_low_rank(m, n, rank, noise_std=0.4, rng=rng)]
+    missing = rng.uniform(size=(m, n)) < 0.15
+    Y_np[missing] = np.nan
+    S_np[missing] = np.inf
+    Yj = jnp.array(Y_np, dtype=jnp.float32)
+    Sj = jnp.array(S_np, dtype=jnp.float32)
+    result = matlap_iso_renyi_lambda(Yj, Sj, rank=rank, alpha=0.5, n_outer=5)
+    assert jnp.all(jnp.isfinite(result.mu)), "mu contains NaN/inf"
+    assert np.isfinite(result.lambda_bar) and result.lambda_bar > 0
+
+
+def test_renyi_lambda_opt_direct():
+    """renyi_lambda_opt returns a positive finite lambda distinct from the init."""
+    from matlap import renyi_lambda_opt
+    rng = np.random.default_rng(303)
+    m, n, rank = 30, 15, 3
+    Y, S, _ = make_low_rank(m, n, rank, noise_std=0.4, rng=rng)
+    iso = matlap_lowrank_isotropic(Y, S, rank=rank)
+    lam_r = renyi_lambda_opt(
+        iso.V_r, iso.d_r, iso.delta, iso.mu, iso.diag_sigma, Y, S, alpha=0.5
+    )
+    assert np.isfinite(lam_r) and lam_r > 0
+    # The optimised λ should differ from the auto-λ init (BFGS actually moved)
+    assert abs(lam_r - iso.lambda_bar) / iso.lambda_bar > 1e-4, (
+        f"Rényi lambda ({lam_r:.4f}) unchanged from auto-lambda ({iso.lambda_bar:.4f})"
+    )

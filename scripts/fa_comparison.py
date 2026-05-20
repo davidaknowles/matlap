@@ -50,6 +50,7 @@ METHODS = [
     "iso_cv",
     "iso_warmstart",
     "iso_then_proximal",
+    "iso_renyi",
     "faem",
     "gradml",
 ]
@@ -64,6 +65,7 @@ METHOD_LABELS = {
     "iso_cv":            "iso_cv           (lowrank+iso CAVI, grid+CV)",
     "iso_warmstart":     "iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start)",
     "iso_then_proximal": "iso_then_proximal(iso λ → proximal_gradient)",
+    "iso_renyi":         "iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ)",
     "faem":              "faem             (FA EM, free subspace, Gaussian factor model)",
     "gradml":            "gradml           (gradient marginal LL, free subspace)",
 }
@@ -175,6 +177,12 @@ def run_one_seed(seed: int, missing_frac: float) -> list[dict]:
     r_iso_lam = matlap.matlap_lowrank_isotropic(Y_j, S_j, rank=RANK, max_iter=MAX_ITER_CAVI)
     r_p = proximal_gradient(Y_j, S_j, r_iso_lam.lambda_bar, max_iter=300, tol=1e-6)
     record("iso_then_proximal", r_p.X, r_iso_lam.lambda_bar, time.perf_counter() - t0)
+
+    # iso_renyi: Rényi α=0.5 λ learning (alternating CAVI + Rényi λ opt)
+    t0 = time.perf_counter()
+    r = matlap.matlap_iso_renyi_lambda(Y_j, S_j, rank=RANK, alpha=0.5,
+                                       n_outer=20, max_iter=MAX_ITER_CAVI)
+    record("iso_renyi", r.mu, r.lambda_bar, time.perf_counter() - t0)
 
     # faem
     t0 = time.perf_counter()

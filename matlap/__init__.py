@@ -6,7 +6,7 @@ from .core import (
     LowRankCAVIResult, LowRankGridResult,
     LowRankIsotropicResult, LowRankIsotropicGridResult,
     matlap, matlap_batched, matlap_batched_warmstart,
-    matlap_iso_warmstart, matlap_grid,
+    matlap_iso_warmstart, matlap_iso_renyi_lambda, matlap_grid,
     matlap_grid_lowrank, matlap_grid_lowrank_isotropic,
     matlap_lowrank, matlap_lowrank_isotropic,
     matlap_adaptive_lowrank_isotropic,
@@ -16,7 +16,7 @@ from .proximal import ProximalResult, proximal_cv, proximal_gradient
 from .vi import VIResult, fit_vi
 from .cv import cv_lambda, cv_score_single, make_cv_scorer
 from .scoring import (
-    closed_form_loo, renyi_elbo, compute_iso_prior_var,
+    closed_form_loo, renyi_elbo, renyi_lambda_opt, compute_iso_prior_var,
     make_elbo_scorer, make_loo_scorer, make_renyi_scorer,
 )
 from .adaptive import adaptive_lambda_search, iso_warm_state, lowrank_warm_state
@@ -32,6 +32,7 @@ __all__ = [
     "matlap_batched",
     "matlap_batched_warmstart",
     "matlap_iso_warmstart",
+    "matlap_iso_renyi_lambda",
     "matlap_grid",
     "matlap_grid_lowrank",
     "matlap_grid_lowrank_isotropic",
@@ -60,6 +61,7 @@ __all__ = [
     # Post-hoc scoring
     "closed_form_loo",
     "renyi_elbo",
+    "renyi_lambda_opt",
     "compute_iso_prior_var",
     "make_elbo_scorer",
     "make_loo_scorer",
