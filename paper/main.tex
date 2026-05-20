@@ -244,8 +244,8 @@ The low-rank CAVI (\texttt{matlap\_lowrank}, Section~\ref{sec:lowrank-cavi}) ini
 
 The low-rank-plus-isotropic variant (\texttt{matlap\_lowrank\_isotropic}, Section~\ref{sec:lowrank-woodbury}) partially addresses this: the posterior mean $\mu_i$ is full-rank (the isotropic off-subspace precision $\delta$ provides gradient signal in all directions), but the covariance structure $Q$ remains restricted to $\mathrm{col}(V_r)$.  In practice this gives lower RMSE than the pure low-rank model, though the subspace still does not evolve.
 
-\paragraph{Methods with a free subspace.}
-The Factor Analysis EM (\texttt{matlap\_faem}) and gradient marginal likelihood (\texttt{matlap\_gradml}) methods described in Section~\ref{sec:faem} parameterise an unconstrained loading matrix $W_r \in \mathbb{R}^{n \times r}$.  The column space of $W_r$ evolves freely across iterations, allowing the model to discover the true signal subspace from data rather than inheriting it from the initialization.  The FA EM M-step for $W_r$ is a per-column weighted least-squares problem, globally concave in $W_r$ for fixed posterior moments, with a unique solution.  Both methods optimize the marginal log-likelihood $\log p(Y_\Omega \mid W_r, \lambda)$, which is identified up to a right-orthogonal rotation $W_r \mapsto W_r R$; this rotation ambiguity creates saddle points but no spurious local maxima, as all critical points satisfying $\partial \mathcal{L}/\partial W_r = 0$ yield the same posterior mean $\mu_i = W_r \hat{z}_i$ and marginal covariance $W_r A_i^{-1} W_r^\top$.
+\paragraph{The frozen-subspace limitation and open directions.}
+The low-rank CAVI converges to the global maximum of the \emph{restricted} ELBO, but cannot escape the initial column space.  Extending the CAVI to allow $\mathrm{col}(V_r)$ to evolve—for example by taking gradient steps on the ELBO with respect to $V_r$, or by treating $Q$ as a free rank-$r$ parameter optimised by gradient ascent rather than the closed-form $Q = \Psi^{1/2}$ update—would require departing from the closed-form coordinate updates and is left for future work.  In the empirical comparison (Section~\ref{sec:experiments}) we include Factor Analysis EM (\texttt{matlap\_faem}) and a gradient marginal likelihood method (\texttt{matlap\_gradml}) as baselines; these are Gaussian factor models (not Matrix Laplace) but share the same low-rank parameterisation and allow the subspace to evolve freely, providing an upper bound on what free-subspace optimisation can achieve.
 
 \section{Implementation}
 
@@ -383,51 +383,6 @@ At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, v
 
 Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariateNormal} distribution and combined with the rSVD nuclear norm approximation, reducing per-step cost to $O(mnr)$.
 
-\subsection{Factor Analysis EM and Gradient Marginal Likelihood}
-\label{sec:faem}
-
-Both approaches overcome the frozen-subspace limitation (Section~\ref{sec:convexity}) by treating the loading matrix $W_r \in \mathbb{R}^{n \times r}$ as an unconstrained free parameter and optimising the penalised marginal log-likelihood.
-
-\paragraph{Model.}
-We write $x_i = W_r z_i$ with isotropic prior $z_i \sim \mathcal{N}(0, \lambda^{-1} I_r)$ and Gaussian likelihood $y_{ij} \mid x_i \sim \mathcal{N}(x_{ij}, s_{ij}^2)$ for observed entries.  Unlike the low-rank CAVI, which fixes $\mathrm{col}(V_r)$ and writes $W_r = V_r \mathrm{diag}(d_r)$, here $W_r$ is unconstrained and absorbs both directions and scales.
-
-\paragraph{Marginal log-likelihood.}
-Integrating out $z_i$ via the Woodbury identity gives, for each row $i$,
-\begin{equation}
-  \log p(y_i^\Omega \mid W_r, \lambda) = -\tfrac{1}{2}\!\left[
-    y_i^\top \Lambda_i y_i - \mathrm{rhs}_i^\top A_i^{-1} \mathrm{rhs}_i
-    - \textstyle\sum_{j\in\Omega_i} \log p_{ij} + \log|A_i| - r\log\lambda + |\Omega_i| \log 2\pi
-  \right],
-  \label{eq:marginal-ll}
-\end{equation}
-where $\Lambda_i = \mathrm{diag}(p_i)$, $A_i = \lambda I_r + W_r^\top \Lambda_i W_r \in \mathbb{R}^{r \times r}$, and $\mathrm{rhs}_i = W_r^\top \Lambda_i y_i$.  Only the $r \times r$ matrix $A_i$ need be inverted per row.
-
-\paragraph{E-step.}
-The posterior over $z_i$ is $q(z_i) = \mathcal{N}(\hat{z}_i, A_i^{-1})$ with
-\begin{equation}
-  A_i = \lambda I_r + W_r^\top \Lambda_i W_r, \qquad \hat{z}_i = A_i^{-1} W_r^\top (p_i \odot y_i).
-\end{equation}
-The posterior second moment is $\mathbb{E}[z_i z_i^\top] = A_i^{-1} + \hat{z}_i \hat{z}_i^\top$ and the posterior mean of $x_i$ is $\mu_i = W_r \hat{z}_i$.
-
-\paragraph{FA EM M-step.}
-The expected complete-data log-likelihood decouples across rows of $W_r^\top$.  Setting the gradient for the $j$-th row $w_j^\top$ to zero yields the closed-form update
-\begin{equation}
-  w_j = \left(\sum_{i} p_{ij}\,\mathbb{E}[z_i z_i^\top]\right)^{-1} \!\sum_{i} p_{ij}\,y_{ij}\,\hat{z}_i,
-  \label{eq:faem-mstep}
-\end{equation}
-a weighted least-squares problem with a unique solution.  The M-step for $\lambda$ is the Gamma posterior mean,
-\begin{equation}
-  \bar\lambda = \frac{a_0 + mr/2}{b_0 + \tfrac{1}{2}\sum_i \mathrm{Tr}\!\left(\mathbb{E}[z_i z_i^\top]\right)}.
-\end{equation}
-Per-iteration cost is $O(mnr + mr^3)$, identical to the low-rank CAVI.
-
-\paragraph{Gradient marginal likelihood.}
-As an alternative to EM, we directly maximise
-\begin{equation}
-  \mathcal{L}_{\mathrm{grad}}(W_r, \lambda) = \sum_i \log p(y_i^\Omega \mid W_r, \lambda) + (a_0 - 1)\log\lambda - b_0\lambda
-\end{equation}
-with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \cite{kingma2014adam}, with gradients computed by JAX autodiff through~\eqref{eq:marginal-ll}.
-
 \section{Empirical Comparison}
 \label{sec:experiments}
 
@@ -520,11 +475,6 @@ B.~Recht, M.~Fazel, and P.~A. Parrilo.
 E.~J. Cand\`{e}s and B.~Recht.
 \newblock Exact matrix completion via convex optimization.
 \newblock \textit{Communications of the ACM}, 55(6):111--119, 2012.
-
-\bibitem{kingma2014adam}
-D.~P. Kingma and J.~Ba.
-\newblock Adam: A method for stochastic optimization.
-\newblock In \textit{International Conference on Learning Representations (ICLR)}, 2015.
 
 \bibitem{halko2011finding}
 N.~Halko, P.~G. Martinsson, and J.~A. Tropp.
