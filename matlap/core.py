@@ -6,6 +6,7 @@ Main public functions:
     matlap_grid()                  — full CAVI, lambda selected by ELBO over grid
     matlap_batched()               — full CAVI, memory-efficient batched rows
     matlap_batched_warmstart()     — matlap_batched with FA-EM warm-start
+    matlap_iso_warmstart()         — matlap_lowrank_isotropic with FA-EM warm-start
     matlap_lowrank()               — low-rank CAVI with automatic lambda
     matlap_grid_lowrank()          — low-rank CAVI, lambda selected by ELBO over grid
     matlap_lowrank_isotropic()     — low-rank+isotropic CAVI with automatic lambda
@@ -952,6 +953,77 @@ def matlap_batched_warmstart(
         batch_size=batch_size,
         lambda_val=lambda_val,
         verbose=verbose,
+    )
+
+
+def matlap_iso_warmstart(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    faem_rank: int = 10,
+    faem_iters: int = 50,
+    rank: int | None = None,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    lambda_val: float | None = None,
+    verbose: bool = False,
+) -> LowRankIsotropicResult:
+    """FA-EM warm-started version of :func:`matlap_lowrank_isotropic`.
+
+    Runs FA-EM for a small number of iterations to obtain a good initial
+    subspace, then passes ``V_r`` and ``d_r`` to
+    :func:`matlap_lowrank_isotropic`.
+
+    The mapping from FA-EM to low-rank+isotropic warm-start is::
+
+        FA-EM W_r  (n × r)
+          → thin SVD: W_r = U Σ Vt
+          → V_r_init = U   (n × r, orthonormal)
+          → d_r_init = Σ   (eigenvalues of Q_r = (W_r W_r^T)^{1/2})
+
+    Args:
+        Y:          Observed matrix, shape (m, n).
+        S:          Standard errors, shape (m, n). ``jnp.inf`` where missing.
+        faem_rank:  Rank used for FA-EM warm-start (default: 10).
+        faem_iters: FA-EM iterations for warm-start (default: 50; fast).
+        rank:       Rank for matlap_lowrank_isotropic. Defaults to faem_rank.
+        a0, b0, max_iter, tol, lambda_val, verbose:
+                    Passed through to :func:`matlap_lowrank_isotropic`.
+
+    Returns:
+        LowRankIsotropicResult (same as :func:`matlap_lowrank_isotropic`).
+    """
+    from .faem import matlap_faem
+
+    if rank is None:
+        rank = faem_rank
+
+    faem = matlap_faem(Y, S, rank=faem_rank, max_iter=faem_iters)
+
+    # Thin SVD of W_r: (n,r) → U (n,r), s (r,), Vt (r,r)
+    W_r = jnp.asarray(faem.W_r, dtype=jnp.float32)
+    U, s, _ = jnp.linalg.svd(W_r, full_matrices=False)
+    # Pad/trim if rank != faem_rank
+    if rank > faem_rank:
+        pad = jnp.zeros((U.shape[0], rank - faem_rank), dtype=jnp.float32)
+        U = jnp.concatenate([U, pad], axis=1)
+        s = jnp.concatenate([s, jnp.ones(rank - faem_rank, dtype=jnp.float32)])
+        # Re-orthogonalise via QR in case padding introduced non-orthogonality
+        U, _ = jnp.linalg.qr(U)
+    else:
+        U = U[:, :rank]
+        s = s[:rank]
+
+    return matlap_lowrank_isotropic(
+        Y, S, lambda_val,
+        rank=rank,
+        a0=a0, b0=b0,
+        max_iter=max_iter, tol=tol,
+        verbose=verbose,
+        V_r_init=U,
+        d_r_init=s,
     )
 
 

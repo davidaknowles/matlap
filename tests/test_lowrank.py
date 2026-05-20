@@ -757,3 +757,52 @@ def test_score_factories_all_return_floats():
         assert isinstance(score, float)
         assert np.isfinite(score)
 
+
+
+# ---------------------------------------------------------------------------
+# FA-EM warm-start for matlap_lowrank_isotropic
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_iso_warmstart_basic():
+    """matlap_iso_warmstart should run and return correct shapes."""
+    from matlap import matlap_iso_warmstart
+    rng = np.random.default_rng(200)
+    m, n, rank = 40, 20, 4
+    Y, S, X_true = make_low_rank(m, n, rank, noise_std=0.3, rng=rng)
+    result = matlap_iso_warmstart(Y, S, faem_rank=4, faem_iters=30, rank=4, max_iter=100)
+    assert result.mu.shape == (m, n)
+    assert result.V_r.shape == (n, 4)
+    assert result.d_r.shape == (4,)
+    assert np.isfinite(result.lambda_bar) and result.lambda_bar > 0
+    err_mu = float(jnp.mean((result.mu - X_true) ** 2))
+    err_Y = float(jnp.mean((Y - X_true) ** 2))
+    assert err_mu < err_Y, f"warmstart MSE {err_mu:.4f} >= noisy Y MSE {err_Y:.4f}"
+
+
+def test_matlap_iso_warmstart_fewer_iters():
+    """Warm-start should converge in fewer iterations than cold rSVD init."""
+    from matlap import matlap_iso_warmstart
+    rng = np.random.default_rng(201)
+    m, n, rank = 60, 25, 4
+    Y, S, _ = make_low_rank(m, n, rank, noise_std=0.3, rng=rng)
+
+    cold = matlap_lowrank_isotropic(Y, S, rank=rank, max_iter=200, tol=1e-5)
+    warm = matlap_iso_warmstart(Y, S, faem_rank=rank, faem_iters=50,
+                                rank=rank, max_iter=200, tol=1e-5)
+
+    assert warm.n_iter <= cold.n_iter, (
+        f"Warm-start ({warm.n_iter} iters) should not need more iters "
+        f"than cold-start ({cold.n_iter} iters)"
+    )
+
+
+def test_matlap_iso_warmstart_rank_expansion():
+    """rank > faem_rank should be handled without error."""
+    from matlap import matlap_iso_warmstart
+    rng = np.random.default_rng(202)
+    Y, S, _ = make_low_rank(30, 15, rank=2, noise_std=0.5, rng=rng)
+    # FA-EM rank=3, CAVI rank=6 — warm-start pads with zeros then re-orthogonalises
+    result = matlap_iso_warmstart(Y, S, faem_rank=3, faem_iters=20, rank=6, max_iter=50)
+    assert result.mu.shape == (30, 15)
+    assert result.V_r.shape == (15, 6)
