@@ -60,7 +60,8 @@ def compute_elbo(
     obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)  # (m, n)
     prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
 
-    resid2 = (Y - mus) ** 2  # (m, n)
+    # Zero out residuals at missing entries to avoid 0 * NaN = NaN
+    resid2 = jnp.where(obs_mask, (Y - mus) ** 2, 0.0)
     sigma_diag = jnp.diagonal(sigmas, axis1=1, axis2=2)  # (m, n)
 
     ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
@@ -142,7 +143,7 @@ def compute_elbo_from_diag(
     obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)
     prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
 
-    resid2 = (Y - mus) ** 2
+    resid2 = jnp.where(obs_mask, (Y - mus) ** 2, 0.0)
     ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
     ll -= 0.5 * jnp.sum(jnp.where(obs_mask, jnp.log(2.0 * jnp.pi * S2), 0.0))
 
@@ -204,7 +205,7 @@ def compute_elbo_lowrank(
     # 1. Log-likelihood (uses sigma_diag directly; same formula as full CAVI)
     obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)
     prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
-    resid2 = (Y - mus) ** 2
+    resid2 = jnp.where(obs_mask, (Y - mus) ** 2, 0.0)
     ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
     ll -= 0.5 * jnp.sum(jnp.where(obs_mask, jnp.log(2.0 * jnp.pi * S2), 0.0))
 
