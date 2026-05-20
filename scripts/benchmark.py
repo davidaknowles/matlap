@@ -15,6 +15,8 @@ proximal            Nuclear-norm FISTA with a heuristic lambda
 proximal_cv         Same with lambda selected by 2-fold entry-wise CV
 vi_diagonal         Numpyro SVI, fully-factorised Gaussian guide, auto-λ
 vi_diagonal_approx  Same guide, rSVD nuclear norm (approx_rank), much faster
+fa_em               Factor Analysis EM, free subspace loading matrix, auto-λ
+gradml              Gradient ascent on marginal LL (Adam), free subspace, auto-λ
 matlap_lowrank      Low-rank CAVI (Woodbury rank-r updates), auto-λ
 vi_matrix_factor    SVI with shared column-factor guide + rSVD; O(mn) memory
 vi_row_lowrank      SVI with per-row low-rank guide + rSVD; O(mnr) memory
@@ -37,6 +39,8 @@ Usage
     --missing            Fraction missing        (default 0.20)
     --proximal-iters     FISTA iterations        (default 100)
     --vi-steps           SVI gradient steps      (default 200)
+    --faem-iters         FA EM iterations        (default 100)
+    --gradml-steps       GradML Adam steps       (default 500)
     --lowrank-iters      matlap_lowrank iters    (default 50)
     --lowrank-rank       Rank for matlap_lowrank (default 50)
     --guide-rank         Rank for low-rank VI guides (default 15)
@@ -152,6 +156,18 @@ def run_vi_diagonal_approx(Y, S, n_steps, approx_rank, lr=3e-3):
     return r.mu, float(r.lambda_bar), r.converged
 
 
+def run_matlap_faem(Y, S, rank, max_iter):
+    from matlap.faem import matlap_faem
+    r = matlap_faem(Y, S, rank=rank, max_iter=max_iter)
+    return r.mu, float(r.lambda_bar), r.converged
+
+
+def run_matlap_gradml(Y, S, rank, max_iter):
+    from matlap.faem import matlap_gradml
+    r = matlap_gradml(Y, S, rank=rank, max_iter=max_iter)
+    return r.mu, float(r.lambda_bar), r.converged
+
+
 def run_matlap_lowrank(Y, S, rank, max_iter):
     from matlap.core import matlap_lowrank
     r = matlap_lowrank(Y, S, rank=rank, max_iter=max_iter)
@@ -199,6 +215,8 @@ def benchmark_seed(
     missing_frac: float,
     proximal_iters: int,
     vi_steps: int,
+    faem_iters: int,
+    gradml_steps: int,
     lowrank_iters: int,
     lowrank_rank: int,
     guide_rank: int,
@@ -225,6 +243,12 @@ def benchmark_seed(
             ("proximal_cv",
              run_proximal_cv,
              (Y, S, lam_grid, proximal_iters // 2)),
+            ("matlap_faem",
+             run_matlap_faem,
+             (Y, S, lowrank_rank, faem_iters)),
+            ("matlap_gradml",
+             run_matlap_gradml,
+             (Y, S, lowrank_rank, gradml_steps)),
             ("matlap_lowrank",
              run_matlap_lowrank,
              (Y, S, lowrank_rank, lowrank_iters)),
@@ -305,6 +329,8 @@ EXCLUDED = {
 METHOD_DESC = {
     "proximal":             "Nuclear-norm FISTA, λ set by heuristic",
     "proximal_cv":          "Nuclear-norm FISTA, λ by entry-wise CV",
+    "matlap_faem":          "Factor Analysis EM, free subspace W_r, auto-λ (EB)",
+    "matlap_gradml":        "Gradient marginal LL (Adam), free subspace W_r, auto-λ",
     "matlap_lowrank":       "Low-rank CAVI (Woodbury, rank-r factor subspace), auto-λ",
     "matlap_grid_lowrank":  "Low-rank CAVI on λ-grid, warm-started path, best ELBO",
     "matlap_batched":       "Full CAVI, batched rows (O(batch·n²) peak mem), auto-λ",
@@ -491,6 +517,8 @@ def build_report(
     lines.append("|---|---|---|---|")
     lines.append("| matlap | O(m·n²) — **40 GB OOM** | O(m·n³) | Exact but infeasible at n=1k |")
     lines.append(f"| matlap_batched | O(B·n²), B={args.batch_size} — {args.batch_size}×4MB={args.batch_size*4} MB | O(m·n³) — **slow** at n=1k | Feasible memory; use at n≲300 |")
+    lines.append(f"| matlap_faem | O(mr² + mn) at r={args.lowrank_rank} — ~44 MB | O(mnr + mr³) | Free subspace; FA EM M-step |")
+    lines.append(f"| matlap_gradml | O(mr² + mn) at r={args.lowrank_rank} — ~44 MB | O(mnr + mr³) per step | Free subspace; Adam on marginal LL |")
     lines.append(f"| matlap_lowrank | O(mn + nr²) at r={args.lowrank_rank} — ~44 MB | O(mn·r) Woodbury | Exact in rank-r subspace |")
     lines.append(f"| matlap_grid_lowrank | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | G={args.grid_points} grid pts, warm-started |")
     lines.append("| proximal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/iter on CPU |")
@@ -520,6 +548,10 @@ def main() -> None:
     parser.add_argument("--missing",              type=float, default=0.20)
     parser.add_argument("--proximal-iters",       type=int,   default=100)
     parser.add_argument("--vi-steps",             type=int,   default=200)
+    parser.add_argument("--faem-iters",           type=int,   default=100,
+                        help="FA EM iterations (default 100)")
+    parser.add_argument("--gradml-steps",         type=int,   default=500,
+                        help="GradML Adam steps (default 500)")
     parser.add_argument("--lowrank-iters",        type=int,   default=50)
     parser.add_argument("--lowrank-rank",         type=int,   default=50)
     parser.add_argument("--guide-rank",           type=int,   default=15)
@@ -535,6 +567,7 @@ def main() -> None:
     print(f"matlap benchmark  {args.rows}×{args.cols} rank-{args.rank} "
           f"| seeds={args.seeds} | missing={args.missing:.0%}")
     print(f"  proximal_iters={args.proximal_iters}  vi_steps={args.vi_steps}  "
+          f"faem_iters={args.faem_iters}  gradml_steps={args.gradml_steps}  "
           f"lowrank_iters={args.lowrank_iters}  lowrank_rank={args.lowrank_rank}  "
           f"guide_rank={args.guide_rank}  approx_rank={args.approx_rank}  "
           f"grid_points={args.grid_points}  batch_size={args.batch_size}")
@@ -565,6 +598,8 @@ def main() -> None:
                 missing_frac=args.missing,
                 proximal_iters=args.proximal_iters,
                 vi_steps=args.vi_steps,
+                faem_iters=args.faem_iters,
+                gradml_steps=args.gradml_steps,
                 lowrank_iters=args.lowrank_iters,
                 lowrank_rank=args.lowrank_rank,
                 guide_rank=args.guide_rank,
