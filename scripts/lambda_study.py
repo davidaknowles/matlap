@@ -101,23 +101,30 @@ METHODS = [
     "iso_grid_renyi",
     "iso_grid_is",
     "iso_adaptive",
+    "faem",
+    "gradml",
 ]
 
 METHOD_LABELS = {
-    "proximal_cv":  "proximal_cv    (FISTA + 3-fold CV)",
-    "matlap_auto":  "matlap_auto    (full CAVI, auto-λ)",
-    "matlap_grid":  "matlap_grid    (full CAVI, best ELBO over grid)",
-    "lowrank_auto": "lowrank_auto   (rank-r CAVI, auto-λ, biased)",
-    "lowrank_grid": "lowrank_grid   (matlap_grid_lowrank, best ELBO)",
-    "lowrank_cv":   "lowrank_cv     (rank-r CAVI, grid+CV)",
-    "iso_auto":     "iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)",
-    "iso_grid":     "iso_grid       (lowrank+iso CAVI, best ELBO over grid)",
-    "iso_cv":       "iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)",
-    "iso_grid_loo": "iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)",
+    "proximal_cv":    "proximal_cv    (FISTA + 3-fold CV)",
+    "matlap_auto":    "matlap_auto    (full CAVI, auto-λ)",
+    "matlap_grid":    "matlap_grid    (full CAVI, best ELBO over grid)",
+    "lowrank_auto":   "lowrank_auto   (rank-r CAVI, auto-λ, biased)",
+    "lowrank_grid":   "lowrank_grid   (matlap_grid_lowrank, best ELBO)",
+    "lowrank_cv":     "lowrank_cv     (rank-r CAVI, grid+CV)",
+    "iso_auto":       "iso_auto       (lowrank+iso CAVI, auto-λ, δ learned)",
+    "iso_grid":       "iso_grid       (lowrank+iso CAVI, best ELBO over grid)",
+    "iso_cv":         "iso_cv         (lowrank+iso CAVI, grid+CV, δ learned)",
+    "iso_grid_loo":   "iso_grid_loo   (lowrank+iso CAVI, best closed-form LOO over grid)",
     "iso_grid_renyi": "iso_grid_renyi (lowrank+iso CAVI, best Rényi α=0.5 over grid)",
-    "iso_grid_is": "iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)",
-    "iso_adaptive": "iso_adaptive   (lowrank+iso CAVI, adaptive golden-ratio λ, Rényi α=0.5)",
+    "iso_grid_is":    "iso_grid_is    (lowrank+iso CAVI, best α=0 importance objective)",
+    "iso_adaptive":   "iso_adaptive   (lowrank+iso CAVI, adaptive golden-ratio λ, Rényi α=0.5)",
+    "faem":           "faem           (FA EM, free subspace, Gaussian factor model)",
+    "gradml":         "gradml         (gradient marginal LL, free subspace, Gaussian factor model)",
 }
+
+FAEM_ITERS   = 200
+GRADML_STEPS = 2000
 
 
 # ---------------------------------------------------------------------------
@@ -258,6 +265,18 @@ def run_iso_adaptive(Y, S, rank=LOWRANK_RANK, alpha: float = 0.5):
     return r.best_result.mu, float(r.best_lambda)
 
 
+def run_faem(Y, S, rank=LOWRANK_RANK):
+    from matlap import matlap_faem
+    r = matlap_faem(Y, S, rank=rank, max_iter=FAEM_ITERS)
+    return r.mu, float(r.lambda_bar)
+
+
+def run_gradml(Y, S, rank=LOWRANK_RANK):
+    from matlap import matlap_gradml
+    r = matlap_gradml(Y, S, rank=rank, max_iter=GRADML_STEPS)
+    return r.mu, float(r.lambda_bar)
+
+
 # ---------------------------------------------------------------------------
 # Single-seed benchmark
 # ---------------------------------------------------------------------------
@@ -285,6 +304,8 @@ def run_one_seed(seed: int, r_true: int, snr: float = 1.0,
         ("iso_grid_renyi", lambda: run_iso_grid_renyi(Y, S, lam_grid)),
         ("iso_grid_is", lambda: run_iso_grid_is(Y, S, lam_grid)),
         ("iso_adaptive", lambda: run_iso_adaptive(Y, S)),
+        ("faem",         lambda: run_faem(Y, S)),
+        ("gradml",       lambda: run_gradml(Y, S)),
     ]
 
     label = f"r={r_true} snr={snr}"
