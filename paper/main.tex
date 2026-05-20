@@ -90,6 +90,8 @@ The likelihood of the latent true matrix $X$ is elementwise normal:
 
 \section{Inference}
 
+\subsection{Coordinate Ascent Variational Inference (CAVI)} \label{sec:cavi}
+
 To avoid the slow convergence of Markov Chain Monte Carlo (MCMC) while preserving the convexity lost by the common $X = UV^T$ factorization, we utilize a variational representation of the nuclear norm. For any matrix $X$, the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
 \begin{equation}
     \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
@@ -367,7 +369,7 @@ Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariate
 \subsection{Factor Analysis EM and Gradient Marginal Likelihood}
 \label{sec:faem}
 
-Both approaches overcome the frozen-subspace limitation (Section~\ref{sec:convexity}) by treating the loading matrix $W_r \in \mathbb{R}^{n \times r}$ as an unconstrained free parameter and optimising the penalised marginal log-likelihood.
+These are comparator methods. They treat the loading matrix $W_r \in \mathbb{R}^{n \times r}$ as an unconstrained free parameter and optimise the penalised marginal log-likelihood.
 
 \paragraph{Model.}
 We write $x_i = W_r z_i$ with isotropic prior $z_i \sim \mathcal{N}(0, \lambda^{-1} I_r)$ and Gaussian likelihood $y_{ij} \mid x_i \sim \mathcal{N}(x_{ij}, s_{ij}^2)$ for observed entries.  Unlike the low-rank CAVI, which fixes $\mathrm{col}(V_r)$ and writes $W_r = V_r \mathrm{diag}(d_r)$, here $W_r$ is unconstrained and absorbs both directions and scales.
