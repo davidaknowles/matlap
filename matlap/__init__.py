@@ -5,7 +5,7 @@ from .core import (
     CAVIResult, BatchedCAVIResult, GridResult,
     LowRankCAVIResult, LowRankGridResult,
     LowRankIsotropicResult, LowRankIsotropicGridResult,
-    matlap, matlap_batched, matlap_grid,
+    matlap, matlap_batched, matlap_batched_warmstart, matlap_grid,
     matlap_grid_lowrank, matlap_grid_lowrank_isotropic,
     matlap_lowrank, matlap_lowrank_isotropic,
     matlap_adaptive_lowrank_isotropic,
@@ -29,6 +29,7 @@ __all__ = [
     # CAVI
     "matlap",
     "matlap_batched",
+    "matlap_batched_warmstart",
     "matlap_grid",
     "matlap_grid_lowrank",
     "matlap_grid_lowrank_isotropic",

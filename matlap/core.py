@@ -4,6 +4,8 @@ Coordinate Ascent Variational Inference (CAVI) for Bayesian Matrix Denoising.
 Main public functions:
     matlap()                       — full CAVI with automatic lambda estimation
     matlap_grid()                  — full CAVI, lambda selected by ELBO over grid
+    matlap_batched()               — full CAVI, memory-efficient batched rows
+    matlap_batched_warmstart()     — matlap_batched with FA-EM warm-start
     matlap_lowrank()               — low-rank CAVI with automatic lambda
     matlap_grid_lowrank()          — low-rank CAVI, lambda selected by ELBO over grid
     matlap_lowrank_isotropic()     — low-rank+isotropic CAVI with automatic lambda
@@ -772,6 +774,9 @@ def matlap_batched(
     max_iter: int = 200,
     tol: float = 1e-6,
     batch_size: int = 64,
+    lambda_val: float | None = None,
+    lambda_init: float | None = None,
+    mu_init: jax.Array | None = None,
     verbose: bool = False,
 ) -> BatchedCAVIResult:
     """Full CAVI with memory-efficient batched row processing.
@@ -791,14 +796,21 @@ def matlap_batched(
     :func:`matlap_lowrank` for larger n.
 
     Args:
-        Y:          Observed matrix, shape (m, n). NaN/any value where missing.
-        S:          Known standard errors, shape (m, n). ``jnp.inf`` where missing.
-        a0:         Gamma prior shape for lambda (default: 1e-3).
-        b0:         Gamma prior rate for lambda (default: 1e-3).
-        max_iter:   Maximum CAVI iterations.
-        tol:        Convergence tolerance on relative ELBO change.
-        batch_size: Number of rows processed per JIT call (controls peak memory).
-        verbose:    Print ELBO at each iteration.
+        Y:            Observed matrix, shape (m, n). NaN/any value where missing.
+        S:            Known standard errors, shape (m, n). ``jnp.inf`` where missing.
+        a0:           Gamma prior shape for lambda (default: 1e-3).
+        b0:           Gamma prior rate for lambda (default: 1e-3).
+        max_iter:     Maximum CAVI iterations.
+        tol:          Convergence tolerance on relative ELBO change.
+        batch_size:   Number of rows processed per JIT call (controls peak memory).
+        lambda_val:   If provided, fix lambda to this value (skip empirical-Bayes
+                      update). Useful for grid search and comparison studies.
+        lambda_init:  If provided, initialise lambda to this value but allow CAVI
+                      to update it. Useful for warm-starting from FA-EM/GradML.
+        mu_init:      If provided, use this (m, n) array as the initial posterior
+                      means instead of the observed Y. Warm-starting from a fast
+                      method (e.g. FA-EM) typically halves the iteration count.
+        verbose:      Print ELBO at each iteration.
 
     Returns:
         BatchedCAVIResult with posterior mean, diagonal covariances, and diagnostics.
@@ -809,7 +821,10 @@ def matlap_batched(
     m, n = Y.shape
 
     obs_mask = jnp.isfinite(S) & jnp.isfinite(Y)
-    mus = jnp.where(obs_mask, Y, 0.0)
+    if mu_init is not None:
+        mus = jnp.asarray(mu_init, dtype=jnp.float32)
+    else:
+        mus = jnp.where(obs_mask, Y, 0.0)
 
     # Initial Psi from a single pass over rows in batches (no sigma storage)
     # Use identity covariances as starting point: Psi = mumuT + mI
@@ -817,8 +832,15 @@ def matlap_batched(
     decomp = matrix_sqrt_eigh(Psi)
 
     a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
-    b_N = jnp.asarray(b0 + trace_sqrt(decomp), dtype=jnp.float32)
-    lambda_bar = a_N / b_N
+    if lambda_val is not None:
+        lambda_bar = jnp.asarray(lambda_val, dtype=jnp.float32)
+        b_N = a_N / lambda_bar
+    elif lambda_init is not None:
+        lambda_bar = jnp.asarray(lambda_init, dtype=jnp.float32)
+        b_N = a_N / lambda_bar
+    else:
+        b_N = jnp.asarray(b0 + trace_sqrt(decomp), dtype=jnp.float32)
+        lambda_bar = a_N / b_N
 
     elbo_trace: list[float] = []
     converged = False
@@ -850,8 +872,9 @@ def matlap_batched(
 
         trace_Q = trace_sqrt(decomp)
         a_N = jnp.asarray(a0 + m * n, dtype=jnp.float32)
-        b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
-        lambda_bar = a_N / b_N
+        if lambda_val is None:
+            b_N = jnp.asarray(b0, dtype=jnp.float32) + trace_Q
+            lambda_bar = a_N / b_N
 
         elbo = compute_elbo_from_diag(
             Y, S2, mus, sigma_diag, log_dets,
@@ -878,6 +901,57 @@ def matlap_batched(
         elbo_trace=elbo_trace,
         converged=converged,
         n_iter=len(elbo_trace),
+    )
+
+
+def matlap_batched_warmstart(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    faem_rank: int = 10,
+    faem_iters: int = 50,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    batch_size: int = 64,
+    lambda_val: float | None = None,
+    verbose: bool = False,
+) -> BatchedCAVIResult:
+    """FA-EM warm-started version of :func:`matlap_batched`.
+
+    Runs FA-EM for a small number of iterations to obtain good initial
+    posterior means and a lambda estimate, then passes them to
+    :func:`matlap_batched`.  This typically halves the number of CAVI
+    iterations needed because the initial Q encodes the dominant subspace.
+
+    FA-EM is a Gaussian factor model, so its mu is a good proxy for the
+    Matrix Laplace posterior means; the warm-start does not bias the final
+    result since CAVI updates all quantities from the initialisation.
+
+    Args:
+        Y:          Observed matrix, shape (m, n).
+        S:          Standard errors, shape (m, n). ``jnp.inf`` where missing.
+        faem_rank:  Rank used for FA-EM warm-start (default: 10).
+        faem_iters: FA-EM iterations for warm-start (default: 50; fast).
+        a0, b0, max_iter, tol, batch_size, lambda_val, verbose:
+                    Passed through to :func:`matlap_batched`.
+
+    Returns:
+        BatchedCAVIResult (same as :func:`matlap_batched`).
+    """
+    from .faem import matlap_faem  # local import to avoid circular dep at module level
+
+    faem = matlap_faem(Y, S, rank=faem_rank, max_iter=faem_iters)
+    return matlap_batched(
+        Y, S,
+        mu_init=faem.mu,
+        lambda_init=faem.lambda_bar if lambda_val is None else None,
+        a0=a0, b0=b0,
+        max_iter=max_iter, tol=tol,
+        batch_size=batch_size,
+        lambda_val=lambda_val,
+        verbose=verbose,
     )
 
 

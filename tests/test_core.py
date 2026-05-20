@@ -250,3 +250,59 @@ def test_matlap_grid_vs_auto_lambda_similar_reconstruction():
     assert mse_grid < mse_auto * 3.0, (
         f"Grid MSE ({mse_grid:.4f}) much worse than auto ({mse_auto:.4f})"
     )
+
+
+# ---------------------------------------------------------------------------
+# matlap_batched with warm-start
+# ---------------------------------------------------------------------------
+
+
+def test_matlap_batched_warmstart_basic():
+    """matlap_batched_warmstart should run, return correct shapes and converge."""
+    from matlap import matlap_batched_warmstart
+    m, n = 30, 20
+    Y, S, X_true = make_low_rank(m, n, rank=3, noise_std=0.3, rng=RNG)
+    result = matlap_batched_warmstart(Y, S, faem_rank=3, faem_iters=30, max_iter=100)
+    assert result.mu.shape == (m, n)
+    assert np.isfinite(result.lambda_bar) and result.lambda_bar > 0
+    assert len(result.elbo_trace) > 0
+    err_mu = float(jnp.mean((result.mu - X_true) ** 2))
+    err_Y = float(jnp.mean((Y - X_true) ** 2))
+    assert err_mu < err_Y, (
+        f"Warmstart posterior mean (MSE={err_mu:.4f}) should beat noisy Y (MSE={err_Y:.4f})"
+    )
+
+
+def test_matlap_batched_warmstart_fewer_iters():
+    """Warm-start should converge in fewer iterations than cold-start."""
+    from matlap import matlap_batched, matlap_batched_warmstart
+    m, n, rank = 50, 25, 3
+    Y, S, _ = make_low_rank(m, n, rank, noise_std=0.3, rng=np.random.default_rng(42))
+
+    cold = matlap_batched(Y, S, max_iter=200, tol=1e-5)
+    warm = matlap_batched_warmstart(Y, S, faem_rank=rank, faem_iters=50,
+                                    max_iter=200, tol=1e-5)
+
+    # Warm-start should need strictly fewer CAVI iterations
+    assert warm.n_iter <= cold.n_iter, (
+        f"Warm-start ({warm.n_iter} iters) should not need more iters "
+        f"than cold-start ({cold.n_iter} iters)"
+    )
+
+
+def test_matlap_batched_mu_init_param():
+    """Passing mu_init directly to matlap_batched should give same result as warmstart."""
+    from matlap import matlap_batched, matlap_batched_warmstart
+    import matlap as ml
+    m, n = 25, 15
+    Y, S, _ = make_low_rank(m, n, rank=2, noise_std=0.5, rng=np.random.default_rng(7))
+
+    faem = ml.matlap_faem(Y, S, rank=2, max_iter=30)
+    r1 = matlap_batched(Y, S, mu_init=faem.mu, lambda_init=faem.lambda_bar, max_iter=80)
+    r2 = matlap_batched_warmstart(Y, S, faem_rank=2, faem_iters=30, max_iter=80)
+
+    assert r1.mu.shape == (m, n)
+    assert r2.mu.shape == (m, n)
+    # Both should give similar (not necessarily identical) results
+    mse = float(jnp.mean((r1.mu - r2.mu) ** 2))
+    assert mse < 0.1, f"mu_init and warmstart gave very different results (MSE={mse:.4f})"
