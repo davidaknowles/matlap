@@ -44,22 +44,28 @@ METHODS = [
     "proximal_cv",
     "batched_auto",
     "batched_grid",
+    "batched_warmstart",
     "iso_auto",
     "iso_grid",
     "iso_cv",
+    "iso_warmstart",
+    "iso_then_proximal",
     "faem",
     "gradml",
 ]
 
 METHOD_LABELS = {
-    "proximal_cv":  "proximal_cv  (FISTA + 3-fold CV)",
-    "batched_auto": "batched_auto (full CAVI, auto-λ)",
-    "batched_grid": "batched_grid (full CAVI, best ELBO over grid)",
-    "iso_auto":     "iso_auto     (lowrank+iso CAVI, auto-λ)",
-    "iso_grid":     "iso_grid     (lowrank+iso CAVI, best ELBO over grid)",
-    "iso_cv":       "iso_cv       (lowrank+iso CAVI, grid+CV)",
-    "faem":         "faem         (FA EM, free subspace, Gaussian factor model)",
-    "gradml":       "gradml       (gradient marginal LL, free subspace)",
+    "proximal_cv":       "proximal_cv      (FISTA + 3-fold CV)",
+    "batched_auto":      "batched_auto     (full CAVI, auto-λ)",
+    "batched_grid":      "batched_grid     (full CAVI, best ELBO over grid)",
+    "batched_warmstart": "batched_warmstart(full CAVI, FA-EM warm-start)",
+    "iso_auto":          "iso_auto         (lowrank+iso CAVI, auto-λ)",
+    "iso_grid":          "iso_grid         (lowrank+iso CAVI, best ELBO over grid)",
+    "iso_cv":            "iso_cv           (lowrank+iso CAVI, grid+CV)",
+    "iso_warmstart":     "iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start)",
+    "iso_then_proximal": "iso_then_proximal(iso λ → proximal_gradient)",
+    "faem":              "faem             (FA EM, free subspace, Gaussian factor model)",
+    "gradml":            "gradml           (gradient marginal LL, free subspace)",
 }
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
@@ -131,6 +137,12 @@ def run_one_seed(seed: int, missing_frac: float) -> list[dict]:
     r_bg = matlap_grid(Y_j, S_j, jnp.array(lam_grid), max_iter=MAX_ITER_CAVI)
     record("batched_grid", r_bg.best_result.mu, r_bg.best_lambda, time.perf_counter() - t0)
 
+    # batched_warmstart
+    t0 = time.perf_counter()
+    r = matlap.matlap_batched_warmstart(Y_j, S_j, faem_rank=RANK, faem_iters=50,
+                                        max_iter=MAX_ITER_CAVI)
+    record("batched_warmstart", r.mu, r.lambda_bar, time.perf_counter() - t0)
+
     # iso_auto
     t0 = time.perf_counter()
     r = matlap.matlap_lowrank_isotropic(Y_j, S_j, rank=RANK, max_iter=MAX_ITER_CAVI)
@@ -150,6 +162,19 @@ def run_one_seed(seed: int, missing_frac: float) -> list[dict]:
         return matlap.matlap_lowrank_isotropic(Y_, S_, lam, rank=RANK, max_iter=MAX_ITER_CAVI)
     best_lam_iso, r_ic = cv_lambda(Y_j, S_j, lam_grid, iso_fit, n_folds=N_FOLDS)
     record("iso_cv", r_ic.mu, float(best_lam_iso), time.perf_counter() - t0)
+
+    # iso_warmstart
+    t0 = time.perf_counter()
+    r = matlap.matlap_iso_warmstart(Y_j, S_j, faem_rank=RANK, faem_iters=50,
+                                    rank=RANK, max_iter=MAX_ITER_CAVI)
+    record("iso_warmstart", r.mu, r.lambda_bar, time.perf_counter() - t0)
+
+    # iso_then_proximal: use iso auto-λ as regulariser for proximal_gradient
+    t0 = time.perf_counter()
+    from matlap.proximal import proximal_gradient
+    r_iso_lam = matlap.matlap_lowrank_isotropic(Y_j, S_j, rank=RANK, max_iter=MAX_ITER_CAVI)
+    r_p = proximal_gradient(Y_j, S_j, r_iso_lam.lambda_bar, max_iter=300, tol=1e-6)
+    record("iso_then_proximal", r_p.X, r_iso_lam.lambda_bar, time.perf_counter() - t0)
 
     # faem
     t0 = time.perf_counter()
