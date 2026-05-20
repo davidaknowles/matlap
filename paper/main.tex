@@ -31,7 +31,7 @@
 We present a Bayesian approach to low-rank matrix estimation under a heteroscedastic noise model. By utilizing a novel matrix Laplace distribution we encourage low-rank structure directly on the matrix $X$ without resorting to a non-convex factorization. To overcome the non-differentiability and non-separability of the prior, we exploit its variational representation as a Gaussian Scale Mixture. This auxiliary variable formulation allows us to develop a Coordinate Ascent Variational Inference (CAVI) algorithm that is strictly convex in all sub-updates, naturally estimates the global regularization parameter, and avoids the Neyman-Scott paradox by explicitly incorporating posterior uncertainty.
 \end{abstract}
 
-
+\tableofcontents
 
 \section{Introduction}
 
@@ -88,14 +88,12 @@ The likelihood of the latent true matrix $X$ is elementwise normal:
     p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
 \end{equation}
 
-\section{Variational Inference}
+\section{Inference}
 
 To avoid the slow convergence of Markov Chain Monte Carlo (MCMC) while preserving the convexity lost by the common $X = UV^T$ factorization, we utilize a variational representation of the nuclear norm. For any matrix $X$, the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
 \begin{equation}
     \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
 \end{equation}
-
-Three natural choices for the variational family $q(X)$ arise from the symmetric structure of the nuclear norm.
 
 \textbf{Row factorization.} Let $q(X) = \prod_{i=1}^m \mathcal{N}(x_i \mid \mu_i, \Sigma_i)$, where $x_i \in \mathbb{R}^n$ is the $i$-th row of $X$. The expected second moment is
 \begin{equation}
@@ -109,26 +107,23 @@ This requires $O(n^3)$ matrix operations per iteration.
 
 \textbf{Column factorization.} We could in principle factorize $q(X)$ over columns instead of rows, but this is equivalent to the row factorization by simply transposing the input data. 
 
-\section{Coordinate Ascent Variational Inference (CAVI)}
-
 We place a Gamma hyperprior on the regularization parameter: $\lambda \sim \text{Gamma}(a_0, b_0)$. We iteratively update the variational distributions to maximize the ELBO.
 
-\subsection{Update for Auxiliary Matrix $Q$}
-Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root of $\Psi$:
+\paragraph{Update for Auxiliary Matrix $Q$.} Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root of $\Psi$:
 \begin{equation}
     Q^* = \Psi^{1/2} = \left( \sum_{i=1}^m \mu_i \mu_i^T + \Sigma_i \right)^{1/2}
 \end{equation}
 
-\subsection{Update for Variational Posterior $q(X)$}
-Given $Q$ and $\bar{\lambda} = \mathbb{E}_q[\lambda]$, the log-posterior for each row $x_i$ is a multivariate Gaussian. Let $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ be the known noise variance matrix for row $i$. The optimal variational updates are:
+\paragraph{Update for Variational Posterior $q(X)$.} Given $Q$ and $\bar{\lambda} = \mathbb{E}_q[\lambda]$, the log-posterior for each row $x_i$ is a multivariate Gaussian. Let $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ be the known noise variance matrix for row $i$. The optimal variational updates are:
 \begin{align}
     \Sigma_i &= \left( S_i^{-1} + \bar{\lambda} Q^{-1} \right)^{-1} \\
     \mu_i &= \Sigma_i \left( S_i^{-1} y_i \right)
 \end{align}
 Notice how the auxiliary matrix $Q$ induces correlation across the columns of $X$, even if the noise $S_i$ is diagonal.
 
-\subsection{Update for Hyperparameter Posterior $q(\lambda)$}
-Because $Z(\lambda) \propto \lambda^{-mn}$, the log-prior contributes $mn \log \lambda$. Combined with the Gamma prior and the variational bound on the nuclear norm, the optimal $q(\lambda)$ is $\text{Gamma}(a_N, b_N)$. 
+\paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this with \texttt{matlap\_batched}, which processes rows in mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. With $B=64$ and $n=1{,}000$ this is approximately 256 MB versus 40 GB. The algorithm is otherwise identical to full CAVI (Section~\ref{sec:cavi}) and converges to the same solution.
+
+\paragraph{Update for Hyperparameter Posterior $q(\lambda)$.} Because $Z(\lambda) \propto \lambda^{-mn}$, the log-prior contributes $mn \log \lambda$. Combined with the Gamma prior and the variational bound on the nuclear norm, the optimal $q(\lambda)$ is $\text{Gamma}(a_N, b_N)$. 
 Notably, the scale update simplifies beautifully because $\text{Tr}(\Psi Q^{-1}) + \text{Tr}(Q) = \text{Tr}(\Psi \Psi^{-1/2}) + \text{Tr}(\Psi^{1/2}) = 2\text{Tr}(\Psi^{1/2})$.
 \begin{align}
     a_N &= a_0 + mn \\
@@ -136,8 +131,21 @@ Notably, the scale update simplifies beautifully because $\text{Tr}(\Psi Q^{-1})
 \end{align}
 The expected value is updated as $\bar{\lambda} = \frac{a_N}{b_N}$. 
 
-\subsection{Algorithm}
-The full procedure is summarized in Algorithm 1. The algorithm requires no cross-validation, naturally discovers the effective rank of the matrix by heavily penalizing negligible principal components, and consists entirely of smooth, strictly convex sub-problems.
+\paragraph{Evidence Lower Bound.} Convergence is monitored via the ELBO. Using the variational bound at the optimal $Q = \Psi^{1/2}$ and the normalizing constant $\log Z(\lambda) = -mn\log\lambda + \mathrm{const}$, the ELBO decomposes as
+\begin{align}
+    \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
+    \underbrace{- \bar{\lambda}\,\mathrm{Tr}(Q) + mn\,\mathbb{E}_q[\log\lambda]}_{\text{prior on }X\text{ (lower bound)}} \notag\\
+    &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
+    - \underbrace{\mathrm{KL}\!\left(q(\lambda)\,\|\,p(\lambda)\right)}_{\text{KL for }\lambda}
+\end{align}
+where $\mathcal{O}$ is the set of observed entries and
+\begin{equation}
+    \mathrm{KL}\!\left(\mathrm{Gamma}(a_N,b_N)\,\|\,\mathrm{Gamma}(a_0,b_0)\right)
+    = a_N \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
+    + (a_N - a_0)\,\psi(a_N) + (b_0-b_N)\frac{a_N}{b_N}.
+\end{equation}
+
+The full procedure is summarized in Algorithm 1. 
 
 \begin{algorithm}[H]
 \caption{CAVI for Bayesian Low-Rank Matrix Denoising}
@@ -165,108 +173,10 @@ The full procedure is summarized in Algorithm 1. The algorithm requires no cross
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Evidence Lower Bound}
+\paragraph{Missing Data.} The model naturally accommodates missing observations. If entry $(i,j)$ is unobserved, we set $s_{ij} = \infty$, making the noise precision $1/s_{ij}^2 = 0$. The entry then contributes nothing to the likelihood, the row posterior update for $\mu_i$, or the ELBO. Observed and missing entries can be arbitrarily interleaved.
 
-Convergence is monitored via the Evidence Lower Bound (ELBO), which is also used to select $\lambda$ in the grid-search mode. Using the variational bound at the optimal $Q = \Psi^{1/2}$ and the normalizing constant $\log Z(\lambda) = -mn\log\lambda + \mathrm{const}$, the ELBO decomposes as
-
-\begin{align}
-    \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
-    \underbrace{- \bar{\lambda}\,\mathrm{Tr}(Q) + mn\,\mathbb{E}_q[\log\lambda]}_{\text{prior on }X\text{ (lower bound)}} \notag\\
-    &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
-    - \underbrace{\mathrm{KL}\!\left(q(\lambda)\,\|\,p(\lambda)\right)}_{\text{KL for }\lambda}
-\end{align}
-
-where $\mathcal{O}$ is the set of observed entries and
-
-\begin{equation}
-    \mathrm{KL}\!\left(\mathrm{Gamma}(a_N,b_N)\,\|\,\mathrm{Gamma}(a_0,b_0)\right)
-    = a_N \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
-    + (a_N - a_0)\,\psi(a_N) + (b_0-b_N)\frac{a_N}{b_N}.
-\end{equation}
-
-\subsection{Missing Data}
-
-The model naturally accommodates missing observations. If entry $(i,j)$ is unobserved, we set $s_{ij} = \infty$, making the noise precision $1/s_{ij}^2 = 0$. The entry then contributes nothing to the likelihood, the row posterior update for $\mu_i$, or the ELBO. Observed and missing entries can be arbitrarily interleaved.
-
-\subsection{Invariance of the Optimal Regularisation to Observation Density}
-\label{sec:lambda-invariance}
-
-A practically important consequence of the Bayesian formulation is that the oracle-optimal regularisation strength is approximately invariant to the fraction of missing observations, while the analogous proximal estimator is not.
-
-\paragraph{Setup.}
-Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix.  Each entry is independently observed with probability $f$; observed entries carry heteroscedastic Gaussian noise $y_{ij} = x_{ij} + \varepsilon_{ij}$, $\varepsilon_{ij} \sim \mathcal{N}(0, s_{ij}^2)$.  We use the noise-calibrated heuristic
-\begin{equation}
-  \bar\lambda \;=\; \frac{\sqrt{\max(m,n)}}{\sqrt{\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)}}, \label{eq:lambda-heuristic}
-\end{equation}
-which estimates the typical noise singular-value scale of an $m\times n$ Gaussian matrix with the observed noise distribution (cf.\ the Marchenko--Pastur bulk edge $\approx (1+\sqrt{n/m})\,s\sqrt{m}$ in the homoscedastic case).
-
-\paragraph{The heuristic is independent of $f$.}
-For a random Bernoulli$(f)$ mask applied to noise variances $\{s_{ij}^2\}$ drawn iid from any distribution, the observed entries $\{(i,j)\in\Omega\}$ are a uniformly random subsample of all entries.  Therefore $\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)$ converges to the population median by the law of large numbers, and $\bar\lambda$ in~\eqref{eq:lambda-heuristic} is independent of $f$.  This holds for arbitrary heteroscedastic noise.
-
-\paragraph{The oracle Bayesian regularisation is also independent of $f$.}
-In the factor representation, each latent row score $z_i \in \mathbb{R}^r$ has prior $z_{ik} \sim \mathcal{N}(0,\,d_{r,k}/\lambda)$.  The effective data precision for factor $k$ in row $i$ is
-\begin{equation}
-  \beta_k^{(i)} \;=\; \sum_j p_{ij}\,v_{kj}^2/s_{ij}^2 \;=\; f\,B_k^{(i)},
-\end{equation}
-where $B_k^{(i)} = \sum_j v_{kj}^2/s_{ij}^2$ is the full-data precision (independent of $f$).  The posterior mean is $\hat z_{ik} = \gamma_{ik}\,z_{ik}^{\mathrm{true}} + \text{noise}$ with shrinkage $\gamma_{ik} = \beta_k^{(i)}/(\beta_k^{(i)} + \lambda/d_{r,k})$.  Setting $A = (z_{ik}^{\mathrm{true}})^2$, the MSE for factor $(i,k)$ is
-\begin{equation}
-  \mathrm{MSE}_{ik}(\gamma) \;=\; (1-\gamma)^2 A \;+\; \gamma^2/\beta_k^{(i)},
-\end{equation}
-which is minimised at $\gamma_{ik}^* = A\beta_k^{(i)}/(1 + A\beta_k^{(i)})$.  The corresponding optimal regularisation satisfies
-\begin{equation}
-  \frac{\lambda^*}{d_{r,k}} \;=\; \beta_k^{(i)}\,\frac{1-\gamma_{ik}^*}{\gamma_{ik}^*} \;=\; \beta_k^{(i)} \cdot \frac{1}{\beta_k^{(i)}\,A} \;=\; \frac{1}{(z_{ik}^{\mathrm{true}})^2}, \label{eq:lambda-opt}
-\end{equation}
-since $\beta_k^{(i)}$ cancels exactly.  Critically, $f$ (which enters only through $\beta_k^{(i)} = f\,B_k^{(i)}$) also cancels.  The oracle $\lambda^*$ is therefore independent of both $f$ and the noise heteroscedasticity $\{s_{ij}^2\}$.  Since $\bar\lambda$ from~\eqref{eq:lambda-heuristic} is also independent of $f$, we have
-\begin{equation}
-  \frac{\lambda^*}{\bar\lambda} \;=\; \mathrm{const.,} \label{eq:invariance}
-\end{equation}
-independent of observation density.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across densities from 2\% to 90\% observed (see Section~\ref{sec:experiments}).
-
-\paragraph{Why the proximal estimator is not invariant.}
-For the nuclear-norm penalised least squares problem, the appropriate threshold is the largest singular value of the noise component of $Y_\Omega$.  Under a Bernoulli$(f)$ mask, the noise matrix $E_\Omega = \varepsilon \odot P$ has entry variances $f\,s_{ij}^2$, so its spectral norm scales as $\sqrt{f}\cdot s_{\mathrm{rms}}\sqrt{\max(m,n)}$ (Marchenko--Pastur bulk edge for the sparse noise matrix).  The oracle proximal threshold therefore satisfies $\lambda^*_{\mathrm{prox}} \propto \sqrt{f}$, which decreases with $f$.  Relative to the $f$-independent heuristic~\eqref{eq:lambda-heuristic}, the ratio $\lambda^*_{\mathrm{prox}}/\bar\lambda \propto \sqrt{f}$ is not constant, so the same grid centre becomes increasingly misspecified as observations become sparse.  The Bayesian model avoids this because $f$ enters symmetrically into both the data precision $\beta_k^{(i)}$ and the posterior variance $1/\beta_k^{(i)}$, and these cancel in the bias--variance optimum~\eqref{eq:lambda-opt}.
-
-\subsection{Optimization Landscape and Global Convergence}
-\label{sec:convexity}
-
-Although the posterior $p(X \mid Y, S, \lambda, Q)$ is log-concave in $X$---the Gaussian likelihood contributes a log-quadratic and the GSM prior with $Q$ fixed contributes $-\tfrac{\bar\lambda}{2}\mathrm{Tr}(X^\top Q^{-1} X)$---the ELBO over the full variational family $(q(X), Q, q(\lambda))$ is not jointly concave.  Nonetheless, the CAVI iteration enjoys strong convergence guarantees because every coordinate update has a \emph{unique} global optimum.
-
-\paragraph{Global optimality of \texttt{matlap\_batched}.}
-Given $Q$ and $\bar\lambda$, the optimal $q(x_i)$ is the exact Gaussian posterior
-$\mathcal{N}(\mu_i, \Sigma_i)$ with $\Sigma_i = (S_i^{-1} + \bar\lambda Q^{-1})^{-1}$ and $\mu_i = \Sigma_i S_i^{-1} y_i$, which is unique.
-The $Q$-update $Q^* = \Psi^{1/2}$ follows from the AM--GM inequality
-$\mathrm{Tr}(\Psi Q^{-1}) + \mathrm{Tr}(Q) \geq 2\mathrm{Tr}(\Psi^{1/2})$,
-with equality at $Q = \Psi^{1/2}$, and $\mathrm{Tr}(\Psi Q^{-1}) + \mathrm{Tr}(Q)$ is strictly convex in $Q \succ 0$ so the minimum is unique.
-The $\lambda$-update is the mean of a Gamma posterior, again unique.
-Because rows are conditionally independent given $(Q, \lambda)$, the mean-field approximation is \emph{exact}: the CAVI iterates converge to the true posterior factorization, which is the unique global maximum of the ELBO.  \texttt{matlap\_batched} is therefore initialization-independent.
-
-\paragraph{Low-rank variants and the frozen-subspace limitation.}
-The low-rank CAVI (\texttt{matlap\_lowrank}, Section~\ref{sec:lowrank-cavi}) initialises a loading matrix $V_r$ from the top-$r$ right singular vectors of $Y_\Omega$ and restricts $x_i \in \mathrm{col}(V_r)$ throughout.  The $Q_r$-update rotates $V_r$ \emph{within} its column space but never changes the subspace itself.  Within this restriction the CAVI sub-updates are again unique, and the algorithm converges to the global maximum of the \emph{restricted} ELBO.  However, if any signal lies outside $\mathrm{col}(V_r^{\mathrm{init}})$---which is likely when the true rank exceeds $r$ or the signal-to-noise ratio is low---the restricted optimum can be substantially worse than the global one.
-
-The low-rank-plus-isotropic variant (\texttt{matlap\_lowrank\_isotropic}, Section~\ref{sec:lowrank-woodbury}) partially addresses this: the posterior mean $\mu_i$ is full-rank (the isotropic off-subspace precision $\delta$ provides gradient signal in all directions), but the covariance structure $Q$ remains restricted to $\mathrm{col}(V_r)$.  In practice this gives lower RMSE than the pure low-rank model, though the subspace still does not evolve.
-
-\paragraph{The frozen-subspace limitation and open directions.}
-The low-rank CAVI converges to the global maximum of the \emph{restricted} ELBO, but cannot escape the initial column space.  Extending the CAVI to allow $\mathrm{col}(V_r)$ to evolve—for example by taking gradient steps on the ELBO with respect to $V_r$, or by treating $Q$ as a free rank-$r$ parameter optimised by gradient ascent rather than the closed-form $Q = \Psi^{1/2}$ update—would require departing from the closed-form coordinate updates and is left for future work.  In the empirical comparison (Section~\ref{sec:experiments}) we include Factor Analysis EM (\texttt{matlap\_faem}) and a gradient marginal likelihood method (\texttt{matlap\_gradml}) as baselines; these are Gaussian factor models (not Matrix Laplace) but share the same low-rank parameterisation and allow the subspace to evolve freely, providing an upper bound on what free-subspace optimisation can achieve.
-
-\section{Implementation}
-
-A reference implementation is provided in the \texttt{matlap} Python package using JAX \cite{jax2018github} for JIT compilation and automatic differentiation.
-
-\paragraph{Numerical stability.} Matrix inverses are never formed explicitly. The matrix square root $Q = \Psi^{1/2}$ is obtained via \texttt{jnp.linalg.eigh}, which returns eigenvalues $d_k$ and eigenvectors $V$ so that $Q^{-1} = V\,\mathrm{diag}(1/d_k)\,V^\top$ can be applied matrix-free. The per-row precision system $(D_i + \bar{\lambda}Q^{-1})\mu_i = D_i y_i$ is solved with a Cholesky factorisation (\texttt{jax.scipy.linalg.cho\_factor}/\texttt{cho\_solve}).
-
-\paragraph{Vectorisation.} The $m$ row updates are independent and are vectorised with \texttt{jax.vmap}, giving a single batched Cholesky solve per iteration.
-
-\paragraph{ELBO monotonicity.} After updating all rows, $\Psi$ and $Q$ are recomputed from the new $\{\mu_i, \Sigma_i\}$ before the ELBO is evaluated. This ensures the ELBO is computed at a fully self-consistent state and is guaranteed non-decreasing.
-
-\paragraph{Lambda grid search.} As an alternative to the empirical-Bayes update, \texttt{matlap\_grid} accepts a user-supplied grid of $\lambda$ values, runs CAVI with $\lambda$ held fixed at each grid point, and returns the solution with the highest ELBO.
-
-\section{Scalable Extensions}
-\label{sec:scalable}
-
+\subsection{Low-Rank CAVI via the Woodbury Identity} \label{sec:lowrank-cavi}
 The full CAVI algorithm stores the $m$ row covariance matrices $\{\Sigma_i\}$ explicitly, requiring $O(mn^2)$ memory—approximately 40 GB for a $10{,}000 \times 1{,}000$ matrix in 32-bit precision. We describe two families of extensions that reduce this to $O(mnr)$ or $O(mn)$ while preserving the key algorithmic properties.
-
-\subsection{Low-Rank CAVI via the Woodbury Identity}
-
-\label{sec:lowrank-cavi}
 
 We restrict the variational family to a rank-$r$ \emph{factor subspace}. Instead of maintaining free row covariances $\Sigma_i \in \mathbb{S}_{++}^n$, we fix a shared loading matrix $V_r \in \mathbb{R}^{n \times r}$ with orthonormal columns and parameterise $x_i = V_r z_i$ where $z_i \in \mathbb{R}^r$. The variational posterior is
 \begin{equation}
@@ -336,6 +246,82 @@ an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. 
 \paragraph{Summary.}
 At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) no new hyperparameters are introduced—$\delta$ is optimized from the data in closed form each iteration.
 
+\section{Theoretical Properties}
+
+\subsection{Invariance of the Optimal Regularisation to Observation Density}
+\label{sec:lambda-invariance}
+
+A practically important consequence of the Bayesian formulation is that the oracle-optimal regularisation strength is approximately invariant to the fraction of missing observations, while the analogous proximal estimator is not.
+
+\paragraph{Setup.}
+Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix.  Each entry is independently observed with probability $f$; observed entries carry heteroscedastic Gaussian noise $y_{ij} = x_{ij} + \varepsilon_{ij}$, $\varepsilon_{ij} \sim \mathcal{N}(0, s_{ij}^2)$.  We use the noise-calibrated heuristic
+\begin{equation}
+  \bar\lambda \;=\; \frac{\sqrt{\max(m,n)}}{\sqrt{\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)}}, \label{eq:lambda-heuristic}
+\end{equation}
+which estimates the typical noise singular-value scale of an $m\times n$ Gaussian matrix with the observed noise distribution (cf.\ the Marchenko--Pastur bulk edge $\approx (1+\sqrt{n/m})\,s\sqrt{m}$ in the homoscedastic case).
+
+\paragraph{The heuristic is independent of $f$.}
+For a random Bernoulli$(f)$ mask applied to noise variances $\{s_{ij}^2\}$ drawn iid from any distribution, the observed entries $\{(i,j)\in\Omega\}$ are a uniformly random subsample of all entries.  Therefore $\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)$ converges to the population median by the law of large numbers, and $\bar\lambda$ in~\eqref{eq:lambda-heuristic} is independent of $f$.  This holds for arbitrary heteroscedastic noise.
+
+\paragraph{The oracle Bayesian regularisation is also independent of $f$.}
+In the factor representation, each latent row score $z_i \in \mathbb{R}^r$ has prior $z_{ik} \sim \mathcal{N}(0,\,d_{r,k}/\lambda)$.  The effective data precision for factor $k$ in row $i$ is
+\begin{equation}
+  \beta_k^{(i)} \;=\; \sum_j p_{ij}\,v_{kj}^2/s_{ij}^2 \;=\; f\,B_k^{(i)},
+\end{equation}
+where $B_k^{(i)} = \sum_j v_{kj}^2/s_{ij}^2$ is the full-data precision (independent of $f$).  The posterior mean is $\hat z_{ik} = \gamma_{ik}\,z_{ik}^{\mathrm{true}} + \text{noise}$ with shrinkage $\gamma_{ik} = \beta_k^{(i)}/(\beta_k^{(i)} + \lambda/d_{r,k})$.  Setting $A = (z_{ik}^{\mathrm{true}})^2$, the MSE for factor $(i,k)$ is
+\begin{equation}
+  \mathrm{MSE}_{ik}(\gamma) \;=\; (1-\gamma)^2 A \;+\; \gamma^2/\beta_k^{(i)},
+\end{equation}
+which is minimised at $\gamma_{ik}^* = A\beta_k^{(i)}/(1 + A\beta_k^{(i)})$.  The corresponding optimal regularisation satisfies
+\begin{equation}
+  \frac{\lambda^*}{d_{r,k}} \;=\; \beta_k^{(i)}\,\frac{1-\gamma_{ik}^*}{\gamma_{ik}^*} \;=\; \beta_k^{(i)} \cdot \frac{1}{\beta_k^{(i)}\,A} \;=\; \frac{1}{(z_{ik}^{\mathrm{true}})^2}, \label{eq:lambda-opt}
+\end{equation}
+since $\beta_k^{(i)}$ cancels exactly.  Critically, $f$ (which enters only through $\beta_k^{(i)} = f\,B_k^{(i)}$) also cancels.  The oracle $\lambda^*$ is therefore independent of both $f$ and the noise heteroscedasticity $\{s_{ij}^2\}$.  Since $\bar\lambda$ from~\eqref{eq:lambda-heuristic} is also independent of $f$, we have
+\begin{equation}
+  \frac{\lambda^*}{\bar\lambda} \;=\; \mathrm{const.,} \label{eq:invariance}
+\end{equation}
+independent of observation density.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across densities from 2\% to 90\% observed (see Section~\ref{sec:experiments}).
+
+\paragraph{Why the proximal estimator is not invariant.}
+For the nuclear-norm penalised least squares problem, the appropriate threshold is the largest singular value of the noise component of $Y_\Omega$.  Under a Bernoulli$(f)$ mask, the noise matrix $E_\Omega = \varepsilon \odot P$ has entry variances $f\,s_{ij}^2$, so its spectral norm scales as $\sqrt{f}\cdot s_{\mathrm{rms}}\sqrt{\max(m,n)}$ (Marchenko--Pastur bulk edge for the sparse noise matrix).  The oracle proximal threshold therefore satisfies $\lambda^*_{\mathrm{prox}} \propto \sqrt{f}$, which decreases with $f$.  Relative to the $f$-independent heuristic~\eqref{eq:lambda-heuristic}, the ratio $\lambda^*_{\mathrm{prox}}/\bar\lambda \propto \sqrt{f}$ is not constant, so the same grid centre becomes increasingly misspecified as observations become sparse.  The Bayesian model avoids this because $f$ enters symmetrically into both the data precision $\beta_k^{(i)}$ and the posterior variance $1/\beta_k^{(i)}$, and these cancel in the bias--variance optimum~\eqref{eq:lambda-opt}.
+
+\subsection{Optimization Landscape and Global Convergence}
+\label{sec:convexity}
+
+Although the posterior $p(X \mid Y, S, \lambda, Q)$ is log-concave in $X$---the Gaussian likelihood contributes a log-quadratic and the GSM prior with $Q$ fixed contributes $-\tfrac{\bar\lambda}{2}\mathrm{Tr}(X^\top Q^{-1} X)$---the ELBO over the full variational family $(q(X), Q, q(\lambda))$ is not jointly concave.  Nonetheless, the CAVI iteration enjoys strong convergence guarantees because every coordinate update has a \emph{unique} global optimum.
+
+\paragraph{Global optimality of \texttt{matlap\_batched}.}
+Given $Q$ and $\bar\lambda$, the optimal $q(x_i)$ is the exact Gaussian posterior
+$\mathcal{N}(\mu_i, \Sigma_i)$ with $\Sigma_i = (S_i^{-1} + \bar\lambda Q^{-1})^{-1}$ and $\mu_i = \Sigma_i S_i^{-1} y_i$, which is unique.
+The $Q$-update $Q^* = \Psi^{1/2}$ follows from the AM--GM inequality
+$\mathrm{Tr}(\Psi Q^{-1}) + \mathrm{Tr}(Q) \geq 2\mathrm{Tr}(\Psi^{1/2})$,
+with equality at $Q = \Psi^{1/2}$, and $\mathrm{Tr}(\Psi Q^{-1}) + \mathrm{Tr}(Q)$ is strictly convex in $Q \succ 0$ so the minimum is unique.
+The $\lambda$-update is the mean of a Gamma posterior, again unique.
+Because rows are conditionally independent given $(Q, \lambda)$, the mean-field approximation is \emph{exact}: the CAVI iterates converge to the true posterior factorization, which is the unique global maximum of the ELBO.  \texttt{matlap\_batched} is therefore initialization-independent.
+
+\paragraph{Low-rank variants and the frozen-subspace limitation.}
+The low-rank CAVI (\texttt{matlap\_lowrank}, Section~\ref{sec:lowrank-cavi}) initialises a loading matrix $V_r$ from the top-$r$ right singular vectors of $Y_\Omega$ and restricts $x_i \in \mathrm{col}(V_r)$ throughout.  The $Q_r$-update rotates $V_r$ \emph{within} its column space but never changes the subspace itself.  Within this restriction the CAVI sub-updates are again unique, and the algorithm converges to the global maximum of the \emph{restricted} ELBO.  However, if any signal lies outside $\mathrm{col}(V_r^{\mathrm{init}})$---which is likely when the true rank exceeds $r$ or the signal-to-noise ratio is low---the restricted optimum can be substantially worse than the global one.
+
+The low-rank-plus-isotropic variant (\texttt{matlap\_lowrank\_isotropic}, Section~\ref{sec:lowrank-woodbury}) partially addresses this: the posterior mean $\mu_i$ is full-rank (the isotropic off-subspace precision $\delta$ provides gradient signal in all directions), but the covariance structure $Q$ remains restricted to $\mathrm{col}(V_r)$.  In practice this gives lower RMSE than the pure low-rank model, though the subspace still does not evolve.
+
+\paragraph{Methods with a free subspace.}
+The Factor Analysis EM (\texttt{matlap\_faem}) and gradient marginal likelihood (\texttt{matlap\_gradml}) methods described in Section~\ref{sec:faem} parameterise an unconstrained loading matrix $W_r \in \mathbb{R}^{n \times r}$.  The column space of $W_r$ evolves freely across iterations, allowing the model to discover the true signal subspace from data rather than inheriting it from the initialization.  The FA EM M-step for $W_r$ is a per-column weighted least-squares problem, globally concave in $W_r$ for fixed posterior moments, with a unique solution.  Both methods optimize the marginal log-likelihood $\log p(Y_\Omega \mid W_r, \lambda)$, which is identified up to a right-orthogonal rotation $W_r \mapsto W_r R$; this rotation ambiguity creates saddle points but no spurious local maxima, as all critical points satisfying $\partial \mathcal{L}/\partial W_r = 0$ yield the same posterior mean $\mu_i = W_r \hat{z}_i$ and marginal covariance $W_r A_i^{-1} W_r^\top$.
+
+\section{Implementation}
+
+A reference implementation is provided in the \texttt{matlap} Python package using JAX \cite{jax2018github} for JIT compilation and automatic differentiation.
+
+\paragraph{Numerical stability.} Matrix inverses are never formed explicitly. The matrix square root $Q = \Psi^{1/2}$ is obtained via \texttt{jnp.linalg.eigh}, which returns eigenvalues $d_k$ and eigenvectors $V$ so that $Q^{-1} = V\,\mathrm{diag}(1/d_k)\,V^\top$ can be applied matrix-free. The per-row precision system $(D_i + \bar{\lambda}Q^{-1})\mu_i = D_i y_i$ is solved with a Cholesky factorisation (\texttt{jax.scipy.linalg.cho\_factor}/\texttt{cho\_solve}).
+
+\paragraph{Vectorisation.} The $m$ row updates are independent and are vectorised with \texttt{jax.vmap}, giving a single batched Cholesky solve per iteration.
+
+\paragraph{ELBO monotonicity.} After updating all rows, $\Psi$ and $Q$ are recomputed from the new $\{\mu_i, \Sigma_i\}$ before the ELBO is evaluated. This ensures the ELBO is computed at a fully self-consistent state and is guaranteed non-decreasing.
+
+\paragraph{Lambda grid search.} As an alternative to the empirical-Bayes update, \texttt{matlap\_grid} accepts a user-supplied grid of $\lambda$ values, runs CAVI with $\lambda$ held fixed at each grid point, and returns the solution with the highest ELBO.
+
+\section{Scalable Extensions}
+\label{sec:scalable}
+
 \subsection{Randomized SVD for Approximate Nuclear Norm in SVI}
 \label{sec:rsvd}
 
@@ -358,11 +344,6 @@ The same warm-started path is also used by \texttt{matlap\_grid\_lowrank\_isotro
 
 This strategy costs $O(G \cdot mnr)$ in total, where $G$ is the number of grid points. On a GPU at $m=10{,}000$, $n=1{,}000$, $r=30$, a grid of $G=7$ points converges in under one second.
 
-\subsection{Memory-Efficient Full CAVI via Batched Row Processing}
-\label{sec:batched}
-
-For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this with \texttt{matlap\_batched}, which processes rows in mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. With $B=64$ and $n=1{,}000$ this is approximately 256 MB versus 40 GB. The algorithm is otherwise identical to full CAVI (Section~\ref{sec:cavi}) and converges to the same solution.
-
 \subsection{Scalable Variational Guides for SVI}
 
 Two additional guide families reduce the SVI memory footprint to $O(mn)$ while capturing structured posterior correlations:
@@ -382,6 +363,51 @@ Each row $i$ has its own low-rank factor $F_i \in \mathbb{R}^{n \times k}$:
 At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, versus 40 GB for full row-MVN covariances.
 
 Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariateNormal} distribution and combined with the rSVD nuclear norm approximation, reducing per-step cost to $O(mnr)$.
+
+\subsection{Factor Analysis EM and Gradient Marginal Likelihood}
+\label{sec:faem}
+
+Both approaches overcome the frozen-subspace limitation (Section~\ref{sec:convexity}) by treating the loading matrix $W_r \in \mathbb{R}^{n \times r}$ as an unconstrained free parameter and optimising the penalised marginal log-likelihood.
+
+\paragraph{Model.}
+We write $x_i = W_r z_i$ with isotropic prior $z_i \sim \mathcal{N}(0, \lambda^{-1} I_r)$ and Gaussian likelihood $y_{ij} \mid x_i \sim \mathcal{N}(x_{ij}, s_{ij}^2)$ for observed entries.  Unlike the low-rank CAVI, which fixes $\mathrm{col}(V_r)$ and writes $W_r = V_r \mathrm{diag}(d_r)$, here $W_r$ is unconstrained and absorbs both directions and scales.
+
+\paragraph{Marginal log-likelihood.}
+Integrating out $z_i$ via the Woodbury identity gives, for each row $i$,
+\begin{equation}
+  \log p(y_i^\Omega \mid W_r, \lambda) = -\tfrac{1}{2}\!\left[
+    y_i^\top \Lambda_i y_i - \mathrm{rhs}_i^\top A_i^{-1} \mathrm{rhs}_i
+    - \textstyle\sum_{j\in\Omega_i} \log p_{ij} + \log|A_i| - r\log\lambda + |\Omega_i| \log 2\pi
+  \right],
+  \label{eq:marginal-ll}
+\end{equation}
+where $\Lambda_i = \mathrm{diag}(p_i)$, $A_i = \lambda I_r + W_r^\top \Lambda_i W_r \in \mathbb{R}^{r \times r}$, and $\mathrm{rhs}_i = W_r^\top \Lambda_i y_i$.  Only the $r \times r$ matrix $A_i$ need be inverted per row.
+
+\paragraph{E-step.}
+The posterior over $z_i$ is $q(z_i) = \mathcal{N}(\hat{z}_i, A_i^{-1})$ with
+\begin{equation}
+  A_i = \lambda I_r + W_r^\top \Lambda_i W_r, \qquad \hat{z}_i = A_i^{-1} W_r^\top (p_i \odot y_i).
+\end{equation}
+The posterior second moment is $\mathbb{E}[z_i z_i^\top] = A_i^{-1} + \hat{z}_i \hat{z}_i^\top$ and the posterior mean of $x_i$ is $\mu_i = W_r \hat{z}_i$.
+
+\paragraph{FA EM M-step.}
+The expected complete-data log-likelihood decouples across rows of $W_r^\top$.  Setting the gradient for the $j$-th row $w_j^\top$ to zero yields the closed-form update
+\begin{equation}
+  w_j = \left(\sum_{i} p_{ij}\,\mathbb{E}[z_i z_i^\top]\right)^{-1} \!\sum_{i} p_{ij}\,y_{ij}\,\hat{z}_i,
+  \label{eq:faem-mstep}
+\end{equation}
+a weighted least-squares problem with a unique solution.  The M-step for $\lambda$ is the Gamma posterior mean,
+\begin{equation}
+  \bar\lambda = \frac{a_0 + mr/2}{b_0 + \tfrac{1}{2}\sum_i \mathrm{Tr}\!\left(\mathbb{E}[z_i z_i^\top]\right)}.
+\end{equation}
+Per-iteration cost is $O(mnr + mr^3)$, identical to the low-rank CAVI.
+
+\paragraph{Gradient marginal likelihood.}
+As an alternative to EM, we directly maximise
+\begin{equation}
+  \mathcal{L}_{\mathrm{grad}}(W_r, \lambda) = \sum_i \log p(y_i^\Omega \mid W_r, \lambda) + (a_0 - 1)\log\lambda - b_0\lambda
+\end{equation}
+with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \cite{kingma2014adam}, with gradients computed by JAX autodiff through~\eqref{eq:marginal-ll}.
 
 \section{Empirical Comparison}
 \label{sec:experiments}
@@ -475,6 +501,11 @@ B.~Recht, M.~Fazel, and P.~A. Parrilo.
 E.~J. Cand\`{e}s and B.~Recht.
 \newblock Exact matrix completion via convex optimization.
 \newblock \textit{Communications of the ACM}, 55(6):111--119, 2012.
+
+\bibitem{kingma2014adam}
+D.~P. Kingma and J.~Ba.
+\newblock Adam: A method for stochastic optimization.
+\newblock In \textit{International Conference on Learning Representations (ICLR)}, 2015.
 
 \bibitem{halko2011finding}
 N.~Halko, P.~G. Martinsson, and J.~A. Tropp.
