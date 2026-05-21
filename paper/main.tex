@@ -9,6 +9,7 @@
 \geometry{a4paper, margin=1.2in}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{hyperref}
 \usepackage{xcolor}
 
@@ -35,9 +36,9 @@ We present a Bayesian approach to low-rank matrix estimation under a heterosceda
 
 \section{Introduction}
 
-Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from collaborative filtering to genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization (NMF), independent component analysis (ICA), and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices $X = UV^T$. Non-convexity has practical consequences beyond mere theoretical unease: different random initializations routinely converge to qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \cite{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no mechanism for selecting the rank of the solution.
+Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from collaborative filtering to genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization (NMF), independent component analysis (ICA), and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices $X = UV^T$. Non-convexity has practical consequences beyond mere theoretical unease: different random initializations routinely converge to qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no mechanism for selecting the rank of the solution.
 
-Convex relaxations offer a principled escape from local minima. The nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing $X$ \cite{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. The practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme. 
+Convex relaxations offer a principled escape from local minima. The nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing $X$ \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. The practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme. 
 
 We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{Matrix Laplace} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
 
@@ -177,6 +178,25 @@ The full procedure is summarized in Algorithm 1.
 
 \paragraph{Missing Data.} The model naturally accommodates missing observations. If entry $(i,j)$ is unobserved, we set $s_{ij} = \infty$, making the noise precision $1/s_{ij}^2 = 0$. The entry then contributes nothing to the likelihood, the row posterior update for $\mu_i$, or the ELBO. Observed and missing entries can be arbitrarily interleaved.
 
+\paragraph{Rényi $\alpha$-ELBO for $\lambda$ selection.}
+The standard ELBO lower-bounds $\log p(Y \mid \lambda)$ but is tight only when $q(X) = p(X \mid Y, \lambda)$. For the purpose of selecting $\lambda$, we exploit the Rényi $\alpha$-ELBO \citep{li2016renyi},
+\begin{equation}
+    \mathcal{L}_\alpha = \frac{1}{1-\alpha}\log \int q(X)^{\alpha}\, p(Y, X \mid \lambda)^{1-\alpha}\, dX, \quad 0 \le \alpha < 1,
+\end{equation}
+which satisfies $\mathcal{L}_\alpha \le \log p(Y \mid \lambda)$ and recovers the ELBO as $\alpha \to 1$; at $\alpha = 0$ it is the importance-weighted objective.
+
+For the low-rank-plus-isotropic model with diagonal posterior $q(x_{ij}) = \mathcal{N}(\mu_{ij},\sigma_{ij}^2)$, Gaussian likelihood $p(y_{ij}\mid x_{ij}) = \mathcal{N}(y_{ij}, s_{ij}^2)$, and prior marginal $p(x_{ij}) = \mathcal{N}(0,v_j(\lambda))$, the Rényi integral is a product of Gaussian factors and evaluates in closed form as a correction to the diagonal-Gaussian ELBO:
+\begin{equation} \label{eq:renyi-correction}
+    \mathcal{L}_\alpha = \mathcal{L} + \frac{1}{\beta}\sum_{(i,j) \in \mathcal{O}}
+    \left[\frac{\beta^2 f_{ij}^2}{2(1 - 2\beta\, g_{ij})} - \frac{1}{2}\log(1-2\beta\, g_{ij})\right],
+\end{equation}
+where $\beta = 1-\alpha$,
+\begin{align}
+    f_{ij} &= \sigma_{ij}\!\left(\frac{y_{ij}-\mu_{ij}}{s_{ij}^2} - \frac{\mu_{ij}}{v_j(\lambda)}\right), \\
+    g_{ij} &= \tfrac12\!\left(1 - \frac{\sigma_{ij}^2}{s_{ij}^2} - \frac{\sigma_{ij}^2}{v_j(\lambda)}\right),
+\end{align}
+and the sum is over observed entries $\mathcal{O}$.  The correction vanishes as $\alpha\to 1$ (recovering $\mathcal{L}$) and is negative for $\alpha \in (0,1)$ (a tighter bound).  Crucially, $v_j(\lambda)$ depends on $\lambda$ through the low-rank-plus-isotropic parameterization, so $\mathcal{L}_\alpha$ is differentiable with respect to $\lambda$ and can be maximized by gradient-based search (e.g.\ BFGS on $\log\lambda$). In our implementation (\texttt{matlap\_iso\_renyi\_lambda}) we alternate between CAVI updates for the posterior $q$ at fixed $\lambda$ and a one-dimensional BFGS step to update $\lambda$ by maximizing \eqref{eq:renyi-correction}, providing a fully automatic, cross-validation-free procedure for joint posterior and regularization inference.
+
 \subsection{Low-Rank CAVI via the Woodbury Identity} \label{sec:lowrank-cavi}
 The full CAVI algorithm stores the $m$ row covariance matrices $\{\Sigma_i\}$ explicitly, requiring $O(mn^2)$ memory—approximately 40 GB for a $10{,}000 \times 1{,}000$ matrix in 32-bit precision. We describe two families of extensions that reduce this to $O(mnr)$ or $O(mn)$ while preserving the key algorithmic properties.
 
@@ -311,7 +331,7 @@ The Factor Analysis EM (\texttt{matlap\_faem}) and gradient marginal likelihood 
 
 \section{Implementation}
 
-A reference implementation is provided in the \texttt{matlap} Python package using JAX \cite{jax2018github} for JIT compilation and automatic differentiation.
+A reference implementation is provided in the \texttt{matlap} Python package using JAX \citep{jax2018github} for JIT compilation and automatic differentiation.
 
 \paragraph{Numerical stability.} Matrix inverses are never formed explicitly. The matrix square root $Q = \Psi^{1/2}$ is obtained via \texttt{jnp.linalg.eigh}, which returns eigenvalues $d_k$ and eigenvectors $V$ so that $Q^{-1} = V\,\mathrm{diag}(1/d_k)\,V^\top$ can be applied matrix-free. The per-row precision system $(D_i + \bar{\lambda}Q^{-1})\mu_i = D_i y_i$ is solved with a Cholesky factorisation (\texttt{jax.scipy.linalg.cho\_factor}/\texttt{cho\_solve}).
 
@@ -331,7 +351,7 @@ For the gradient-based SVI comparators, the bottleneck is computing $\|X\|_* = \
 \begin{equation}
     \|X\|_* \approx \sum_{k=1}^r \hat{\sigma}_k(X),
 \end{equation}
-where $\hat{\sigma}_1 \geq \dots \geq \hat{\sigma}_r$ are the top-$r$ singular values estimated by power-iteration randomized SVD \cite{halko2011finding}. The method forms a sketch $Y_\Omega = (XX^\top)^q X\Omega$ for a Gaussian random matrix $\Omega \in \mathbb{R}^{n \times (r+p)}$ with $p$ oversampling columns, then extracts approximate singular values from the resulting small matrix.
+where $\hat{\sigma}_1 \geq \dots \geq \hat{\sigma}_r$ are the top-$r$ singular values estimated by power-iteration randomized SVD \citep{halko2011finding}. The method forms a sketch $Y_\Omega = (XX^\top)^q X\Omega$ for a Gaussian random matrix $\Omega \in \mathbb{R}^{n \times (r+p)}$ with $p$ oversampling columns, then extracts approximate singular values from the resulting small matrix.
 
 To enable gradient-based optimization, we implement the approximation with a \texttt{jax.custom\_vjp} rule. The forward pass returns $\sum_k \hat{\sigma}_k$; the backward pass propagates the gradient $g \mapsto g \hat{U}_r \hat{V}_r^\top$, which is the standard nuclear norm subgradient restricted to the top-$r$ component and satisfies $\|\nabla\|_{\mathrm{op}} \leq 1$. This reduces the per-step cost from $O(mn^2)$ to $O(mnr)$ for matrices with $n \leq m$.
 
@@ -409,7 +429,7 @@ As an alternative to EM, we directly maximise
 \begin{equation}
   \mathcal{L}_{\mathrm{grad}}(W_r, \lambda) = \sum_i \log p(y_i^\Omega \mid W_r, \lambda) + (a_0 - 1)\log\lambda - b_0\lambda
 \end{equation}
-with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \cite{kingma2014adam}, with gradients computed by JAX autodiff through~\eqref{eq:marginal-ll}.
+with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \citep{kingma2014adam}, with gradients computed by JAX autodiff through~\eqref{eq:marginal-ll}.
 
 \section{Empirical Comparison}
 \label{sec:experiments}
@@ -518,6 +538,11 @@ N.~Halko, P.~G. Martinsson, and J.~A. Tropp.
 J.~Bradbury, R.~Frostig, P.~Hawkins, M.~J. Johnson, C.~Leary, D.~Maclaurin, G.~Necula, A.~Paszke, J.~VanderPlas, S.~Wanderman-Milne, and Q.~Zhang.
 \newblock {JAX}: composable transformations of {P}ython+{N}um{P}y programs.
 \newblock \url{http://github.com/google/jax}, 2018.
+
+\bibitem{li2016renyi}
+Y.~Li and R.~E. Turner.
+\newblock R{\'e}nyi divergence variational inference.
+\newblock In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2016.
 
 \end{thebibliography}
 
