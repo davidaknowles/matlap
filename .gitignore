@@ -10,3 +10,7 @@ build/
 .ruff_cache/
 .mypy_cache/
 *.so
+paper/main.aux
+paper/main.log
+paper/main.out
+paper/main.toc

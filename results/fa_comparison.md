@@ -1,6 +1,6 @@
 # All-methods comparison across missing fractions
 
-Generated 2026-05-20 12:01
+Generated 2026-05-20 12:23
 
 Settings: m=200, n=50, true_rank=5, model_rank=10, SNR=1.0, seeds=[0, 1, 2]
 
@@ -28,11 +28,11 @@ Settings: m=200, n=50, true_rank=5, model_rank=10, SNR=1.0, seeds=[0, 1, 2]
 
 | Missing | proximal_cv      (FISTA + 3-fold CV) | batched_auto     (full CAVI, auto-λ) | batched_grid     (full CAVI, best ELBO over grid) | batched_warmstart(full CAVI, FA-EM warm-start) | iso_auto         (lowrank+iso CAVI, auto-λ) | iso_grid         (lowrank+iso CAVI, best ELBO over grid) | iso_cv           (lowrank+iso CAVI, grid+CV) | iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start) | iso_then_proximal(iso λ → proximal_gradient) | iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ) | faem             (FA EM, free subspace, Gaussian factor model) | gradml           (gradient marginal LL, free subspace) |
 |--------:|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|
-| 2%    | 8.7 | 0.5 | 0.9 | 0.8 | 0.3 | 0.4 | 1.2 | 0.2 | 0.4 | 2.4 | 0.1 | 0.3 |
-| 10%    | 8.9 | 0.2 | 0.8 | 0.3 | 0.1 | 0.4 | 1.2 | 0.1 | 0.2 | 2.3 | 0.1 | 0.1 |
-| 30%    | 9.1 | 0.2 | 0.8 | 0.4 | 0.1 | 0.4 | 1.2 | 0.2 | 0.3 | 1.8 | 0.1 | 0.1 |
-| 60%    | 8.1 | 0.3 | 0.8 | 0.8 | 0.3 | 0.4 | 1.3 | 0.3 | 0.8 | 1.4 | 0.1 | 0.2 |
-| 90%    | 7.8 | 0.1 | 0.7 | 2.0 | 0.7 | 0.3 | 1.3 | 0.8 | 0.9 | 1.9 | 0.3 | 1.6 |
+| 2%    | 9.1 | 0.5 | 0.8 | 0.8 | 0.3 | 0.3 | 1.3 | 0.2 | 0.2 | 2.3 | 0.1 | 0.3 |
+| 10%    | 8.3 | 0.2 | 0.7 | 0.3 | 0.1 | 0.4 | 1.2 | 0.1 | 0.2 | 2.2 | 0.1 | 0.1 |
+| 30%    | 8.1 | 0.2 | 0.6 | 0.4 | 0.1 | 0.4 | 1.3 | 0.2 | 0.6 | 1.7 | 0.1 | 0.1 |
+| 60%    | 7.1 | 0.3 | 0.6 | 0.9 | 0.3 | 0.4 | 1.3 | 0.3 | 0.9 | 1.4 | 0.1 | 0.2 |
+| 90%    | 6.7 | 0.0 | 0.6 | 1.8 | 0.7 | 0.3 | 1.2 | 0.7 | 0.7 | 2.0 | 0.3 | 1.6 |
 
 ## Method descriptions
 
