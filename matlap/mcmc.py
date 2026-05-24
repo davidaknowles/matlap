@@ -306,8 +306,10 @@ def _gsm_gibbs_step(
     Step C: Half-Cauchy λ update via the inverse-Gamma hierarchy
             (Makalic & Schmidt 2015; Segert & Wycoff 2025 §4.3):
                 beta_new  ~ IG(1,   1 + 1/lambda)
-                alpha_new ~ IG(mn + 1/2, ||X_new||_* + 1/beta_new)
-                lambda_new = 1 / alpha_new.
+                alpha_new ~ IG(mn + 1/2, tr(Q_new) + 1/beta_new)
+                lambda_new = 1 / alpha_new,
+            where tr(Q_new) = sum(d_new) from Step B, so Step B feeds
+            directly into the λ update.
 
     Args:
         X:          Current X, shape (m, n).
@@ -355,11 +357,10 @@ def _gsm_gibbs_step(
     # IG(a, b) sampled as b / Gamma(a, rate=1).
     # beta_new ~ IG(1, 1 + 1/lambda)
     beta_new = (1.0 + 1.0 / jnp.maximum(lambda_bar, 1e-30)) / jax.random.gamma(k4, 1.0)
-    # ||X_new||_* = sum of singular values
-    nuc_X_new = jnp.linalg.svd(X_new, compute_uv=False).sum()
-    # alpha_new = 1/lambda_new ~ IG(mn + 1/2, ||X_new||_* + 1/beta_new)
+    # alpha_new = 1/lambda_new ~ IG(mn + 1/2, tr(Q_new) + 1/beta_new)
+    # tr(Q_new) = sum(d_new); using sampled d so Step B feeds into lambda
     alpha_shape = jnp.array(m * n + 0.5, dtype=X.dtype)
-    alpha_scale = nuc_X_new + 1.0 / jnp.maximum(beta_new, 1e-30)
+    alpha_scale = jnp.sum(d_new) + 1.0 / jnp.maximum(beta_new, 1e-30)
     alpha_new = alpha_scale / jax.random.gamma(k5, alpha_shape)
     lambda_new = 1.0 / jnp.maximum(alpha_new, 1e-30)
 

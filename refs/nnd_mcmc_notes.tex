@@ -4,8 +4,10 @@
 % Adapted to the heteroscedastic denoising/completion setting in matlap.
 
 \documentclass[11pt]{article}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{mathpazo} % Palatino font
 \usepackage{amsmath, amssymb}
 \usepackage{geometry}
 \geometry{a4paper, margin=1.2in}
@@ -152,13 +154,88 @@ sampler of Hoff (2009).
 \]
 again a matrix vMF on $O(n)$; sampled via Hoff (2009).
 
-\paragraph{Heteroscedastic adaptation.}
-For heteroscedastic $s_{ij}^2$, the sufficient statistic for $U$ and $V$ is no
-longer a pure trace form, so the vMF structure is lost.  The source treats the
-homoscedastic case; the heteroscedastic analogue requires a more complex MH
-step for $U$ and $V$.  In our \textsc{matlap} implementation we adopt instead
-a GSM auxiliary-variable Gibbs based on $Q$ (see implementation notes below),
-which remains tractable for heteroscedastic noise.
+\paragraph{Heteroscedastic adaptation (\textsc{matlap} implementation).}
+\label{sec:het-gibbs}
+For heteroscedastic $s_{ij}^2$, the vMF structure of the conditionals for
+$U$ and $V$ is lost.  We instead exploit the \emph{Gaussian Scale Mixture
+(GSM)} representation of the NND prior (Proposition~3.2 of source):
+\[
+  \exp(-\lambda\|X\|_*)
+  \;=\;
+  \min_{Q\succ 0}
+  \exp\!\Bigl(-\tfrac{\lambda}{2}\bigl[\operatorname{tr}(Q^{-1}\Psi)
+  + \operatorname{tr}(Q)\bigr]\Bigr),
+  \quad \Psi = X^TX,
+\]
+minimized at $Q_* = \Psi^{1/2}$.  Treating $Q$ as an auxiliary variable
+yields the pseudo-joint
+\[
+  p(X,Q,\lambda)
+  \;\propto\;
+  \exp\!\Bigl(-\tfrac{\lambda}{2}\bigl[\operatorname{tr}(Q^{-1}\Psi)+\operatorname{tr}(Q)\bigr]\Bigr)
+  \cdot p(Y\mid X) \cdot p(\lambda).
+\]
+Let $\Psi = V\operatorname{diag}(\psi)V^T$ (eigendecomposition) and
+$d_k = $ eigenvalues of $Q$ in the basis $V$ so that
+$Q = V\operatorname{diag}(d)V^T$.  The three-step Gibbs cycle is:
+
+\subparagraph{Step A: Sample $X\mid d,\lambda,Y,S$.}
+Writing the prior as $p(x_i\mid Q,\lambda) = \mathcal{N}(0, (\lambda Q^{-1})^{-1})$,
+each row of $X$ is conditionally independent:
+\begin{align}
+  A_i &= \operatorname{diag}(s_{i,\cdot}^{-2}\odot m_{i,\cdot}) + \lambda Q^{-1},
+  \quad
+  r_i = \operatorname{diag}(s_{i,\cdot}^{-2}\odot m_{i,\cdot})\,y_i^{\mathrm{obs}},
+  \\
+  x_i &\;\sim\; \mathcal{N}(A_i^{-1}r_i,\; A_i^{-1}),
+\end{align}
+where $m_{i,\cdot}$ is the observation mask and $Q^{-1} = V\operatorname{diag}(1/d)V^T$ from the
+current eigenvalues $d$.  Each $n\times n$ precision matrix $A_i$ is solved by
+Cholesky; rows are sampled in parallel via \texttt{vmap}.
+
+In practice the current implementation initialises $d$ to the MAP
+$d_k = \sqrt{\psi_k}$ at the start of each step (re-derived from the
+current $X$), before running Steps B and C.
+
+\subparagraph{Step B: Sample $d\mid X,\lambda$ (Metropolis-within-Gibbs).}
+After sampling $X_\mathrm{new}$, eigendecompose $\Psi_\mathrm{new}=X_\mathrm{new}^TX_\mathrm{new}
+= V_\mathrm{new}\operatorname{diag}(\psi_\mathrm{new})V_\mathrm{new}^T$.
+Each eigenvalue $d_k$ of $Q$ in the basis $V_\mathrm{new}$ has conditional
+\[
+  p(d_k\mid\psi_k,\lambda)
+  \;\propto\; \exp\!\Bigl(-\tfrac{\lambda}{2}\bigl(d_k + \psi_k/d_k\bigr)\Bigr),
+  \quad d_k>0,
+\]
+which is $\mathrm{GIG}(1,\lambda,\lambda\psi_k)$ with mode $\sqrt{\psi_k}$.
+One Metropolis step with a symmetric log-normal proposal:
+\[
+  \log d_k' = \log d_k + \sigma_Q\,\varepsilon_k, \quad \varepsilon_k\sim\mathcal{N}(0,1),
+\]
+\[
+  \log\alpha_k
+  = -\tfrac{\lambda}{2}(d_k'+\psi_k/d_k' - d_k - \psi_k/d_k)
+  + (\log d_k' - \log d_k),
+\]
+where the second term is the Jacobian for the log-space random walk.
+
+\subparagraph{Step C: Sample $\lambda\mid d_\mathrm{new}$ (half-Cauchy hierarchy).}
+From the GSM joint, $p(\lambda\mid Q) \propto \lambda^{mn}\exp(-\tfrac{\lambda}{2}\operatorname{tr}(Q))\cdot p(\lambda)$.
+With the half-Cauchy prior on $\alpha=1/\lambda$ (Section~\ref{sec:lambda}),
+and $\operatorname{tr}(Q_\mathrm{new}) = \sum_k d_k^\mathrm{new}$ from Step B:
+\begin{align}
+  \beta' &\;\sim\; \mathrm{IG}\!\Bigl(1,\;1+\lambda\Bigr), \\
+  \alpha' &\;\sim\; \mathrm{IG}\!\Bigl(mn+\tfrac{1}{2},\;\textstyle\sum_k d_k^\mathrm{new} + 1/\beta'\Bigr), \\
+  \lambda' &\;=\; 1/\alpha'.
+\end{align}
+Note $\operatorname{tr}(Q_*)=\|X\|_*$ exactly when $d_k=\sqrt{\psi_k}$ (MAP),
+so Steps B--C reduce to a nuclear-norm update when $\sigma_Q\to 0$.
+
+\paragraph{Sparse-data behaviour.}
+At high missing fractions ($\gtrsim$60\%), $X_\mathrm{new}\to 0$ under the
+posterior, so $\sum d_k\to 0$ and $\lambda'\to\infty$ even under the
+half-Cauchy prior.  This is a genuine feature of the model: the NND prior
+concentrates probability mass at $X=0$ for large $\lambda$, and sparse
+data cannot rule out this degenerate configuration.
 
 % ===========================================================================
 \section*{$\lambda$ sampling: Half-Cauchy prior (Sec.\ 4.3)}
@@ -173,21 +250,22 @@ $\beta\sim\mathrm{IG}(1/2,1)$ then $\alpha$ is marginally Half-Cauchy.  For
 conjugacy with the NND likelihood $p(X|\lambda)\propto\lambda^{mn}\exp(-\lambda\|X\|_*)$,
 the source samples the \emph{inverse} $\alpha=1/\lambda$ and introduces an
 auxiliary $\beta$.  The conjugate updates are:
-\[
-  \beta|\alpha \;\sim\; \mathrm{IG}\!\Bigl(1,\; 1 + \tfrac{1}{\alpha}\Bigr),
-\]
-\[
-  \alpha|\beta,X,\gamma^2 \;\sim\;
+\begin{align}
+  \beta|\alpha &\;\sim\; \mathrm{IG}\!\Bigl(1,\; 1 + \tfrac{1}{\alpha}\Bigr), \\
+  \alpha|\beta,X,\gamma^2 &\;\sim\;
   \mathrm{IG}\!\Bigl(mn + \tfrac{1}{2},\;
-    \tfrac{\|X\|_*}{\gamma^2} + \tfrac{1}{\beta}\Bigr),
-\]
-\[
-  \lambda \;\leftarrow\; \tfrac{1}{\alpha}.
-\]
+    \tfrac{\|X\|_*}{\gamma^2} + \tfrac{1}{\beta}\Bigr), \\
+  \lambda &\;\leftarrow\; \tfrac{1}{\alpha}.
+\end{align}
 
 \paragraph{Implementation note (\textsc{matlap}).}
-Our implementation uses a Gamma conjugate prior on $\lambda$ for simplicity,
-with a \texttt{lambda\_max} cap to prevent divergence when the data are sparse
-(missing fraction $\gtrsim$60\%).  The half-Cauchy hierarchy above would be a
-more principled alternative, especially at high missing fractions.
+Our implementation uses this half-Cauchy hierarchy (Step C of the
+heteroscedastic Gibbs above) with $\operatorname{tr}(Q) = \sum_k d_k^\mathrm{new}$
+from Step B, rather than $\|X\|_*/\gamma^2$ as in the homoscedastic source.
+This drops the $\gamma^{-2}$ scaling because $\lambda$ acts directly on
+$\|X\|_*$ (not $\|X\|_*/\gamma$) in our formulation.  As a consequence,
+with very sparse data ($\gtrsim$60\% missing) the sampler still drives
+$\lambda\to\infty$; this reflects the model's degeneracy rather than
+an implementation error (see sparse-data discussion in Section~\ref{sec:gibbs}).
+
 \end{document}
