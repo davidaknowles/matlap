@@ -72,7 +72,7 @@ METHOD_LABELS = {
     "faem":              "faem             (FA EM, free subspace, Gaussian factor model)",
     "gradml":            "gradml           (gradient marginal LL, free subspace)",
     "mcmc_mala":         "mcmc_mala        (Proximal MALA, proximal-cv λ warm-start, 400 samples)",
-    "mcmc_gibbs":        "mcmc_gibbs       (GSM Gibbs, half-Cauchy λ, 400 samples)",
+    "mcmc_gibbs":        "mcmc_gibbs       (MALA+MH Gibbs, proximal-cv warm-start, 400 samples)",
 }
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
@@ -209,11 +209,13 @@ def run_one_seed(seed: int, missing_frac: float) -> list[dict]:
     )
     record("mcmc_mala", r_mala.mu, r_mala.lambda_bar, time.perf_counter() - t0)
 
-    # mcmc_gibbs: GSM Gibbs with half-Cauchy lambda (Segert & Wycoff 2025 §4.3)
+    # mcmc_gibbs: MALA for X + log-normal MH for lambda, warm-started from proximal_cv
     t0 = time.perf_counter()
     r_gibbs = matlap.mcmc_gsm_gibbs(
         Y_j, S_j,
-        n_warmup=100, n_samples=400,
+        lambda_init=float(best_lam),
+        x_init=jnp.array(r_pcv.X),
+        n_warmup=300, n_samples=400,
         key=jax.random.PRNGKey(seed + 100),
     )
     record("mcmc_gibbs", r_gibbs.mu, r_gibbs.lambda_bar, time.perf_counter() - t0)

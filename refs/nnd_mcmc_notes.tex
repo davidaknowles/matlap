@@ -182,8 +182,8 @@ therefore targets the \emph{wrong} posterior.
 The proper augmentation uses the modified Bessel identity
 $K_{1/2}(z)=\sqrt{\pi/(2z)}\,e^{-z}$:
 \[
-  \int_0^\infty d^{-1/2}
-  \exp\!\Bigl(-\tfrac{\psi}{2d} - \tfrac{\lambda^2 d}{2}\Bigr)\,dd
+  \int_0^\infty \nu^{-1/2}
+  \exp\!\Bigl(-\tfrac{\psi}{2\nu} - \tfrac{\lambda^2 \nu}{2}\Bigr)\,d\nu
   \;=\; \frac{\sqrt{\pi}}{\lambda}\,e^{-\lambda\sqrt{\psi}}
   \;=\; \frac{\sqrt{\pi}}{\lambda}\,e^{-\lambda\sigma},
   \quad \sigma=\sqrt{\psi},
@@ -191,95 +191,95 @@ $K_{1/2}(z)=\sqrt{\pi/(2z)}\,e^{-z}$:
 so that
 \[
   \exp(-\lambda\|X\|_*)
-  \;=\; \exp\!\Bigl(-\lambda\textstyle\sum_k\sigma_k\Bigr)
   \;\propto\;
   \int_{\mathbb{R}^n_{>0}}
-  \prod_k d_k^{-1/2}
-  \exp\!\Bigl(-\tfrac{\psi_k}{2d_k} - \tfrac{\lambda^2 d_k}{2}\Bigr)
-  \prod_k dd_k,
+  \prod_k \nu_k^{-1/2}
+  \exp\!\Bigl(-\tfrac{\psi_k}{2\nu_k} - \tfrac{\lambda^2 \nu_k}{2}\Bigr)
+  \prod_k d\nu_k,
 \]
 where $\psi_k$ are the eigenvalues of $\Psi=X^TX$ (i.e.\ $\psi_k=\sigma_k^2$).
 Crucially, $\lambda$ appears \emph{quadratically} in the exponential
-(not linearly as in the variational bound).  The auxiliary variable $Q$ must
-share eigenvectors with $\Psi$ -- write $Q=V\operatorname{diag}(d)V^T$ where
-$\Psi=V\operatorname{diag}(\psi)V^T$ -- for the integral to factorise.
-The correct conditional is
+(not linearly as in the variational bound).
+
+\paragraph{Why $Q$ must share eigenvectors with $\Psi$.}
+The NND prior depends on $X$ only through its singular values $\sigma_k$,
+so each auxiliary $\nu_k$ couples to exactly one $\sigma_k$ via $\psi_k=\sigma_k^2$.
+Defining $Q=V\operatorname{diag}(\nu)V^T$, the coupling becomes
+$\operatorname{tr}(Q^{-1}\Psi)=\sum_k\psi_k/\nu_k$ \emph{if and only if} $Q$ and $\Psi$
+share the same eigenvectors $V$.
+For any other orientation of $Q$, the trace does not factorise per-eigenvalue
+and the integral representation above fails to hold.
+Concretely, if $\Psi=V\operatorname{diag}(\psi)V^T$ is the eigendecomposition of
+$X^TX$, then $Q$ is forced to be $V\operatorname{diag}(\nu)V^T$, and the $\nu_k$
+are the eigenvalues of $Q$ in that shared eigenbasis.
+
+The correct conditional is then
 \[
-  \boxed{p(d_k\mid X,\lambda)
-  \;\propto\; d_k^{-1/2}\exp\!\Bigl(-\tfrac{\psi_k}{2d_k}-\tfrac{\lambda^2 d_k}{2}\Bigr)
+  \boxed{p(\nu_k\mid X,\lambda)
+  \;\propto\; \nu_k^{-1/2}\exp\!\Bigl(-\tfrac{\psi_k}{2\nu_k}-\tfrac{\lambda^2 \nu_k}{2}\Bigr)
   \;=\;\mathrm{GIG}\!\Bigl(\tfrac{1}{2},\,\psi_k,\,\lambda^2\Bigr).}
 \]
 This differs from the variational-bound ``conditional'' in two ways:
-the shape parameter is $\tfrac{1}{2}$ (giving the $d_k^{-1/2}$ factor) and the
-rate on $d_k$ is $\lambda^2/2$, not $\lambda/2$.
+the shape parameter is $\tfrac{1}{2}$ (giving the $\nu_k^{-1/2}$ factor) and the
+rate on $\nu_k$ is $\lambda^2/2$, not $\lambda/2$.
 
-\paragraph{Heteroscedastic Gibbs (corrected).}
-For heteroscedastic $s_{ij}^2$, the vMF structure of the conditionals for
-$U$ and $V$ is lost.  Using the correct GSM with auxiliary $d$ in the
-eigenbasis of $X^TX$, the three-step Gibbs is:
+\paragraph{Why the nu-augmented Gibbs is approximate for heteroscedastic noise.}
+For heteroscedastic $s_{ij}^2$, the GSM augmentation does \emph{not} yield
+tractable row-conditionals.  The true conditional
+$p(X\mid\nu,Y,S)\propto p(Y\mid X,S)\cdot\exp\!\bigl(-\tfrac{1}{2}\sum_k\psi_k/\nu_k\bigr)$
+requires $\psi_k=\sigma_k(X)^2$, the eigenvalues of $X^TX$: these depend on $X$
+itself, so the conditional is \emph{not} Gaussian.  Fixing $V=V(X_{\text{prev}})$
+from the previous iteration turns it into a Gaussian but targets the wrong
+distribution, biasing the posterior mean.
 
-\subparagraph{Step A: Sample $X\mid d,\lambda,Y,S$.}
-Writing $p(x_i\mid Q,\lambda)\propto\exp(-\tfrac{1}{2}x_i^TQ^{-1}x_i)$
-with precision $\lambda Q^{-1}$, each row is a Gaussian:
-\begin{align}
-  A_i &= \operatorname{diag}(s_{i,\cdot}^{-2}\odot m_{i,\cdot}) + \lambda Q^{-1},
-  \quad
-  r_i = \bigl(s_{i,\cdot}^{-2}\odot m_{i,\cdot}\bigr)\odot y_i^{\mathrm{obs}},
-  \\
-  x_i &\;\sim\; \mathcal{N}(A_i^{-1}r_i,\; A_i^{-1}),
-\end{align}
-where $Q^{-1}=V\operatorname{diag}(1/d)V^T$.
-Solved via Cholesky of the $n\times n$ precision $A_i$; rows parallelised
-via \texttt{vmap}.
-
-\subparagraph{Step B: Sample $d\mid X,\lambda$ (exact GIG).}
-After sampling $X_\mathrm{new}$, eigendecompose
-$\Psi_\mathrm{new}=V_\mathrm{new}\operatorname{diag}(\psi_\mathrm{new})V_\mathrm{new}^T$.
-Each $d_k$ is independently drawn from
+\paragraph{Heteroscedastic Gibbs: MALA for $X$, MH for $\lambda$.}
+The $\nu$ variables can be \emph{analytically marginalised} using the Bessel
+identity above:
 \[
-  d_k\mid\psi_k,\lambda
-  \;\sim\; \mathrm{GIG}\!\Bigl(\tfrac{1}{2},\,\psi_k,\,\lambda^2\Bigr),
+  p(X,\lambda\mid Y,S)
+  \;\propto\;
+  p(Y\mid X,S)\cdot\lambda^{mn}\exp(-\lambda\|X\|_*)\cdot p(\lambda).
 \]
-with density $\propto d_k^{-1/2}\exp(-\psi_k/(2d_k)-\lambda^2 d_k/2)$.
-GIG samples can be drawn exactly (no Metropolis step needed) using the
-algorithm of Devroye (2014) or Hörmann \& Leydold (2014); see Appendix.
-The mode is $d_k^* = (-\tfrac{1}{2}+\sqrt{\tfrac{1}{4}+\lambda^2\psi_k})/\lambda^2$
-(close to $\sigma_k/\lambda$ for large $\lambda\sigma_k$).
+This marginal target admits two tractable conditional steps.
 
-\subparagraph{Step C: Sample $\lambda\mid d_\mathrm{new}$ (half-Cauchy hierarchy).}
-From the correct GSM joint,
-$p(\lambda\mid d)\propto\lambda^{(m+1)n}\exp(-\tfrac{\lambda^2}{2}\textstyle\sum_k d_k)\cdot p(\lambda)$,
-where the $\lambda^{(m+1)n}$ factor accounts for the $\lambda^{mn}$ normalising
-constant of the NND prior and the $\lambda^n$ from the GIG normalising constants.
-Adopting a half-Cauchy prior on $\lambda$ via the half-Normal scale mixture
-(Polson \& Scott 2012): $\lambda|\zeta\sim\mathrm{half\text{-}Normal}(0,\zeta)$,
+\subparagraph{Step A: MALA for $X\mid\lambda,Y,S$.}
+The gradient of $\log p(X,\lambda\mid Y,S)$ with respect to $X$ is
+\[
+  \nabla_X\log p
+  = M\odot(Y-X)/S^2 - \lambda\, U_X V_X^T,
+\]
+where $X=U_X\operatorname{diag}(\sigma_X)V_X^T$ is the (sub-)gradient via the nuclear norm
+subdifferential.  Proposing via singular-value soft-thresholding (proximal
+gradient step) and correcting with MH keeps the chain exact, identical to
+\emph{Sampler~1} above but with $\lambda$ as a fixed parameter for the step.
+
+\subparagraph{Step B: Update $\zeta\mid\lambda$ (IG conjugate).}
+With the half-Cauchy prior $\lambda\mid\zeta\sim\mathrm{half\text{-}Normal}(0,\zeta)$,
 $\zeta\sim\mathrm{IG}(\tfrac{1}{2},\tfrac{1}{2})$:
-\begin{align}
-  \zeta' &\;\sim\; \mathrm{IG}\!\Bigl(\tfrac{1}{2},\;\tfrac{1+\lambda^2}{2}\Bigr),
-  \label{eq:zeta-update}\\
-  \lambda' &\;\sim\; \mathrm{TruncatedNormal}^+\!\Bigl(
-    0,\;\bigl[\textstyle\sum_k d_k' + 1/\zeta'\bigr]^{-1}\Bigr),
-  \label{eq:lambda-update}
-\end{align}
-where TruncatedNormal$^+(0,v)$ denotes a half-normal with variance $v$,
-sampled as $|\mathcal{N}(0,1)|/\sqrt{\sum d_k'+1/\zeta'}$.
-The $(m+1)n$ exponent modifies \eqref{eq:lambda-update} to a
-truncated generalised normal; if $(m+1)n$ is large this can be approximated
-or handled via MH.
+\[
+  \zeta'\;\sim\;\mathrm{IG}\!\Bigl(\tfrac{1}{2},\;\tfrac{1+\lambda^2}{2}\Bigr).
+\]
 
-\paragraph{Comparison with current \textsc{matlap} implementation.}
-The current code uses the variational pseudo-joint rather than the correct
-scale mixture, giving two errors in Step~B:
-(i) the GIG shape is $1$ instead of $\tfrac{1}{2}$ (missing the $d_k^{-1/2}$
-factor), and (ii) the rate on $d_k$ is $\lambda/2$ instead of $\lambda^2/2$.
-Step C also uses the $\exp(-\lambda\,\operatorname{tr}(Q))$ form (linear in $\lambda$)
-rather than the quadratic-in-$\lambda$ form from the correct scale mixture.
-The sampler is therefore approximate; the stationary distribution differs
-from the true posterior.
+\subparagraph{Step C: MH for $\lambda\mid X,\zeta$.}
+The marginal conditional (integrating out $\nu$) is
+\[
+  \log p(\lambda\mid X,\zeta)
+  = mn\log\lambda - \lambda\|X\|_* - \frac{\lambda^2}{2\zeta} + \mathrm{const},
+\]
+which is log-concave in $\lambda$ but not conjugate to a standard family.
+A log-normal random-walk MH step is used:
+\[
+  \log\lambda^* \;\sim\;\mathcal{N}(\log\lambda,\;\delta_\lambda^2),
+  \qquad
+  \log\alpha = \log p(\lambda^*\mid X,\zeta) - \log p(\lambda\mid X,\zeta)
+  + \log\lambda^* - \log\lambda,
+\]
+accepted with probability $\min(1,e^\alpha)$.  The Jacobian correction
+$\log\lambda^* - \log\lambda$ accounts for the log-normal proposal asymmetry.
 
 \paragraph{Sparse-data behaviour.}
 At high missing fractions ($\gtrsim$60\%), $X_\mathrm{new}\to 0$ under the
-posterior, so $\psi_k\to 0$, $\sum d_k\to 0$ and $\lambda'\to\infty$.
+posterior, so $\psi_k\to 0$, $\sum\nu_k\to 0$ and $\lambda'\to\infty$.
 This occurs with both the variational and the correct GSM formulations:
 the NND prior places all mass at $X=0$ for large $\lambda$, and sparse
 data cannot rule out this degenerate configuration.
@@ -308,13 +308,8 @@ auxiliary $\beta$.  In the SVD Gibbs (homoscedastic), the conjugate updates are:
 \paragraph{Note on parameterisations.}
 The IG hierarchy above is conjugate to the \emph{linear} NND likelihood
 $\exp(-\lambda\|X\|_*/\gamma^2)$ (source uses homoscedastic $\gamma^2$).
-In the correct GSM augmentation (Section~\ref{sec:gibbs}), $\lambda$
-appears \emph{quadratically} via $\exp(-\lambda^2\sum_k d_k/2)$,
-so the conditional $p(\lambda|d)$ has a different form (see Step~C in
-Section~\ref{sec:gibbs}) and the IG hierarchy no longer applies.
-The current \textsc{matlap} implementation applies the IG hierarchy
-with $\operatorname{tr}(Q) = \sum_k d_k$ in place of $\|X\|_*/\gamma^2$;
-this is internally consistent with the (approximate) variational pseudo-joint
-but not with the correct GSM.
+The \textsc{matlap} heteroscedastic Gibbs marginalises $\nu$ analytically and
+uses a log-normal MH step for $\lambda$ directly from the marginal
+$p(\lambda\mid X,\zeta)$ (Step~C above); the IG hierarchy is not needed.
 
 \end{document}

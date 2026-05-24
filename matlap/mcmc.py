@@ -8,18 +8,18 @@ Two samplers adapted from Segert & Wycoff (2025), arXiv:2510.05447:
    proximal gradient step; accepts/rejects with the full MH ratio.  Step size
    is adapted via Robbins–Monro to target the optimal acceptance rate 0.574.
 
-2. ``mcmc_gsm_gibbs`` – Gibbs sampler exploiting the Gaussian Scale Mixture
-   (GSM) auxiliary variable Q.  Cycles through:
-   (a) exact row-wise Gaussian sampling of X | Q, lambda,
-   (b) Metropolis-within-Gibbs updates of Q's eigenvalues,
-   (c) half-Cauchy λ sampling via the inverse-Gamma hierarchy of
-       Makalic & Schmidt (2015), as used in Segert & Wycoff (2025) §4.3.
+2. ``mcmc_gsm_gibbs`` – Joint (X, lambda) Gibbs sampler.  Uses MALA for the
+   X | lambda step (exact, with MH correction) and log-normal MH for lambda
+   given X, with a half-Cauchy prior on lambda via an IG(1/2) auxiliary zeta.
+   Marginalizes the GSM nu variables analytically so no GIG sampling is
+   needed; avoids the shrinkage-amplification divergence of the fully-augmented
+   chain.
 
 Both samplers run warmup and sampling phases inside ``jax.lax.scan`` for
 efficient JIT compilation.  The returned ``mu`` is the posterior mean over
 the post-warmup samples.
 
-See ``refs/nnd_mcmc.tex`` for full algorithmic derivations.
+See ``refs/nnd_mcmc_notes.tex`` for full algorithmic derivations.
 """
 
 from __future__ import annotations
@@ -28,7 +28,6 @@ from dataclasses import dataclass
 
 import jax
 import jax.numpy as jnp
-import jax.scipy.linalg as jsla
 
 
 # ---------------------------------------------------------------------------
@@ -246,126 +245,86 @@ def mcmc_proximal_mala(
 
 
 # ---------------------------------------------------------------------------
-# GSM Gibbs helpers
+# Gibbs helpers
 # ---------------------------------------------------------------------------
 
 
-@jax.jit
-def _sample_x_rows(
-    Y: jax.Array,
-    obs_mask: jax.Array,
-    prec_noise: jax.Array,
-    Q_inv: jax.Array,
-    lambda_bar: jax.Array,
-    key: jax.Array,
-) -> jax.Array:
-    """Sample all rows x_i ~ N(mu_i, Sigma_i) in parallel.
-
-    Sigma_i^{-1} = diag(prec_noise_i) + lambda_bar * Q^{-1}
-    mu_i         = Sigma_i * (prec_noise_i * y_i)
-    """
-    lambda_Q_inv = lambda_bar * Q_inv  # (n, n)
-
-    def sample_one_row(y_i, obs_i, prec_i, key_i):
-        prec_obs = jnp.where(obs_i, prec_i, 0.0)
-        A_i = jnp.diag(prec_obs) + lambda_Q_inv
-        cho = jsla.cho_factor(A_i)
-        rhs = prec_obs * jnp.where(jnp.isfinite(y_i), y_i, 0.0)
-        mu_i = jsla.cho_solve(cho, rhs)
-        # Sample: x_i = mu_i + L^{-T} eps  (L is Cholesky of A_i, A_i = L L^T)
-        eps = jax.random.normal(key_i, rhs.shape)
-        x_i = mu_i + jsla.solve_triangular(cho[0], eps, trans=True)
-        return x_i
-
-    row_keys = jax.random.split(key, Y.shape[0])
-    return jax.vmap(sample_one_row)(Y, obs_mask, prec_noise, row_keys)
+_LAMBDA_LOG_STEP: float = 0.5  # random-walk MH step size in log(lambda) space
 
 
 @jax.jit
-def _gsm_gibbs_step(
+def _gibbs_step(
     X: jax.Array,
+    nuc_X: jax.Array,
     lambda_bar: jax.Array,
-    beta: jax.Array,
+    zeta: jax.Array,
+    log_step: jax.Array,
     key: jax.Array,
     Y: jax.Array,
     obs_mask: jax.Array,
     prec_noise: jax.Array,
-    sigma_Q: jax.Array,
-) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
-    """One complete GSM Gibbs step.
+) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array, jax.Array, jax.Array]:
+    """One joint (X, lambda) Gibbs step using MALA for X and MH for lambda.
 
-    State: (X, lambda, beta).  Q is re-derived from X at every step.
+    The nu auxiliary variables from the GSM are integrated out analytically:
+    the marginal p(X | Y, lambda) ∝ p(Y|X) * exp(-lambda ||X||_*) is sampled
+    exactly (with MH correction) by the proximal MALA kernel.  Lambda is then
+    updated from its marginal conditional:
 
-    Step A: Compute Q = Psi^{1/2} (MAP) from current X, then sample
-            x_i | Q, lambda from the Gaussian conditional.
+        p(lambda | X, zeta) ∝ lambda^{mn} exp(-lambda ||X||_* - lambda^2/(2*zeta))
 
-    Step B: From the new X, compute Psi_new = X_new^T X_new.  Initialise
-            d = sqrt(psi_new) (MAP) and do one Metropolis step in log space
-            to sample approximately from p(d | psi_new, lambda).
-
-    Step C: Half-Cauchy λ update via the inverse-Gamma hierarchy
-            (Makalic & Schmidt 2015; Segert & Wycoff 2025 §4.3):
-                beta_new  ~ IG(1,   1 + 1/lambda)
-                alpha_new ~ IG(mn + 1/2, tr(Q_new) + 1/beta_new)
-                lambda_new = 1 / alpha_new,
-            where tr(Q_new) = sum(d_new) from Step B, so Step B feeds
-            directly into the λ update.
+    via a log-normal random-walk MH step.  The half-Cauchy auxiliary zeta is
+    updated by its IG(1/2, (1+lambda^2)/2) conjugate.
 
     Args:
         X:          Current X, shape (m, n).
+        nuc_X:      Nuclear norm of X (recomputed on proposal change by MALA).
         lambda_bar: Current lambda, scalar.
-        beta:       Current IG auxiliary variable for the half-Cauchy hierarchy.
+        zeta:       Current half-Cauchy auxiliary, scalar.
+        log_step:   Log of the current MALA step size (adapted during warmup).
         key:        JAX random key.
-        Y, obs_mask, prec_noise: Data arrays (fixed throughout the chain).
-        sigma_Q:    Std of log-normal random walk for d proposals.
+        Y, obs_mask, prec_noise: Data (fixed throughout the chain).
 
     Returns:
-        X_new, lambda_new, beta_new, q_accept_rate (mean acceptance for d).
+        X_new, nuc_new, lambda_new, zeta_new, mala_accepted, lam_accepted
     """
     m, n = Y.shape
-    key, k1, k2, k3, k4, k5 = jax.random.split(key, 6)
+    k1, k2, k3, k4 = jax.random.split(key, 4)
 
-    # --- Step A: compute MAP Q from current X, sample X_new | Q, lambda ---
-    Psi = X.T @ X  # (n, n)
-    psi_vals, V = jnp.linalg.eigh(Psi)
-    psi_vals = jnp.maximum(psi_vals, 1e-10)
-    d_map = jnp.sqrt(psi_vals)  # MAP eigenvalues: Q_opt = Psi^{1/2}
-    Q_inv = V @ jnp.diag(1.0 / jnp.maximum(d_map, 1e-30)) @ V.T
-    X_new = _sample_x_rows(Y, obs_mask, prec_noise, Q_inv, lambda_bar, k1)
-
-    # --- Step B: single-step MH for d starting at MAP of Psi_new ---
-    Psi_new = X_new.T @ X_new
-    psi_new, V_new = jnp.linalg.eigh(Psi_new)
-    psi_new = jnp.maximum(psi_new, 1e-10)
-    d_init = jnp.sqrt(psi_new)  # MAP re-initialisation in new eigenbasis
-
-    eps_d = jax.random.normal(k2, (n,))
-    log_d_init = jnp.log(jnp.maximum(d_init, 1e-30))
-    log_d_prop = log_d_init + sigma_Q * eps_d
-    d_prop = jnp.exp(log_d_prop)
-
-    # Target: p(d_k) ∝ exp(-lambda/2 * (d_k + psi_k/d_k))  (GIG(1, lambda, lambda*psi))
-    log_alpha_k = (
-        -0.5 * lambda_bar * (d_prop + psi_new / d_prop - d_init - psi_new / d_init)
-        + (log_d_prop - log_d_init)
+    # --- Step A: proximal MALA step for X | lambda (exact via MH) ---
+    step_size = jnp.exp(log_step)
+    X_new, nuc_new, mala_accepted = _mala_step(
+        X, nuc_X, k1, Y, obs_mask, prec_noise, lambda_bar, step_size
     )
-    u_k = jax.random.uniform(k3, (n,))
-    accept_k = jnp.log(u_k) < log_alpha_k
-    d_new = jnp.where(accept_k, d_prop, d_init)
 
-    # --- Step C: half-Cauchy λ via inverse-Gamma hierarchy ---
-    # IG(a, b) sampled as b / Gamma(a, rate=1).
-    # beta_new ~ IG(1, 1 + 1/lambda)
-    beta_new = (1.0 + 1.0 / jnp.maximum(lambda_bar, 1e-30)) / jax.random.gamma(k4, 1.0)
-    # alpha_new = 1/lambda_new ~ IG(mn + 1/2, tr(Q_new) + 1/beta_new)
-    # tr(Q_new) = sum(d_new); using sampled d so Step B feeds into lambda
-    alpha_shape = jnp.array(m * n + 0.5, dtype=X.dtype)
-    alpha_scale = jnp.sum(d_new) + 1.0 / jnp.maximum(beta_new, 1e-30)
-    alpha_new = alpha_scale / jax.random.gamma(k5, alpha_shape)
-    lambda_new = 1.0 / jnp.maximum(alpha_new, 1e-30)
+    # --- Step B: IG update for zeta | lambda ---
+    # IG(1/2) has infinite mean; clamp to prevent occasional spikes from
+    # causing a runaway lambda → zeta → lambda feedback loop.
+    zeta_new = (1.0 + lambda_bar ** 2) / (
+        2.0 * jax.random.gamma(k2, jnp.array(0.5, X.dtype))
+    )
+    zeta_new = jnp.minimum(zeta_new, jnp.array(1e6, X.dtype))
 
-    q_accept_rate = accept_k.astype(jnp.float32).mean()
-    return X_new, lambda_new, beta_new, q_accept_rate
+    # --- Step C: log-normal MH for lambda | X_new, zeta_new ---
+    def log_p_lam(log_lam: jax.Array) -> jax.Array:
+        lam = jnp.exp(log_lam)
+        return m * n * log_lam - lam * nuc_new - lam ** 2 / (2.0 * zeta_new)
+
+    log_lam_old = jnp.log(jnp.maximum(lambda_bar, 1e-30))
+    log_lam_prop = log_lam_old + jnp.array(_LAMBDA_LOG_STEP, X.dtype) * jax.random.normal(k3)
+    # Jacobian from log(lambda) → lambda parameterisation: +log_lam_prop - log_lam_old
+    log_alpha = (
+        log_p_lam(log_lam_prop) + log_lam_prop
+        - log_p_lam(log_lam_old) - log_lam_old
+    )
+    lam_accepted = (jax.random.uniform(k4) < jnp.exp(jnp.minimum(log_alpha, 0.0))).astype(X.dtype)
+    lambda_new = jnp.where(lam_accepted.astype(bool), jnp.exp(log_lam_prop), lambda_bar)
+    # Safety clamp: when nuc_new→0 (X→0) the posterior on lambda diverges;
+    # clip to prevent numerical overflow.  The clamp only activates in
+    # degenerate cases where the posterior is effectively improper.
+    lambda_new = jnp.minimum(lambda_new, jnp.array(1e4, X.dtype))
+
+    return X_new, nuc_new, lambda_new, zeta_new, mala_accepted, lam_accepted
 
 
 # ---------------------------------------------------------------------------
@@ -378,37 +337,47 @@ def mcmc_gsm_gibbs(
     S: jax.Array,
     *,
     lambda_init: float | None = None,
+    x_init: jax.Array | None = None,
     n_warmup: int = 100,
     n_samples: int = 300,
-    sigma_Q: float = 0.3,
+    step_size_init: float | None = None,
+    rm_step: float = 0.05,
     key: jax.Array | None = None,
 ) -> MCMCResult:
-    """GSM Gibbs sampler for the NND posterior with half-Cauchy prior on λ.
+    """Joint (X, lambda) Gibbs sampler for the NND posterior.
 
-    Each iteration cycles through:
-    (a) Sample X row-wise from the Gaussian conditional given Q (MAP) and lambda.
-    (b) Single-step Metropolis update for Q's eigenvalues starting at the MAP
-        (GIG(1, lambda, lambda*psi) target; log-normal random walk proposal).
-    (c) Half-Cauchy λ update via the inverse-Gamma hierarchy of
-        Makalic & Schmidt (2015), as in Segert & Wycoff (2025) §4.3:
-            beta  ~ IG(1,        1 + 1/lambda)
-            alpha ~ IG(mn + 1/2, ||X||_* + 1/beta)
-            lambda = 1/alpha.
+    Targets p(X, lambda | Y, S) using:
+
+    (a) Proximal MALA step for X | lambda — exact via Metropolis–Hastings
+        correction.  Uses singular-value soft-thresholding as the proximal
+        proposal mean.  Step size is adapted via Robbins–Monro during warmup.
+    (b) IG(1/2, (1+lambda^2)/2) update for the half-Cauchy auxiliary zeta.
+    (c) Log-normal random-walk MH step for lambda | X, zeta from
+
+            p(lambda | X, zeta) ∝ lambda^{mn} exp(-lambda ||X||_*
+                                                    - lambda^2 / (2*zeta)).
+
+    The nu auxiliary variables from the GSM representation are integrated
+    out analytically: no GIG sampling is needed.  This avoids the
+    shrinkage-amplification divergence of the fully-augmented chain and
+    ensures the sampler targets the correct posterior.
 
     Args:
-        Y:            Observations, shape (m, n); ignored where S = inf.
-        S:            Standard errors, shape (m, n); inf = missing.
-        lambda_init:  Initial lambda; heuristic if None.
-        n_warmup:     Burn-in steps (samples discarded).
-        n_samples:    Post-warmup samples averaged for posterior mean.
-        sigma_Q:      Std of log-normal random walk for Q eigenvalue proposals.
-                      Set to 0 to use pure MAP Q update (equivalent to CAVI).
-        key:          JAX random key; fixed seed if None.
+        Y:              Observations, shape (m, n); ignored where S = inf.
+        S:              Standard errors, shape (m, n); inf = missing.
+        lambda_init:    Initial lambda; heuristic if None.
+        x_init:         Initial X matrix; defaults to Y with missing=0.
+        n_warmup:       Burn-in steps (step size adapted via RM).
+        n_samples:      Post-warmup samples averaged for posterior mean.
+        step_size_init: Initial MALA step size.  Defaults to
+                        ``0.5 / max_observed_precision``.
+        rm_step:        Robbins–Monro learning rate for step adaptation.
+        key:            JAX random key; fixed seed if None.
 
     Returns:
         MCMCResult with ``mu`` = posterior mean of X, ``lambda_bar`` = mean
-        sampled lambda over post-warmup samples, ``accept_rate`` = mean Q
-        eigenvalue acceptance rate.
+        sampled lambda over post-warmup samples, ``accept_rate`` = mean
+        MALA acceptance rate.
     """
     if key is None:
         key = jax.random.PRNGKey(99)
@@ -421,43 +390,49 @@ def mcmc_gsm_gibbs(
         max_prec = float(jnp.max(prec_noise))
         lambda_init = float(jnp.sqrt(max(m, n)) / jnp.sqrt(max(max_prec, 1e-10)))
 
-    X0 = jnp.where(obs_mask, Y, 0.0)
+    if step_size_init is None:
+        max_prec = float(jnp.max(prec_noise))
+        step_size_init = 0.5 / max(max_prec, 1e-6)
+
+    X0 = x_init if x_init is not None else jnp.where(obs_mask, Y, 0.0)
+    nuc_X0 = jnp.linalg.svd(X0, compute_uv=False).sum()
     lambda0 = jnp.array(lambda_init, dtype=Y.dtype)
-    beta0 = jnp.ones((), dtype=Y.dtype)  # IG auxiliary initialised at 1
+    zeta0 = jnp.ones((), dtype=Y.dtype)
+    log_step0 = jnp.log(jnp.array(step_size_init, dtype=Y.dtype))
 
-    sigma_Q_j = jnp.array(sigma_Q, dtype=Y.dtype)
-
+    # --- Warmup: adapt MALA step size via Robbins–Monro ---
     def warmup_body(carry, key):
-        X, lam, beta = carry
-        X_new, lam_new, beta_new, _ = _gsm_gibbs_step(
-            X, lam, beta, key, Y, obs_mask, prec_noise, sigma_Q_j
+        X, nuc_X, lam, zeta, log_step = carry
+        X_new, nuc_new, lam_new, zeta_new, mala_acc, _ = _gibbs_step(
+            X, nuc_X, lam, zeta, log_step, key, Y, obs_mask, prec_noise
         )
-        return (X_new, lam_new, beta_new), None
-
-    def sample_body(carry, key):
-        X, lam, beta = carry
-        X_new, lam_new, beta_new, q_acc = _gsm_gibbs_step(
-            X, lam, beta, key, Y, obs_mask, prec_noise, sigma_Q_j
-        )
-        return (X_new, lam_new, beta_new), (X_new, lam_new, q_acc)
+        log_step_new = log_step + rm_step * (mala_acc - 0.574)
+        return (X_new, nuc_new, lam_new, zeta_new, log_step_new), None
 
     key, key_warmup, key_sample = jax.random.split(key, 3)
-
-    (X_warmed, lam_warmed, beta_warmed), _ = jax.lax.scan(
+    (X_warmed, nuc_warmed, lam_warmed, zeta_warmed, log_step_final), _ = jax.lax.scan(
         warmup_body,
-        (X0, lambda0, beta0),
+        (X0, nuc_X0, lambda0, zeta0, log_step0),
         jax.random.split(key_warmup, n_warmup),
     )
 
-    (_, _, _), (X_samples, lam_samples, q_acc_samples) = jax.lax.scan(
+    # --- Sampling: fixed step size ---
+    def sample_body(carry, key):
+        X, nuc_X, lam, zeta = carry
+        X_new, nuc_new, lam_new, zeta_new, mala_acc, _ = _gibbs_step(
+            X, nuc_X, lam, zeta, log_step_final, key, Y, obs_mask, prec_noise
+        )
+        return (X_new, nuc_new, lam_new, zeta_new), (X_new, lam_new, mala_acc)
+
+    (_, _, _, _), (X_samples, lam_samples, acc_samples) = jax.lax.scan(
         sample_body,
-        (X_warmed, lam_warmed, beta_warmed),
+        (X_warmed, nuc_warmed, lam_warmed, zeta_warmed),
         jax.random.split(key_sample, n_samples),
     )
 
     mu = X_samples.mean(axis=0)
     lambda_bar = float(lam_samples.mean())
-    accept_rate = float(q_acc_samples.mean())
+    accept_rate = float(acc_samples.mean())
 
     return MCMCResult(
         mu=mu,
