@@ -19,6 +19,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -53,6 +54,8 @@ METHODS = [
     "iso_renyi",
     "faem",
     "gradml",
+    "mcmc_mala",
+    "mcmc_gibbs",
 ]
 
 METHOD_LABELS = {
@@ -68,6 +71,8 @@ METHOD_LABELS = {
     "iso_renyi":         "iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ)",
     "faem":              "faem             (FA EM, free subspace, Gaussian factor model)",
     "gradml":            "gradml           (gradient marginal LL, free subspace)",
+    "mcmc_mala":         "mcmc_mala        (Proximal MALA, proximal-cv λ warm-start, 400 samples)",
+    "mcmc_gibbs":        "mcmc_gibbs       (GSM Gibbs, conjugate λ, 400 samples)",
 }
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
@@ -193,6 +198,25 @@ def run_one_seed(seed: int, missing_frac: float) -> list[dict]:
     t0 = time.perf_counter()
     r = matlap.matlap_gradml(Y_j, S_j, rank=RANK, max_iter=MAX_ITER_GRAD)
     record("gradml", r.mu, r.lambda_bar, time.perf_counter() - t0)
+
+    # mcmc_mala: Proximal MALA warm-started from proximal_cv MAP with its λ
+    t0 = time.perf_counter()
+    r_mala = matlap.mcmc_proximal_mala(
+        Y_j, S_j, float(best_lam),
+        x_init=jnp.array(r_pcv.X),
+        n_warmup=100, n_samples=400,
+        key=jax.random.PRNGKey(seed),
+    )
+    record("mcmc_mala", r_mala.mu, r_mala.lambda_bar, time.perf_counter() - t0)
+
+    # mcmc_gibbs: GSM Gibbs with conjugate Gamma lambda
+    t0 = time.perf_counter()
+    r_gibbs = matlap.mcmc_gsm_gibbs(
+        Y_j, S_j,
+        n_warmup=100, n_samples=400,
+        key=jax.random.PRNGKey(seed + 100),
+    )
+    record("mcmc_gibbs", r_gibbs.mu, r_gibbs.lambda_bar, time.perf_counter() - t0)
 
     return rows
 

@@ -1,6 +1,7 @@
 """matlap: Bayesian matrix denoising via CAVI with a Matrix Laplace prior."""
 
 from .faem import FAEMResult, GradMLResult, matlap_faem, matlap_gradml
+from .mcmc import MCMCResult, mcmc_proximal_mala, mcmc_gsm_gibbs
 from .core import (
     CAVIResult, BatchedCAVIResult, GridResult,
     LowRankCAVIResult, LowRankGridResult,
@@ -66,7 +67,10 @@ __all__ = [
     "make_elbo_scorer",
     "make_loo_scorer",
     "make_renyi_scorer",
-    # Adaptive search primitives
+    # MCMC
+    "mcmc_proximal_mala",
+    "mcmc_gsm_gibbs",
+    "MCMCResult",
     "adaptive_lambda_search",
     "iso_warm_state",
     "lowrank_warm_state",

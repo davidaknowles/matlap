@@ -1,0 +1,164 @@
+% refs/nnd_mcmc.tex
+% Salient algorithmic details from Segert & Wycoff (2025)
+% "A Probabilistic Basis for Low-Rank Matrix Learning"  arXiv:2510.05447
+% Adapted to the heteroscedastic denoising/completion setting in matlap.
+
+\section*{MCMC Samplers for the Nuclear-Norm Distribution Posterior}
+
+\subsection*{Source paper}
+Segert, J.\ \& Wycoff, N.\ (2025).
+\emph{A Probabilistic Basis for Low-Rank Matrix Learning}.
+arXiv:2510.05447v1.
+
+\subsection*{Model}
+Observation model (heteroscedastic; entries missing when $s_{ij}=\infty$):
+\[
+  y_{ij} \mid x_{ij},\, s_{ij}
+  \;\sim\; \mathcal{N}(x_{ij},\, s_{ij}^2), \quad (i,j)\in\Omega.
+\]
+Nuclear-norm prior with scalar $\lambda>0$:
+\[
+  p(X \mid \lambda) \;\propto\; \exp\!\bigl(-\lambda\|X\|_*\bigr).
+\]
+Gamma hyperprior $\lambda\sim\mathrm{Gamma}(a_0,b_0)$ (shape / rate).
+
+\subsection*{Gaussian Scale Mixture (GSM) representation}
+The NND prior admits the auxiliary-variable representation
+\[
+  \exp\!\bigl(-\lambda\|X\|_*\bigr)
+  \;=\;
+  \min_{Q\succ 0}\;\exp\!\Bigl(-\tfrac{\lambda}{2}\bigl[
+    \operatorname{tr}(Q^{-1}\Psi) + \operatorname{tr}(Q)\bigr]\Bigr),
+  \quad
+  \Psi = X^T X,
+\]
+achieved at $Q_\star = \Psi^{1/2}$.
+Treating $Q$ as an auxiliary variable with the pseudo-joint
+\[
+  p(X,Q,\lambda)
+  \;\propto\;
+  \exp\!\Bigl(-\tfrac{\lambda}{2}\bigl[\operatorname{tr}(Q^{-1}\Psi)+\operatorname{tr}(Q)\bigr]\Bigr)
+  \cdot p(Y\mid X) \cdot p(\lambda)
+\]
+gives tractable conditional distributions (see Section~4.2 of the source).
+
+
+% ===========================================================================
+\section*{Sampler 1: Proximal MALA (Sec.\ 4.1, Appendix J.4)}
+% ===========================================================================
+
+\paragraph{Algorithm.}
+Metropolis-Adjusted Langevin Algorithm using the proximal operator of
+$-\log p$ as the proposal mean.  For the heteroscedastic setting, the
+proximal operator of $\lambda\|\cdot\|_*$ does not simplify to a closed-form
+expression (unlike the homoscedastic case in Appendix~J.3 where the proximal
+operator of the negative log-posterior has a closed form via SVT).  We
+therefore use a \emph{proximal gradient} step instead (as in the matrix
+completion case, Appendix~J.4):
+
+\[
+  \bar X = \mathrm{SVT}_{\delta\lambda/2}\!\Bigl(
+    X^t + \tfrac{\delta}{2}\, \underbrace{M\odot(Y-X^t)/S^2}_{
+      \nabla_X\log p_{\text{lik}}(X^t)}
+  \Bigr),
+\]
+where $M_{ij}=\mathbf{1}[(i,j)\in\Omega]$, $\mathrm{SVT}_\tau(Z)=
+U\operatorname{diag}(\max(\sigma_k-\tau,0))V^T$ is singular-value
+soft-thresholding, and $\delta>0$ is the proposal scale.
+
+\paragraph{Proposal and accept/reject.}
+\[
+  X^* \;\sim\; \mathcal{N}(\bar X,\, \delta I),
+\]
+accepted with probability $\min(1,\alpha)$ where
+\[
+  \log\alpha
+  = \log p(X^*) - \log p(X^t)
+  + \log q(X^t\mid X^*) - \log q(X^*\mid X^t),
+\]
+\[
+  \log p(Z)
+  = -\tfrac{1}{2}\sum_{(i,j)\in\Omega}\frac{(y_{ij}-z_{ij})^2}{s_{ij}^2}
+  - \lambda\|Z\|_*,
+\]
+\[
+  \log q(Z'\mid Z) = -\frac{\|Z'-\bar Z\|_F^2}{2\delta},
+\]
+with $\bar Z$ the proximal-gradient mean centred at $Z$.
+
+\paragraph{Step size adaptation.}
+Robbins--Monro targeting acceptance rate $0.574$ (optimal for proximal MCMC;
+Crucinio et al.\ 2023):
+\[
+  \log\delta_{t+1} = \log\delta_t + c_t(\alpha_t - 0.574),
+  \quad c_t = c/\sqrt{t}.
+\]
+
+\paragraph{Heteroscedastic adaptation.}
+In the homoscedastic case (Appendix~J.3), the proximal operator of the full
+negative log-posterior has the closed form
+$\mathrm{SVT}_{\delta\lambda(\delta+2\gamma^2)^{-1}}
+ \bigl((\delta Y + 2\gamma^2 X^t)(\delta+2\gamma^2)^{-1}\bigr)$.
+For heteroscedastic $s_{ij}^2$, no such closed form exists; the proximal
+gradient approximation above is used instead, exactly as in the matrix
+completion variant of Appendix~J.4.  The MH correction renders the chain
+exact regardless of this approximation.
+
+
+% ===========================================================================
+\section*{Sampler 2: GSM Gibbs (Sec.\ 4.2; heteroscedastic adaptation)}
+% ===========================================================================
+
+\paragraph{Original SVD Gibbs (homoscedastic case).}
+For homoscedastic $s_{ij}^2=\gamma^2$, reparameterise $X=U\operatorname{diag}(\sigma)V^T$
+(thin SVD).  The conditional $p(U\mid\sigma,V,Y)$ is matrix von Mises--Fisher
+and can be sampled using the Hoff (2009) reflective slice sampler.  For
+heteroscedastic noise, this conditional loses its vMF structure because
+entry-specific weights $w_{ij}=1/s_{ij}^2$ break the trace-form sufficient
+statistic.
+
+\paragraph{GSM Gibbs for heteroscedastic noise.}
+We instead Gibbs-sample the auxiliary $Q$ directly.  Define the pseudo-joint
+above with $Q$ treated as an auxiliary variable.  Under this joint:
+
+\subparagraph{Step A: Sample $X\mid Q,\lambda,Y,S$.}
+Rows are conditionally independent:
+$x_i \sim \mathcal{N}(\mu_i,\Sigma_i)$, with
+\[
+  \Sigma_i^{-1} = \mathrm{diag}(s_{i,\cdot}^{-2}\odot m_{i,\cdot}) + \lambda Q^{-1},
+  \qquad
+  \mu_i = \Sigma_i\,\mathrm{diag}(s_{i,\cdot}^{-2}\odot m_{i,\cdot})\,y_i^{\text{obs}},
+\]
+where $m_{i,\cdot}$ is the observation mask for row $i$.
+Implemented via Cholesky of the precision matrix.
+
+\subparagraph{Step B: Sample $Q\mid X,\lambda$ (Metropolis-within-Gibbs).}
+Eigendecompose $\Psi=X^TX=V\operatorname{diag}(\psi)V^T$.
+The conditional on each eigenvalue $d_k$ of $Q$ (in the basis of $V$) is
+\[
+  p(d_k\mid\psi_k,\lambda)
+  \;\propto\; \exp\!\Bigl(-\tfrac{\lambda}{2}\bigl(d_k + \psi_k/d_k\bigr)\Bigr),
+  \quad d_k>0.
+\]
+This is GIG$(1,\lambda,\lambda\psi_k)$ with mode $\sqrt{\psi_k}$ (matching
+the CAVI $Q$ update).  We sample via Metropolis with a symmetric log-normal
+random walk:
+\[
+  \log d_k' = \log d_k + \sigma_Q\,\varepsilon,\quad \varepsilon\sim\mathcal{N}(0,1),
+\]
+\[
+  \log\alpha_k
+  = -\tfrac{\lambda}{2}(d_k'+\psi_k/d_k'-d_k-\psi_k/d_k)
+  + (\log d_k' - \log d_k).
+\]
+(The second term is the Jacobian in log space; the symmetric log-normal
+proposal cancels in the MH ratio.)
+
+\subparagraph{Step C: Sample $\lambda\mid X,Q$.}
+Conjugate Gamma update matching the CAVI posterior:
+\[
+  \lambda \;\sim\; \mathrm{Gamma}(a_0+mn,\; b_0+\operatorname{tr}(Q)).
+\]
+
+\paragraph{Posterior mean.}
+Return $(1/N)\sum_{t=1}^N X^{(t)}$ over $N$ post-warmup samples.
