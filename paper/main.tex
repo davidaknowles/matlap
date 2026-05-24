@@ -9,7 +9,8 @@
 \geometry{a4paper, margin=1.2in}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage[backend=biber,style=numeric,sorting=none,natbib=true]{biblatex}
+\addbibresource{references.bib}
 \usepackage{hyperref}
 \usepackage{xcolor}
 
@@ -20,7 +21,7 @@
     urlcolor=blue!60!black
 }
 
-\title{Bayesian Matrix Denoising:\\ Variational Inference for the Matrix Laplace Prior\\ via Gaussian Scale Mixtures}
+\title{A convex Bayesian approach to low-rank matrix estimation with heteroscedastic noise}
 \author{David A Knowles}
 \date{}
 
@@ -29,26 +30,42 @@
 \maketitle
 
 \begin{abstract}
-We present a Bayesian approach to low-rank matrix estimation under a heteroscedastic noise model. By utilizing a novel matrix Laplace distribution we encourage low-rank structure directly on the matrix $X$ without resorting to a non-convex factorization. To overcome the non-differentiability and non-separability of the prior, we exploit its variational representation as a Gaussian Scale Mixture. This auxiliary variable formulation allows us to develop a Coordinate Ascent Variational Inference (CAVI) algorithm that is strictly convex in all sub-updates, naturally estimates the global regularization parameter, and avoids the Neyman-Scott paradox by explicitly incorporating posterior uncertainty.
+We present a convex Bayesian approach to low-rank matrix estimation under a heteroscedastic noise model. By utilizing the nuclear norm distribution we encourage low-rank structure directly on the data matrix without resorting to a non-convex factorization. To overcome the non-differentiability and non-separability of the prior, we exploit its variational representation using an auxiliary variable. This formulation allows us to develop a Coordinate Ascent Variational Inference (CAVI) algorithm that is strictly convex in all sub-updates, naturally estimates the global regularization parameter, and avoids the Neyman-Scott paradox by explicitly incorporating posterior uncertainty.
 \end{abstract}
 
 \tableofcontents
 
 \section{Introduction}
 
-Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from collaborative filtering to genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization (NMF), independent component analysis (ICA), and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices $X = UV^T$. Non-convexity has practical consequences beyond mere theoretical unease: different random initializations routinely converge to qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no mechanism for selecting the rank of the solution.
+Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from recommender systems to single cell genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization, independent component analysis, and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices. Non-convexity has practical consequences: different random initializations or minor data perturbations can result in qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution (up to sign flips) via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no principled mechanism for selecting the rank of the solution.
 
-Convex relaxations offer a principled escape from local minima. The nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing $X$ \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. The practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme. 
+Convex relaxations offer a principled escape from local minima. The nuclear norm, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing the data matrix \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. A practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme (i.e. how to choose heldout matrix elements). 
 
-We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{Matrix Laplace} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
+We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
 
-\section{Characterization of the Matrix Laplace Prior}
+\section{Convex Heteroscedastic Matrix Factorization}
 
-Let $X \in \mathbb{R}^{m \times n}$ be a random matrix. The Matrix Laplace Prior is a matrix-variate generalization of the standard Laplace (or exponential) distribution, defined by the probability density function:
+We consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ and a corresponding matrix of known standard errors $S \in \mathbb{R}^{m \times n}$, where $s_{ij}$ is the uncertainty associated with $Y_{ij}$. The likelihood of the latent true matrix $X$ is elementwise normal, 
+\begin{equation}
+    p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
+\end{equation}
+
+The typical approach would be to represent $X=UV^T$ and optimize over $U$ and $V$, but this is non-convex and requires careful initialization. In the convex optimization/compressed sensing literature, a common alternative is to place a convex penalty directly on $X$ that encourages low-rank structure. The natural choice is the nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the sum of the singular values of $X$. The loss is then, 
+\begin{equation} \label{eq:loss}
+    \mathcal{L}(X) = \sum_{ij} \frac{(Y_{ij}-X_{ij})^2}{s_{ij}^2} + \lambda \|X\|_*.
+\end{equation}
+In principle $\lambda$ can be selected by CV, but this is computationally expensive and requires arbitrary choices about the CV scheme (how many folds, how to select heldout entries, what metric to use). 
+
+Here, we ask whether Eq \ref{eq:loss} can be re-interpreted from an empirical Bayes viewpoint to enable automatical estimation of $\lambda$ from the data. We consider the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution, a matrix-variate generalization of the standard Laplace distribution,
 \begin{equation}
     p(X \mid \lambda) = \frac{1}{Z(\lambda)} \exp\big(-\lambda \|X\|_*\big)
 \end{equation}
-where $\|X\|_* = \sum_{i=1}^{\min(m,n)} \sigma_i(X)$ is the nuclear norm.
+where the normalizing constant $Z(\lambda)=\text{Vol}(B_*) \cdot (mn)! / \lambda^{mn}$ is the normalizing constant, with $B_* = \{X : \|X\|_* \le 1\}$ the unit nuclear norm ball. 
+
+This distribution encourages low-rank structure in $X$ by penalizing the sum of its singular values, and it is the natural matrix analogue of the Laplace distribution used in Lasso regression for sparsity.
+
+Let $X \in \mathbb{R}^{m \times n}$ be a random matrix. The nuclear norm Prior is a matrix-variate generalization of the standard Laplace (or exponential) distribution, defined by the probability density function:
+
 
 %\subsection{Mean and Covariance}
 %Because the nuclear norm is absolutely homogeneous ($\|-X\|_* = \|X\|_*$) and the density is symmetric around the origin, the expectation of $X$ is exactly the zero matrix: $\mathbb{E}[X] = 0_{m \times n}$.
@@ -79,15 +96,6 @@ Assuming $m \ge n$, the change of variables to the Singular Value Decomposition 
     p(\sigma_1, \dots, \sigma_n) \propto \prod_{i=1}^n \underbrace{ \sigma_i^{m-n} e^{-\lambda \sigma_i}}_{\propto \, \mathrm{Gamma}(\sigma_i,m-n+1,\,\lambda)} \cdot \underbrace{\prod_{1 \le i < j \le n} (\sigma_i^2 - \sigma_j^2)}_{\text{repulsion term}}
 \end{equation}
 This characterizes the singular values as a 1D Coulomb gas subject to a logarithmic pairwise repulsion. 
-
-\section{The Heteroscedastic Low-Rank Model}
-
-We consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ and a corresponding matrix of known standard errors $S \in \mathbb{R}^{m \times n}$, where $s_{ij}$ is the uncertainty associated with $Y_{ij}$. 
-
-The likelihood of the latent true matrix $X$ is elementwise normal:
-\begin{equation}
-    p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
-\end{equation}
 
 \section{Inference}
 
@@ -502,48 +510,6 @@ Method & Rank sweep & SNR sweep \\
 
 The key pattern is that \texttt{iso\_grid\_renyi} is essentially tied with \texttt{iso\_cv} across both sweeps, while \texttt{iso\_grid\_is} (\(\alpha=0\)) is close but degrades at higher SNR and \texttt{iso\_grid\_loo} is too conservative. The ELBO-based grids (\texttt{matlap\_grid} and \texttt{lowrank\_grid}) remain systematically worse than CV.
 
-\begin{thebibliography}{9}
-
-\bibitem{lee1999learning}
-D.~D. Lee and H.~S. Seung.
-\newblock Learning the parts of objects by non-negative matrix factorization.
-\newblock \textit{Nature}, 401(6755):788--791, 1999.
-
-\bibitem{cai2021}
-T.~Cai, X.~Li, and Z.~Ma.
-\newblock Optimal rates of convergence for noisy sparse phase retrieval via thresholded Wirtinger flow.
-\newblock \textit{Annals of Statistics}, 44(5):2221--2251, 2021.
-
-\bibitem{recht2010guaranteed}
-B.~Recht, M.~Fazel, and P.~A. Parrilo.
-\newblock Guaranteed minimum-rank solutions of linear matrix equations via nuclear norm minimization.
-\newblock \textit{SIAM Review}, 52(3):471--501, 2010.
-
-\bibitem{candes2010power}
-E.~J. Cand\`{e}s and B.~Recht.
-\newblock Exact matrix completion via convex optimization.
-\newblock \textit{Communications of the ACM}, 55(6):111--119, 2012.
-
-\bibitem{kingma2014adam}
-D.~P. Kingma and J.~Ba.
-\newblock Adam: A method for stochastic optimization.
-\newblock In \textit{International Conference on Learning Representations (ICLR)}, 2015.
-
-\bibitem{halko2011finding}
-N.~Halko, P.~G. Martinsson, and J.~A. Tropp.
-\newblock Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions.
-\newblock \textit{SIAM Review}, 53(2):217--288, 2011.
-
-\bibitem{jax2018github}
-J.~Bradbury, R.~Frostig, P.~Hawkins, M.~J. Johnson, C.~Leary, D.~Maclaurin, G.~Necula, A.~Paszke, J.~VanderPlas, S.~Wanderman-Milne, and Q.~Zhang.
-\newblock {JAX}: composable transformations of {P}ython+{N}um{P}y programs.
-\newblock \url{http://github.com/google/jax}, 2018.
-
-\bibitem{li2016renyi}
-Y.~Li and R.~E. Turner.
-\newblock R{\'e}nyi divergence variational inference.
-\newblock In \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2016.
-
-\end{thebibliography}
+\printbibliography
 
 \end{document}
