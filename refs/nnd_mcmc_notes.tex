@@ -1,0 +1,193 @@
+% refs/nnd_mcmc.tex
+% Salient algorithmic details from Segert & Wycoff (2025)
+% "A Probabilistic Basis for Low-Rank Matrix Learning"  arXiv:2510.05447
+% Adapted to the heteroscedastic denoising/completion setting in matlap.
+
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1.2in}
+
+\title{MCMC Samplers for the Nuclear-Norm Distribution Posterior\\
+\large Notes on Segert \& Wycoff (2025), arXiv:2510.05447}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{MCMC Samplers for the Nuclear-Norm Distribution Posterior}
+
+\subsection*{Source paper}
+Segert, J.\ \& Wycoff, N.\ (2025).
+\emph{A Probabilistic Basis for Low-Rank Matrix Learning}.
+arXiv:2510.05447v1.
+
+\subsection*{Model}
+Observation model (heteroscedastic; entries missing when $s_{ij}=\infty$):
+\[
+  y_{ij} \mid x_{ij},\, s_{ij}
+  \;\sim\; \mathcal{N}(x_{ij},\, s_{ij}^2), \quad (i,j)\in\Omega.
+\]
+Nuclear-norm prior with scalar $\lambda>0$ (Proposition~3.3 of source):
+\[
+  p(X \mid \lambda) \;\propto\; \lambda^{mn}\exp\!\bigl(-\lambda\|X\|_*\bigr).
+\]
+Half-Cauchy hyperprior on $\lambda$ (Section~4.3 of source; Polson \& Scott 2012):
+implemented via the inverse-Gamma hierarchy of Makalic \& Schmidt (2015)---see
+Section~\ref{sec:lambda} below.
+
+\subsection*{SVD reparameterization}
+Write the thin SVD $X = U\operatorname{diag}(\sigma)V^T$ where
+$U\in\mathrm{St}(m,n)$ (semi-orthogonal), $V\in O(n)$ (orthogonal),
+$\sigma\in\mathbb{R}^n_+$.  The nuclear norm is $\|X\|_*=\sum_k\sigma_k$.
+Reparameterizing to $(U,\sigma,V)$ gives tractable conditional posteriors
+(Section~4.2 of source; homoscedastic $s_{ij}^2=\gamma^2$).
+
+
+% ===========================================================================
+\section*{Sampler 1: Proximal MALA (Sec.\ 4.1, Appendix J.4)}
+% ===========================================================================
+
+\paragraph{Algorithm.}
+Metropolis-Adjusted Langevin Algorithm using the proximal operator of
+$-\log p$ as the proposal mean.  For the heteroscedastic setting, the
+proximal operator of $\lambda\|\cdot\|_*$ does not simplify to a closed-form
+expression (unlike the homoscedastic case in Appendix~J.3 where the proximal
+operator of the negative log-posterior has a closed form via SVT).  We
+therefore use a \emph{proximal gradient} step instead (as in the matrix
+completion case, Appendix~J.4):
+
+\[
+  \bar X = \mathrm{SVT}_{\delta\lambda/2}\!\Bigl(
+    X^t + \tfrac{\delta}{2}\, \underbrace{M\odot(Y-X^t)/S^2}_{
+      \nabla_X\log p_{\text{lik}}(X^t)}
+  \Bigr),
+\]
+where $M_{ij}=\mathbf{1}[(i,j)\in\Omega]$, $\mathrm{SVT}_\tau(Z)=
+U\operatorname{diag}(\max(\sigma_k-\tau,0))V^T$ is singular-value
+soft-thresholding, and $\delta>0$ is the proposal scale.
+
+\paragraph{Proposal and accept/reject.}
+\[
+  X^* \;\sim\; \mathcal{N}(\bar X,\, \delta I),
+\]
+accepted with probability $\min(1,\alpha)$ where
+\[
+  \log\alpha
+  = \log p(X^*) - \log p(X^t)
+  + \log q(X^t\mid X^*) - \log q(X^*\mid X^t),
+\]
+\[
+  \log p(Z)
+  = -\tfrac{1}{2}\sum_{(i,j)\in\Omega}\frac{(y_{ij}-z_{ij})^2}{s_{ij}^2}
+  - \lambda\|Z\|_*,
+\]
+\[
+  \log q(Z'\mid Z) = -\frac{\|Z'-\bar Z\|_F^2}{2\delta},
+\]
+with $\bar Z$ the proximal-gradient mean centred at $Z$.
+
+\paragraph{Step size adaptation.}
+Robbins--Monro targeting acceptance rate $0.574$ (optimal for proximal MCMC;
+Crucinio et al.\ 2023):
+\[
+  \log\delta_{t+1} = \log\delta_t + c_t(\alpha_t - 0.574),
+  \quad c_t = c/\sqrt{t}.
+\]
+
+\paragraph{Heteroscedastic adaptation.}
+In the homoscedastic case (Appendix~J.3), the proximal operator of the full
+negative log-posterior has the closed form
+$\mathrm{SVT}_{\delta\lambda(\delta+2\gamma^2)^{-1}}
+ \bigl((\delta Y + 2\gamma^2 X^t)(\delta+2\gamma^2)^{-1}\bigr)$.
+For heteroscedastic $s_{ij}^2$, no such closed form exists; the proximal
+gradient approximation above is used instead, exactly as in the matrix
+completion variant of Appendix~J.4.  The MH correction renders the chain
+exact regardless of this approximation.
+
+
+% ===========================================================================
+\section*{Sampler 2: SVD Gibbs (Sec.\ 4.2)}
+\label{sec:gibbs}
+% ===========================================================================
+
+\paragraph{Algorithm.}
+Iterate over three conditional samplers in the SVD parameterization
+$X=U\operatorname{diag}(\sigma)V^T$.  Let $s=\operatorname{diag}(U^TYV)$.
+
+\subparagraph{Step A: Sample $\sigma\mid U,V,\lambda,Y$.}
+The joint conditional density of the singular values is
+\[
+  p(\sigma\mid\cdot)
+  \;\propto\;
+  \exp\!\Bigl(-\lambda\textstyle\sum_k\sigma_k
+    -\tfrac{\|\sigma - s\|^2}{2\gamma^2}\Bigr)
+  \prod_{k\le n}\sigma_k^{m-n}
+  \prod_{i<j\le n}|\sigma_i^2 - \sigma_j^2|,
+\]
+where the Vandermonde factor $\prod_{i<j}|\sigma_i^2-\sigma_j^2|$ arises from
+the Jacobian of the SVD map.  This density is not product-separable and
+has posterior nonsmoothness from the nuclear norm; the source samples it via
+a Metropolis-adjusted Langevin method operating in $\mathbb{R}^n$ (vs.\ the
+full $m\times n$ problem for direct MALA on $X$).
+
+\subparagraph{Step B: Sample $U\mid\sigma,V,\lambda,Y$.}
+\[
+  p(U\mid\cdot)
+  \;\propto\;
+  \exp\!\Bigl(-\tfrac{1}{2\gamma^2}\operatorname{tr}\bigl[(YV\operatorname{diag}(\sigma))^T U\bigr]\Bigr),
+\]
+which is a \emph{matrix von Mises--Fisher} (vMF) distribution on
+$\mathrm{St}(m,n)$ (Jupp \& Mardia 1979).  Sampled via the reflective slice
+sampler of Hoff (2009).
+
+\subparagraph{Step C: Sample $V\mid\sigma,U,\lambda,Y$.}
+\[
+  p(V\mid\cdot)
+  \;\propto\;
+  \exp\!\Bigl(-\tfrac{1}{2\gamma^2}\operatorname{tr}\bigl[(\operatorname{diag}(\sigma)Y^TU^T)^T V\bigr]\Bigr),
+\]
+again a matrix vMF on $O(n)$; sampled via Hoff (2009).
+
+\paragraph{Heteroscedastic adaptation.}
+For heteroscedastic $s_{ij}^2$, the sufficient statistic for $U$ and $V$ is no
+longer a pure trace form, so the vMF structure is lost.  The source treats the
+homoscedastic case; the heteroscedastic analogue requires a more complex MH
+step for $U$ and $V$.  In our \textsc{matlap} implementation we adopt instead
+a GSM auxiliary-variable Gibbs based on $Q$ (see implementation notes below),
+which remains tractable for heteroscedastic noise.
+
+% ===========================================================================
+\section*{$\lambda$ sampling: Half-Cauchy prior (Sec.\ 4.3)}
+\label{sec:lambda}
+% ===========================================================================
+
+A Gamma prior on $\lambda$ is conjugate but may not allow $\lambda$ to range
+over multiple orders of magnitude.  The source uses a \emph{half-Cauchy}
+prior (Polson \& Scott 2012), implemented via the inverse-Gamma hierarchy of
+Makalic \& Schmidt (2015): if $\alpha|\beta\sim\mathrm{IG}(1/2, 1/\beta)$ and
+$\beta\sim\mathrm{IG}(1/2,1)$ then $\alpha$ is marginally Half-Cauchy.  For
+conjugacy with the NND likelihood $p(X|\lambda)\propto\lambda^{mn}\exp(-\lambda\|X\|_*)$,
+the source samples the \emph{inverse} $\alpha=1/\lambda$ and introduces an
+auxiliary $\beta$.  The conjugate updates are:
+\[
+  \beta|\alpha \;\sim\; \mathrm{IG}\!\Bigl(1,\; 1 + \tfrac{1}{\alpha}\Bigr),
+\]
+\[
+  \alpha|\beta,X,\gamma^2 \;\sim\;
+  \mathrm{IG}\!\Bigl(mn + \tfrac{1}{2},\;
+    \tfrac{\|X\|_*}{\gamma^2} + \tfrac{1}{\beta}\Bigr),
+\]
+\[
+  \lambda \;\leftarrow\; \tfrac{1}{\alpha}.
+\]
+
+\paragraph{Implementation note (\textsc{matlap}).}
+Our implementation uses a Gamma conjugate prior on $\lambda$ for simplicity,
+with a \texttt{lambda\_max} cap to prevent divergence when the data are sparse
+(missing fraction $\gtrsim$60\%).  The half-Cauchy hierarchy above would be a
+more principled alternative, especially at high missing fractions.
+\end{document}
