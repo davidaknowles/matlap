@@ -1,0 +1,80 @@
+nohup: ignoring input
+matlap benchmark  10000×1000 rank-15 | seeds=3 | missing=20%
+  proximal_iters=100  vi_steps=200  faem_iters=100  gradml_steps=500  lowrank_iters=50  lowrank_rank=50  guide_rank=15  approx_rank=30  grid_points=7  batch_size=64
+
+
+──────────────────────────────────────────────────────────────────────
+Device: GPU
+──────────────────────────────────────────────────────────────────────
+
+--- Seed 0 ---
+  seed= 0 proximal                RMSE=0.1231  λ=50.009  t=23.5s  conv=False
+  seed= 0 proximal_cv             RMSE=0.1053  λ=158.144  t=120.9s  conv=False
+  seed= 0 matlap_faem             RMSE=0.0812  λ=0.492  t=8.3s  conv=True
+  seed= 0 matlap_gradml           RMSE=0.0813  λ=1.126  t=5.2s  conv=True
+  seed= 0 matlap_lowrank          RMSE=0.2585  λ=9978.409  t=2.9s  conv=True
+  seed= 0 matlap_grid_lowrank     RMSE=0.0986  λ=158.144  t=1.6s  conv=True
+  seed= 0 matlap_grid_lowrank_iso_elbo  RMSE=0.1803  λ=500.095  t=8.3s  conv=True
+  seed= 0 matlap_grid_lowrank_iso_renyi  RMSE=0.1342  λ=50.009  t=6.8s  conv=True
+  seed= 0 matlap_batched          RMSE=0.1526  λ=350.117  t=190.0s  conv=True
+  seed= 0 vi_diagonal             RMSE=0.2424  λ=2.051  t=43.7s  conv=False
+  seed= 0 vi_diagonal_approx      RMSE=0.3991  λ=2.054  t=12.0s  conv=False
+  seed= 0 vi_matrix_factor        RMSE=0.2701  λ=2.054  t=23.5s  conv=False
+  seed= 0 vi_row_lowrank          RMSE=0.2709  λ=2.054  t=26.1s  conv=False
+
+--- Seed 1 ---
+  seed= 1 proximal                RMSE=0.1225  λ=49.992  t=22.2s  conv=False
+  seed= 1 proximal_cv             RMSE=0.1050  λ=158.088  t=121.8s  conv=False
+  seed= 1 matlap_faem             RMSE=0.0808  λ=0.499  t=1.4s  conv=True
+  seed= 1 matlap_gradml           RMSE=0.0810  λ=1.136  t=2.2s  conv=True
+  seed= 1 matlap_lowrank          RMSE=0.2568  λ=9978.749  t=0.1s  conv=True
+  seed= 1 matlap_grid_lowrank     RMSE=0.0984  λ=158.088  t=1.5s  conv=True
+  seed= 1 matlap_grid_lowrank_iso_elbo  RMSE=0.1798  λ=499.918  t=6.6s  conv=True
+  seed= 1 matlap_grid_lowrank_iso_renyi  RMSE=0.1341  λ=49.992  t=6.6s  conv=True
+  seed= 1 matlap_batched          RMSE=0.1527  λ=351.914  t=187.7s  conv=True
+  seed= 1 vi_diagonal             RMSE=0.2410  λ=2.051  t=41.0s  conv=False
+  seed= 1 vi_diagonal_approx      RMSE=0.3952  λ=2.054  t=10.3s  conv=False
+  seed= 1 vi_matrix_factor        RMSE=0.2680  λ=2.054  t=17.3s  conv=False
+  seed= 1 vi_row_lowrank          RMSE=0.2689  λ=2.054  t=23.8s  conv=False
+
+--- Seed 2 ---
+  seed= 2 proximal                RMSE=0.1227  λ=50.006  t=22.0s  conv=False
+  seed= 2 proximal_cv             RMSE=0.1049  λ=158.132  t=121.5s  conv=False
+  seed= 2 matlap_faem             RMSE=0.0808  λ=0.498  t=1.3s  conv=True
+  seed= 2 matlap_gradml           RMSE=0.0810  λ=1.131  t=2.3s  conv=True
+  seed= 2 matlap_lowrank          RMSE=0.2569  λ=9978.672  t=0.1s  conv=True
+  seed= 2 matlap_grid_lowrank     RMSE=0.0985  λ=158.132  t=1.4s  conv=True
+  seed= 2 matlap_grid_lowrank_iso_elbo  RMSE=0.1798  λ=500.058  t=6.5s  conv=True
+  seed= 2 matlap_grid_lowrank_iso_renyi  RMSE=0.1340  λ=50.006  t=6.5s  conv=True
+  seed= 2 matlap_batched          RMSE=0.1524  λ=350.923  t=182.4s  conv=True
+  seed= 2 vi_diagonal             RMSE=0.2411  λ=2.051  t=41.0s  conv=False
+  seed= 2 vi_diagonal_approx      RMSE=0.3951  λ=2.054  t=10.0s  conv=False
+  seed= 2 vi_matrix_factor        RMSE=0.2683  λ=2.054  t=17.2s  conv=False
+  seed= 2 vi_row_lowrank          RMSE=0.2691  λ=2.054  t=23.8s  conv=False
+
+CSV saved to results/benchmark_10k_gpu.csv
+Report saved to results/benchmark_10k_gpu.md
+
+========================================================================
+SUMMARY
+========================================================================
+
+GPU:
+  Method                          RMSE         λ    Time(s)
+  ─────────────────────────────────────────────────────────
+  proximal                  0.1228±0.0002    50.002       22.6
+  proximal_cv               0.1051±0.0002   158.121      121.4
+  matlap_faem               0.0809±0.0002     0.496        3.7
+  matlap_gradml             0.0811±0.0002     1.131        3.2
+  matlap_lowrank            0.2574±0.0008  9978.610        1.0
+  matlap_grid_lowrank       0.0985±0.0001   158.121        1.5
+  matlap_grid_lowrank_iso_elbo  0.1799±0.0002   500.023        7.1
+  matlap_grid_lowrank_iso_renyi  0.1341±0.0001    50.002        6.7
+  matlap_batched            0.1526±0.0001   350.985      186.7
+  vi_diagonal               0.2415±0.0007     2.051       41.9
+  vi_diagonal_approx        0.3965±0.0019     2.054       10.7
+  vi_matrix_factor          0.2688±0.0009     2.054       19.3
+  vi_row_lowrank            0.2696±0.0009     2.054       24.5
+========================================================================
+
+Full report: results/benchmark_10k_gpu.md

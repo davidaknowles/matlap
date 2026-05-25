@@ -424,7 +424,8 @@ We benchmark all scalable methods on a synthetic matrix completion problem with 
 \texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (100 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
 \texttt{matlap\_faem} and \texttt{matlap\_gradml} optimise the low-rank factor analysis marginal likelihood via EM and gradient descent (Adam) respectively, with automatic empirical-Bayes $\lambda$ (100/500 steps).
 \texttt{matlap\_lowrank} runs the rank-50 low-rank CAVI with automatic empirical-Bayes $\lambda$ (50 iterations).
-\texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point).
+\texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point), selecting by ELBO.
+\texttt{matlap\_grid\_lowrank\_iso\_elbo} and \texttt{matlap\_grid\_lowrank\_iso\_renyi} run the low-rank-plus-isotropic CAVI on the same grid, selecting by ELBO or Rényi $\alpha$-ELBO ($\alpha=0.5$) respectively.
 \texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; $O(n^3)$ per row, so slow at $n=1{,}000$).
 \texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (200 steps).
 \texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (200 steps).
@@ -441,19 +442,21 @@ All MCMC methods use a cold start ($\hat{X}_0 = Y$ with missing entries set to z
 \hline
 Method & RMSE & Time (s) & Converged & Notes \\
 \hline
-\texttt{matlap\_faem}          & \textbf{0.081} & \textbf{3.6}  & \checkmark & Best RMSE \\
-\texttt{matlap\_gradml}        & 0.081 & 3.2  & \checkmark & \\
-\texttt{matlap\_grid\_lowrank} & 0.099 & 1.9  & \checkmark & Fastest converged \\
-\texttt{proximal\_cv}          & 0.105 & 121  & --         & 34$\times$ slower than \texttt{matlap\_grid\_lowrank} \\
-\texttt{proximal}              & 0.123 & 23   & --         & Fixed $\lambda$ \\
-\texttt{matlap\_batched}       & 0.153 & 186  & \checkmark & Exact; slow at $n=1{,}000$ \\
-\texttt{matlap\_lowrank}       & 0.257 & 1.0  & \checkmark & Auto-$\lambda$ over-shrinks \\
-\texttt{vi\_diagonal}          & 0.242 & 42   & --         & 200 steps \\
-\texttt{vi\_matrix\_factor}    & 0.269 & 20   & --         & rSVD approx \\
-\texttt{vi\_row\_lowrank}      & 0.270 & 25   & --         & rSVD approx \\
-\texttt{vi\_diagonal\_approx}  & 0.397 & 11   & --         & rSVD approx \\
-\texttt{mcmc\_mala}            & 0.258 & 250  & --         & Not converged in $T=700$ \\
-\texttt{mcmc\_gibbs}           & 0.258 & 252  & --         & Not converged in $T=700$ \\
+\texttt{matlap\_faem}                    & \textbf{0.081} & \textbf{3.7} & \checkmark & Best RMSE \\
+\texttt{matlap\_gradml}                  & 0.081 & 3.2  & \checkmark & \\
+\texttt{matlap\_grid\_lowrank}           & 0.099 & 1.5  & \checkmark & Fastest converged \\
+\texttt{matlap\_grid\_lowrank\_iso\_renyi} & 0.134 & 6.7  & \checkmark & Iso; Rényi scoring \\
+\texttt{proximal\_cv}                    & 0.105 & 121  & --         & 80$\times$ slower \\
+\texttt{proximal}                        & 0.123 & 23   & --         & Fixed $\lambda$ \\
+\texttt{matlap\_batched}                 & 0.153 & 187  & \checkmark & Exact; slow at $n=1{,}000$ \\
+\texttt{matlap\_grid\_lowrank\_iso\_elbo} & 0.180 & 7.1  & \checkmark & Iso; ELBO over-regularises \\
+\texttt{matlap\_lowrank}                 & 0.257 & 1.0  & \checkmark & Auto-$\lambda$ diverges \\
+\texttt{vi\_diagonal}                    & 0.242 & 42   & --         & 200 steps \\
+\texttt{vi\_matrix\_factor}              & 0.269 & 19   & --         & rSVD approx \\
+\texttt{vi\_row\_lowrank}                & 0.270 & 25   & --         & rSVD approx \\
+\texttt{vi\_diagonal\_approx}            & 0.397 & 11   & --         & rSVD approx \\
+\texttt{mcmc\_mala}                      & 0.258 & 250  & --         & Not converged in $T=700$ \\
+\texttt{mcmc\_gibbs}                     & 0.258 & 252  & --         & Not converged in $T=700$ \\
 \hline
 \end{tabular}
 \end{table}
@@ -461,7 +464,11 @@ Method & RMSE & Time (s) & Converged & Notes \\
 \paragraph{Discussion.}
 \texttt{matlap\_faem} and \texttt{matlap\_gradml} achieve the lowest RMSE (0.081), with runtimes under 10 s.
 Both optimise the exact marginal likelihood in the factor subspace rather than variational bounds, enabling reliable automatic $\lambda$ selection.
-\texttt{matlap\_grid\_lowrank} achieves the best efficiency trade-off (RMSE 0.099 in under 2 s) by evaluating a warm-started regularisation path on a shared low-rank basis, avoiding the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 20$).
+\texttt{matlap\_grid\_lowrank} achieves the best efficiency trade-off (RMSE 0.099 in 1.5 s) by evaluating a warm-started regularisation path on a shared low-rank basis, avoiding the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 20$).
+
+The low-rank-plus-isotropic variants (\texttt{matlap\_grid\_lowrank\_iso\_*}) perform worse than the pure low-rank grid at this scale.
+The isotropic component introduces a second degree of freedom that interacts with the ELBO and Rényi scoring of $\lambda$: the ELBO variant selects $\lambda = 500$ (twice the CV-optimal value), strongly over-regularising, while the Rényi variant under-regularises ($\lambda = 50$).
+In smaller-scale experiments (Section~\ref{sec:lambda-study}) the isotropic model is advantageous at low true rank, where it correctly accounts for off-subspace residual variance; at high true rank relative to the noise level the pure low-rank model with grid search is preferable.
 
 \texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
 

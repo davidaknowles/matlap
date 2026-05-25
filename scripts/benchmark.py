@@ -207,6 +207,14 @@ def run_matlap_grid_lowrank(Y, S, lam_grid, rank, max_iter):
     return r.best_result.mu, float(r.best_lambda), r.best_result.converged
 
 
+def run_matlap_grid_lowrank_iso(Y, S, lam_grid, rank, max_iter, score_fn="elbo"):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(
+        Y, S, lam_grid, rank=rank, max_iter=max_iter, score_fn=score_fn
+    )
+    return r.best_result.mu, float(r.best_lambda), r.best_result.converged
+
+
 def run_mcmc_mala(Y, S, lam, n_warmup, n_samples):
     from matlap.mcmc import mcmc_proximal_mala
     r = mcmc_proximal_mala(Y, S, lambda_val=lam, n_warmup=n_warmup, n_samples=n_samples)
@@ -277,6 +285,12 @@ def benchmark_seed(
             ("matlap_grid_lowrank",
              run_matlap_grid_lowrank,
              (Y, S, lam_grid, lowrank_rank, lowrank_iters)),
+            ("matlap_grid_lowrank_iso_elbo",
+             run_matlap_grid_lowrank_iso,
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "elbo")),
+            ("matlap_grid_lowrank_iso_renyi",
+             run_matlap_grid_lowrank_iso,
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "renyi")),
             ("matlap_batched",
              run_matlap_batched,
              (Y, S, lowrank_iters, batch_size)),
@@ -365,7 +379,9 @@ METHOD_DESC = {
     "matlap_faem":          "Factor Analysis EM, free subspace W_r, auto-λ (EB)",
     "matlap_gradml":        "Gradient marginal LL (Adam), free subspace W_r, auto-λ",
     "matlap_lowrank":       "Low-rank CAVI (Woodbury, rank-r factor subspace), auto-λ",
-    "matlap_grid_lowrank":  "Low-rank CAVI on λ-grid, warm-started path, best ELBO",
+    "matlap_grid_lowrank":          "Low-rank CAVI on λ-grid, warm-started path, best ELBO",
+    "matlap_grid_lowrank_iso_elbo":  "Low-rank+iso CAVI on λ-grid, warm-started path, best ELBO",
+    "matlap_grid_lowrank_iso_renyi": "Low-rank+iso CAVI on λ-grid, warm-started path, best Rényi α=0.5",
     "matlap_batched":       "Full CAVI, batched rows (O(batch·n²) peak mem), auto-λ",
     "vi_diagonal":          "SVI, fully-factorised Gaussian guide, auto-λ",
     "vi_diagonal_approx":   "SVI, fully-factorised Gaussian + rSVD nuclear norm, auto-λ",
@@ -561,6 +577,8 @@ def build_report(
     lines.append(f"| matlap_gradml | O(mr² + mn) at r={args.lowrank_rank} — ~44 MB | O(mnr + mr³) per step | Free subspace; Adam on marginal LL |")
     lines.append(f"| matlap_lowrank | O(mn + nr²) at r={args.lowrank_rank} — ~44 MB | O(mn·r) Woodbury | Exact in rank-r subspace |")
     lines.append(f"| matlap_grid_lowrank | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | G={args.grid_points} grid pts, warm-started |")
+    lines.append(f"| matlap_grid_lowrank_iso_elbo | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, ELBO scoring |")
+    lines.append(f"| matlap_grid_lowrank_iso_renyi | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, Rényi α=0.5 |")
     lines.append("| proximal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/iter on CPU |")
     lines.append(f"| vi_diagonal_approx | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | ~30× faster per step vs full SVD |")
     lines.append(f"| vi_matrix_factor | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | Shared column-factor guide |")
