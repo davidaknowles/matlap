@@ -20,6 +20,8 @@ gradml              Gradient ascent on marginal LL (Adam), free subspace, auto-�
 matlap_lowrank      Low-rank CAVI (Woodbury rank-r updates), auto-λ
 vi_matrix_factor    SVI with shared column-factor guide + rSVD; O(mn) memory
 vi_row_lowrank      SVI with per-row low-rank guide + rSVD; O(mnr) memory
+mcmc_mala           Proximal MALA (opt-in, --mcmc): gold-standard MCMC, slow
+mcmc_gibbs          MALA+MH Gibbs (opt-in, --mcmc): full posterior with λ sampling
 
 Methods excluded (with reason documented in report)
 ---------------------------------------------------
@@ -45,6 +47,9 @@ Usage
     --lowrank-rank       Rank for matlap_lowrank (default 50)
     --guide-rank         Rank for low-rank VI guides (default 15)
     --approx-rank        Rank for rSVD nuclear norm  (default 30)
+    --mcmc               Include MCMC methods (slow; warm-started from proximal_cv)
+    --mcmc-warmup        MCMC warmup steps       (default 100)
+    --mcmc-samples       MCMC sample steps       (default 200)
     --no-gpu             Force CPU even if GPU available
     --output             Path prefix for .md and .csv outputs
 """
@@ -69,15 +74,17 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 # Device detection
 # ---------------------------------------------------------------------------
 
-def get_devices(force_cpu: bool) -> list[tuple[str, object]]:
+def get_devices(force_cpu: bool, gpu_only: bool = False) -> list[tuple[str, object]]:
     """Return list of (name, jax_device) to benchmark."""
-    devices = [("CPU", jax.devices("cpu")[0])]
+    devices = [] if gpu_only else [("CPU", jax.devices("cpu")[0])]
     if not force_cpu:
         try:
             gpu = jax.devices("gpu")[0]
             devices.append(("GPU", gpu))
         except RuntimeError:
             pass
+    if not devices:
+        devices = [("CPU", jax.devices("cpu")[0])]
     return devices
 
 
@@ -200,6 +207,18 @@ def run_matlap_grid_lowrank(Y, S, lam_grid, rank, max_iter):
     return r.best_result.mu, float(r.best_lambda), r.best_result.converged
 
 
+def run_mcmc_mala(Y, S, lam, n_warmup, n_samples):
+    from matlap.mcmc import mcmc_mala
+    r = mcmc_mala(Y, S, lambda_val=lam, n_warmup=n_warmup, n_samples=n_samples)
+    return r.mu, float(lam), True
+
+
+def run_mcmc_gibbs(Y, S, lam, n_warmup, n_samples):
+    from matlap.mcmc import mcmc_gsm_gibbs
+    r = mcmc_gsm_gibbs(Y, S, lambda_init=lam, n_warmup=n_warmup, n_samples=n_samples)
+    return r.mu, float(r.lambda_bar), True
+
+
 
 
 
@@ -224,6 +243,9 @@ def benchmark_seed(
     grid_points: int,
     batch_size: int,
     device,
+    run_mcmc: bool = False,
+    mcmc_warmup: int = 300,
+    mcmc_samples: int = 400,
     verbose: bool = True,
 ) -> dict:
     """Run all methods on one seed and one device; return metrics dict."""
@@ -272,7 +294,18 @@ def benchmark_seed(
              (Y, S, vi_steps, guide_rank, approx_rank)),
         ]
 
-        for name, fn, args in methods:
+        all_run_methods = list(methods)
+        if run_mcmc:
+            all_run_methods += [
+                ("mcmc_mala",
+                 run_mcmc_mala,
+                 (Y, S, lam_heuristic, mcmc_warmup, mcmc_samples)),
+                ("mcmc_gibbs",
+                 run_mcmc_gibbs,
+                 (Y, S, lam_heuristic, mcmc_warmup, mcmc_samples)),
+            ]
+
+        for name, fn, args in all_run_methods:
             t0 = time.perf_counter()
             try:
                 mu_hat, lam_est, converged = fn(*args)
@@ -338,6 +371,8 @@ METHOD_DESC = {
     "vi_diagonal_approx":   "SVI, fully-factorised Gaussian + rSVD nuclear norm, auto-λ",
     "vi_matrix_factor":     "SVI, shared column-factor guide + rSVD, auto-λ; O(mn) memory",
     "vi_row_lowrank":       "SVI, per-row low-rank guide + rSVD, auto-λ; O(mnr) memory",
+    "mcmc_mala":            "Proximal MALA, cold start, heuristic λ (fixed)",
+    "mcmc_gibbs":           "MALA+MH Gibbs, cold start, heuristic λ init, λ sampled",
 }
 
 
@@ -347,7 +382,9 @@ def build_report(
     devices_used: list[str],
     gpu_available: bool,
 ) -> str:
-    methods = list(METHOD_DESC)
+    # Only show methods that were actually run (MCMC excluded if --mcmc not set)
+    methods = [m for m in METHOD_DESC
+               if any(m in s for seed_res in all_results.values() for s in seed_res)]
     lines = []
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -377,6 +414,9 @@ def build_report(
     lines.append(f"| matlap_lowrank rank | {args.lowrank_rank} |")
     lines.append(f"| VI guide rank | {args.guide_rank} |")
     lines.append(f"| rSVD approx rank | {args.approx_rank} |")
+    if args.mcmc:
+        lines.append(f"| MCMC warmup steps | {args.mcmc_warmup} |")
+        lines.append(f"| MCMC sample steps | {args.mcmc_samples} |")
     lines.append(f"| Devices | {', '.join(devices_used)} |")
     lines.append("")
 
@@ -527,6 +567,8 @@ def build_report(
     lines.append(f"| vi_row_lowrank | O(mn·r) at r={args.guide_rank} — ~600 MB | O(mn·r) rSVD | Per-row low-rank covariance |")
     lines.append("| vi_row_mvn | O(mn²) — **40 GB OOM** | O(mn³) | Infeasible |")
     lines.append("| vi_matrix_normal | O(m²+n²) — 400 MB | O(m²n) — **impractical** | 10¹¹ FLOPs/step |")
+    lines.append("| mcmc_mala | O(mn) — 40 MB | O(mn·min(m,n)) × T steps full SVD | Gold standard; slow at large mn |")
+    lines.append("| mcmc_gibbs | O(mn) — 40 MB | O(mn·min(m,n)) × T steps full SVD | Gold standard; also samples λ |")
     lines.append("")
 
     return "\n".join(lines)
@@ -560,7 +602,15 @@ def main() -> None:
                         help="Lambda grid size for CV / matlap_grid_lowrank (default 7)")
     parser.add_argument("--batch-size",           type=int,   default=64,
                         help="Row batch size for matlap_batched (default 64)")
+    parser.add_argument("--mcmc",                 action="store_true",
+                        help="Include MCMC methods (slow gold standard)")
+    parser.add_argument("--mcmc-warmup",          type=int,   default=300,
+                        help="MCMC warmup steps (default 300)")
+    parser.add_argument("--mcmc-samples",         type=int,   default=400,
+                        help="MCMC sample steps (default 400)")
     parser.add_argument("--no-gpu",               action="store_true")
+    parser.add_argument("--gpu-only",             action="store_true",
+                        help="Skip CPU benchmarking; GPU only")
     parser.add_argument("--output",               type=str,   default="benchmark_results")
     args = parser.parse_args()
 
@@ -571,9 +621,11 @@ def main() -> None:
           f"lowrank_iters={args.lowrank_iters}  lowrank_rank={args.lowrank_rank}  "
           f"guide_rank={args.guide_rank}  approx_rank={args.approx_rank}  "
           f"grid_points={args.grid_points}  batch_size={args.batch_size}")
+    if args.mcmc:
+        print(f"  mcmc_warmup={args.mcmc_warmup}  mcmc_samples={args.mcmc_samples}")
     print()
 
-    devices = get_devices(args.no_gpu)
+    devices = get_devices(args.no_gpu, args.gpu_only)
     device_names = [name for name, _ in devices]
     gpu_available = any(n == "GPU" for n in device_names)
 
@@ -606,13 +658,17 @@ def main() -> None:
                 approx_rank=args.approx_rank,
                 grid_points=args.grid_points,
                 batch_size=args.batch_size,
+                run_mcmc=args.mcmc,
+                mcmc_warmup=args.mcmc_warmup,
+                mcmc_samples=args.mcmc_samples,
                 device=device,
                 verbose=True,
             )
             seed_results.append(res)
         all_results[dev_name] = seed_results
 
-    methods = list(METHOD_DESC)
+    methods = [m for m in METHOD_DESC
+               if any(m in s for seed_res in all_results.values() for s in seed_res)]
 
     # ── Write CSV
     csv_path = f"{args.output}.csv"
