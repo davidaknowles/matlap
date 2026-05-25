@@ -167,3 +167,124 @@ def test_update_rows_vmap_matches_single():
         np.testing.assert_allclose(mus_v[i], mu_i, atol=1e-5)
         np.testing.assert_allclose(sigmas_v[i], sigma_i, atol=1e-5)
         np.testing.assert_allclose(float(logdets_v[i]), float(ld_i), atol=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# ldlt_cuda: CUDA LDL^T kernel
+# ---------------------------------------------------------------------------
+
+def _has_gpu():
+    """Check whether a CUDA GPU is available."""
+    try:
+        import jax
+        return any(d.platform == "gpu" for d in jax.devices())
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not _has_gpu(), reason="no GPU available")
+def test_ldlt_kernel_factorisation_accuracy():
+    """LDL^T CUDA kernel: A ≈ L D L^T, L unit lower-tri (PSD matrices for stability)."""
+    from matlap.ldlt_cuda import ldlt_batched
+
+    rng = np.random.default_rng(42)
+    m, r = 20, 8
+    # Use PSD matrices: A = B B^T + I (unpivoted LDL^T is stable for PD matrices)
+    B = rng.standard_normal((m, r, r)).astype(np.float32)
+    A_np = (B @ B.transpose(0, 2, 1)) / r + np.eye(r, dtype=np.float32)
+    A = jnp.array(A_np)
+
+    L, d = ldlt_batched(A)
+
+    for i in range(m):
+        A_rec = L[i] @ jnp.diag(d[i]) @ L[i].T
+        np.testing.assert_allclose(A_rec, A[i], atol=1e-3,
+                                   err_msg=f"LDL^T reconstruction failed for matrix {i}")
+        np.testing.assert_allclose(jnp.diag(L[i]), jnp.ones(r), atol=1e-6,
+                                   err_msg="L diagonal must be 1 (unit lower triangular)")
+        np.testing.assert_allclose(jnp.triu(L[i], 1), jnp.zeros((r, r)), atol=1e-6,
+                                   err_msg="L upper triangle must be zero")
+
+
+@pytest.mark.skipif(not _has_gpu(), reason="no GPU available")
+def test_ldlt_matches_eigh_row_update():
+    """update_rows_lowrank_isotropic_ldlt matches eigh path to float32 tolerance."""
+    from matlap.linalg import update_rows_lowrank_isotropic
+    from matlap.ldlt_cuda import update_rows_lowrank_isotropic_ldlt
+
+    rng = np.random.default_rng(7)
+    m, n, r = 50, 80, 6
+    Y = rng.standard_normal((m, n)).astype(np.float32)
+    S2 = (rng.uniform(0.1, 1.0, (m, n)) ** 2).astype(np.float32)
+    # 15% missing data
+    Y.ravel()[rng.choice(m * n, m * n // 7, replace=False)] = np.nan
+    S2.ravel()[rng.choice(m * n, m * n // 7, replace=False)] = np.inf
+
+    V_np = rng.standard_normal((n, r)).astype(np.float32)
+    V_np, _ = np.linalg.qr(V_np)
+    d_r = np.abs(rng.standard_normal(r)).astype(np.float32) + 1.0
+
+    Y_j, S2_j = jnp.array(Y), jnp.array(S2)
+    V_j, d_j = jnp.array(V_np), jnp.array(d_r)
+    lb, gm = jnp.array(0.5), jnp.array(0.5)
+
+    ref = update_rows_lowrank_isotropic(Y_j, S2_j, V_j, d_j, lb, gm)
+    out = update_rows_lowrank_isotropic_ldlt(Y_j, S2_j, V_j, d_j, lb, gm)
+
+    names = ["mu", "z_tilde", "VtSigmaV", "log_det", "diag_sig"]
+    for name, a, b in zip(names, ref, out):
+        np.testing.assert_allclose(np.array(a), np.array(b), atol=1e-3,
+                                   err_msg=f"LDL^T vs eigh mismatch in {name}")
+
+
+@pytest.mark.skipif(not _has_gpu(), reason="no GPU available")
+def test_xla_ldlt_factorisation_accuracy():
+    """XLA FFI LDL^T kernel: A ≈ L D L^T, L unit lower-tri."""
+    from matlap.xla_ext.ldlt_xla import ldlt_xla
+
+    rng = np.random.default_rng(42)
+    m, r = 20, 8
+    B = rng.standard_normal((m, r, r)).astype(np.float32)
+    A_np = (B @ B.transpose(0, 2, 1)) / r + np.eye(r, dtype=np.float32)
+    A = jnp.array(A_np)
+
+    L, d = ldlt_xla(A)
+
+    for i in range(m):
+        A_rec = L[i] @ jnp.diag(d[i]) @ L[i].T
+        np.testing.assert_allclose(A_rec, A[i], atol=1e-3,
+                                   err_msg=f"XLA LDL^T reconstruction failed for matrix {i}")
+        np.testing.assert_allclose(jnp.diag(L[i]), jnp.ones(r), atol=1e-6,
+                                   err_msg="L diagonal must be 1")
+        np.testing.assert_allclose(jnp.triu(L[i], 1), jnp.zeros((r, r)), atol=1e-6,
+                                   err_msg="L upper triangle must be zero")
+
+
+@pytest.mark.skipif(not _has_gpu(), reason="no GPU available")
+def test_xla_ldlt_matches_eigh_row_update():
+    """update_rows_lowrank_isotropic_xla_ldlt matches eigh path to float32 tolerance."""
+    from matlap.linalg import update_rows_lowrank_isotropic
+    from matlap.ldlt_cuda import update_rows_lowrank_isotropic_xla_ldlt
+
+    rng = np.random.default_rng(7)
+    m, n, r = 50, 80, 6
+    Y = rng.standard_normal((m, n)).astype(np.float32)
+    S2 = (rng.uniform(0.1, 1.0, (m, n)) ** 2).astype(np.float32)
+    Y.ravel()[rng.choice(m * n, m * n // 7, replace=False)] = np.nan
+    S2.ravel()[rng.choice(m * n, m * n // 7, replace=False)] = np.inf
+
+    V_np = rng.standard_normal((n, r)).astype(np.float32)
+    V_np, _ = np.linalg.qr(V_np)
+    d_r = np.abs(rng.standard_normal(r)).astype(np.float32) + 1.0
+
+    Y_j, S2_j = jnp.array(Y), jnp.array(S2)
+    V_j, d_j = jnp.array(V_np), jnp.array(d_r)
+    lb, gm = jnp.array(0.5), jnp.array(0.5)
+
+    ref = update_rows_lowrank_isotropic(Y_j, S2_j, V_j, d_j, lb, gm)
+    out = update_rows_lowrank_isotropic_xla_ldlt(Y_j, S2_j, V_j, d_j, lb, gm)
+
+    names = ["mu", "z_tilde", "VtSigmaV", "log_det", "diag_sig"]
+    for name, a, b in zip(names, ref, out):
+        np.testing.assert_allclose(np.array(a), np.array(b), atol=1e-3,
+                                   err_msg=f"XLA LDL^T vs eigh mismatch in {name}")

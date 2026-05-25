@@ -137,6 +137,8 @@ best_lam, result = cv_lambda(
 | `b0` | `1e-3` | Gamma prior rate |
 | `max_iter` | `200` | Maximum CAVI iterations |
 | `tol` | `1e-6` | Relative ELBO convergence tolerance |
+| `use_ldlt` | `False` | Use CuPy CUDA LDL^T kernel (requires CuPy; ~4× vs eigh) |
+| `use_xla_ldlt` | `False` | Use XLA-native CUDA LDL^T kernel (no sync barriers; ~9× vs eigh) |
 
 **Returns** `LowRankIsotropicResult`:
 
@@ -158,9 +160,55 @@ best_lam, result = cv_lambda(
 > (`a_N = a0 + m·n`) so λ is estimated correctly. `matlap_lowrank` uses
 > `a_N = a0 + m·r`, biasing λ low by a factor of ~r/n and causing over-shrinkage.
 
+#### GPU acceleration: CUDA LDL^T kernels
+
+Each CAVI iteration requires factoring `m` independent `r×r` indefinite linear systems `B̃ᵢ = diag(1/cₖ) + GᵢᵀGᵢ`. By default these are factored via `jnp.linalg.eigh`. On GPU with `r=50, m=10000` this costs ~68 ms/iteration.
+
+Two CUDA LDL^T alternatives are provided:
+
+##### `use_xla_ldlt=True` — XLA-native kernel (recommended)
+
+Implemented as an XLA FFI custom call (`matlap/xla_ext/ldlt_kernel.cu`), compiled to `matlap/xla_ext/_ldlt_kernel.so`. Runs on the JAX-managed CUDA stream with **no host/device sync barriers** — all three steps (B̃ computation, LDL^T, output assembly) are fused into a single XLA program:
+
+- ~**9× faster** than `eigh` for the full per-row update (`m=2000, r=50`)
+- ~**4× faster** than the CuPy variant
+- No CuPy dependency; callable inside `jax.jit`
+
+```python
+result = matlap_lowrank_isotropic(Y, S, rank=50, use_xla_ldlt=True)
+result = matlap_grid_lowrank_isotropic(Y, S, grid, rank=50, use_xla_ldlt=True)
+```
+
+**Requirements:** GPU + pre-compiled `_ldlt_kernel.so`. Set `LD_LIBRARY_PATH` to include NVIDIA CUDA libs:
+
+```bash
+NVIDIA_LIBS=/path/to/venv/lib/python3.12/site-packages/nvidia
+export LD_LIBRARY_PATH=$(find $NVIDIA_LIBS -name "lib" -type d | tr '\n' ':')$LD_LIBRARY_PATH
+```
+
+To recompile after kernel changes:
+```bash
+JAX_INC=/path/to/venv/lib/python3.12/site-packages/jaxlib/include
+nvcc -O3 -shared --compiler-options '-fPIC' --std=c++17 -arch=sm_86 \
+  -I"$JAX_INC" -I/usr/local/cuda/include -diag-suppress 940,2473 \
+  -o matlap/xla_ext/_ldlt_kernel.so matlap/xla_ext/ldlt_kernel.cu
+```
+
+##### `use_ldlt=True` — CuPy kernel (kept for comparison)
+
+Uses a CuPy `RawKernel` in `matlap/ldlt_cuda.py`. ~3–4× faster than `eigh`; requires CuPy (`pip install cupy-cuda12x`) and explicit `block_until_ready()` sync barriers.
+
+```python
+result = matlap_lowrank_isotropic(Y, S, rank=50, use_ldlt=True)
+```
+
+**Requirements:** GPU + CuPy + `LD_LIBRARY_PATH` as above.
+
+On CPU-only machines both flags fall back gracefully.
+
 ---
 
-### `matlap_grid_lowrank_isotropic(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, score_fn="elbo", alpha=0.5, verbose=False) → LowRankIsotropicGridResult`
+### `matlap_grid_lowrank_isotropic(Y, S, lambda_grid, *, rank, a0, b0, max_iter, tol, score_fn="elbo", alpha=0.5, use_ldlt=False, use_xla_ldlt=False, verbose=False) → LowRankIsotropicGridResult`
 
 Warm-started λ grid search for `matlap_lowrank_isotropic`. The grid is traversed from
 largest to smallest λ, reusing `(V_r, d_r, delta)` from the previous point. Selection

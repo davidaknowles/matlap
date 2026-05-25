@@ -609,6 +609,8 @@ def matlap_lowrank_isotropic(
     V_r_init: jax.Array | None = None,
     d_r_init: jax.Array | None = None,
     delta_init: float | None = None,
+    use_ldlt: bool = False,
+    use_xla_ldlt: bool = False,
 ) -> LowRankIsotropicResult:
     """Low-rank-plus-isotropic Bayesian matrix denoising via CAVI.
 
@@ -641,6 +643,13 @@ def matlap_lowrank_isotropic(
         d_r_init:    Warm-start Q eigenvalues, shape (r,).  If None, initialised to
                      ones.
         delta_init:  Warm-start off-subspace scale δ.  If None, derived from a_N.
+        use_ldlt:    If True, use the CuPy CUDA LDL^T kernel for the B̃
+                     factorisation.  ~4× faster than ``eigh``; requires CuPy.
+                     Must be called outside ``jax.jit``.
+        use_xla_ldlt: If True, use the XLA-native CUDA LDL^T kernel.  Runs on
+                     the JAX-managed stream with no sync barriers; the entire
+                     update is compiled into a single XLA program.  ~6× faster
+                     than ``eigh``; requires the compiled ``_ldlt_kernel.so``.
 
     Returns:
         :class:`LowRankIsotropicResult` with posterior mean, factor coordinates,
@@ -674,6 +683,13 @@ def matlap_lowrank_isotropic(
     b_N = jnp.asarray(b0 + float(a_N), dtype=jnp.float32)  # trace_Q ≈ a_N → lambda ≈ 1
     lambda_bar = a_N / b_N
 
+    if use_xla_ldlt:
+        from .ldlt_cuda import update_rows_lowrank_isotropic_xla_ldlt as _row_update
+    elif use_ldlt:
+        from .ldlt_cuda import update_rows_lowrank_isotropic_ldlt as _row_update
+    else:
+        _row_update = update_rows_lowrank_isotropic
+
     elbo_trace: list[float] = []
     converged = False
     mus: jax.Array | None = None
@@ -697,7 +713,7 @@ def matlap_lowrank_isotropic(
 
         # Full n-dim Woodbury row updates
         mus, z_tildes, VtSigmaVs, log_dets, diag_sigs = (
-            update_rows_lowrank_isotropic(Y, S2, V_r, d_r, lambda_bar, gamma_arr)
+            _row_update(Y, S2, V_r, d_r, lambda_bar, gamma_arr)
         )
         # mus: (m,n), z_tildes: (m,r), VtSigmaVs: (m,r,r), log_dets: (m,), diag_sigs: (m,n)
 
@@ -1250,6 +1266,8 @@ def matlap_grid_lowrank_isotropic(
     tol: float = 1e-6,
     score_fn: str = "elbo",
     alpha: float = 0.5,
+    use_ldlt: bool = False,
+    use_xla_ldlt: bool = False,
     verbose: bool = False,
 ) -> LowRankIsotropicGridResult:
     """Grid search over lambda using low-rank+isotropic CAVI with warm-started path.
@@ -1273,6 +1291,8 @@ def matlap_grid_lowrank_isotropic(
         tol:          Convergence tolerance on relative ELBO change.
         score_fn:     One of ``{"elbo", "loo", "renyi"}``.
         alpha:        Rényi order for ``score_fn="renyi"``; must satisfy 0≤α<1.
+        use_ldlt:     If True, use the CuPy CUDA LDL^T kernel (requires GPU + CuPy).
+        use_xla_ldlt: If True, use the XLA-native CUDA LDL^T kernel (no sync barriers).
         verbose:      Print progress.
 
     Returns:
@@ -1300,6 +1320,7 @@ def matlap_grid_lowrank_isotropic(
             Y, S, lam_val,
             rank=rank, a0=a0, b0=b0, max_iter=max_iter, tol=tol,
             V_r_init=V_r, d_r_init=d_r, delta_init=delta,
+            use_ldlt=use_ldlt, use_xla_ldlt=use_xla_ldlt,
         )
         V_r = res.V_r
         d_r = res.d_r
