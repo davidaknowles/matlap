@@ -59,7 +59,7 @@ def test_gibbs_result_type():
                        key=jax.random.PRNGKey(1))
     assert isinstance(r, MCMCResult)
     assert r.mu.shape == Y.shape
-    assert 0.0 <= r.accept_rate <= 1.0
+    assert 0.0 < r.accept_rate <= 1.0, f"lambda MH accept_rate {r.accept_rate:.2f} out of range"
     assert r.n_samples == 20
     assert r.lambda_bar > 0.0
 
