@@ -208,8 +208,8 @@ def run_matlap_grid_lowrank(Y, S, lam_grid, rank, max_iter):
 
 
 def run_mcmc_mala(Y, S, lam, n_warmup, n_samples):
-    from matlap.mcmc import mcmc_mala
-    r = mcmc_mala(Y, S, lambda_val=lam, n_warmup=n_warmup, n_samples=n_samples)
+    from matlap.mcmc import mcmc_proximal_mala
+    r = mcmc_proximal_mala(Y, S, lambda_val=lam, n_warmup=n_warmup, n_samples=n_samples)
     return r.mu, float(lam), True
 
 

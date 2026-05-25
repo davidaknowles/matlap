@@ -416,23 +416,25 @@ def mcmc_gsm_gibbs(
         jax.random.split(key_warmup, n_warmup),
     )
 
-    # --- Sampling: fixed step size ---
+    # --- Sampling: fixed step size, online accumulation to avoid O(T·m·n) memory ---
     def sample_body(carry, key):
-        X, nuc_X, lam, zeta = carry
+        X, nuc_X, lam, zeta, sum_X, sum_lam, n_acc = carry
         X_new, nuc_new, lam_new, zeta_new, mala_acc, _ = _gibbs_step(
             X, nuc_X, lam, zeta, log_step_final, key, Y, obs_mask, prec_noise
         )
-        return (X_new, nuc_new, lam_new, zeta_new), (X_new, lam_new, mala_acc)
+        return (X_new, nuc_new, lam_new, zeta_new,
+                sum_X + X_new, sum_lam + lam_new, n_acc + mala_acc), None
 
-    (_, _, _, _), (X_samples, lam_samples, acc_samples) = jax.lax.scan(
+    (_, _, _, _, sum_X, sum_lam, total_acc), _ = jax.lax.scan(
         sample_body,
-        (X_warmed, nuc_warmed, lam_warmed, zeta_warmed),
+        (X_warmed, nuc_warmed, lam_warmed, zeta_warmed,
+         jnp.zeros_like(X_warmed), jnp.zeros((), dtype=Y.dtype), jnp.array(0.0)),
         jax.random.split(key_sample, n_samples),
     )
 
-    mu = X_samples.mean(axis=0)
-    lambda_bar = float(lam_samples.mean())
-    accept_rate = float(acc_samples.mean())
+    mu = sum_X / n_samples
+    lambda_bar = float(sum_lam / n_samples)
+    accept_rate = float(total_acc) / n_samples
 
     return MCMCResult(
         mu=mu,

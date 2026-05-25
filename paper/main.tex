@@ -421,43 +421,53 @@ with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \citep{kingma20
 We benchmark all scalable methods on a synthetic matrix completion problem with $m=10{,}000$ rows, $n=1{,}000$ columns, true rank 15, heteroscedastic Gaussian noise ($\sigma_{ij} \sim \mathrm{Uniform}(0.5, 1.5)$), and 20\% of entries held out as a test set. We report test-set RMSE and wall-clock time on a NVIDIA RTX~3090 GPU, averaged over 3 seeds.
 
 \paragraph{Methods.}
-\texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (300 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
-\texttt{matlap\_lowrank} runs the rank-30 low-rank CAVI with automatic empirical-Bayes $\lambda$ (80 iterations, converged).
+\texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (100 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
+\texttt{matlap\_faem} and \texttt{matlap\_gradml} optimise the low-rank factor analysis marginal likelihood via EM and gradient descent (Adam) respectively, with automatic empirical-Bayes $\lambda$ (100/500 steps).
+\texttt{matlap\_lowrank} runs the rank-50 low-rank CAVI with automatic empirical-Bayes $\lambda$ (50 iterations).
 \texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point).
-\texttt{matlap\_grid\_lowrank\_isotropic} runs the low-rank-plus-isotropic CAVI path and can score $\lambda$ by ELBO, LOO, or Rényi $\alpha$-ELBO ($\alpha=0$ is the importance-style limit).
-\texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; O($n^3$) per row, so slow at $n=1{,}000$).
-\texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (1000 steps, not converged).
-\texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (1000 steps, not converged).
+\texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; $O(n^3)$ per row, so slow at $n=1{,}000$).
+\texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (200 steps).
+\texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (200 steps).
+\texttt{mcmc\_mala} runs the proximal MALA sampler (300 warm-up, 400 samples, heuristic fixed $\lambda$); \texttt{mcmc\_gibbs} runs the MALA+MH Gibbs sampler (same budget, $\lambda$ sampled jointly).
+All MCMC methods use a cold start ($\hat{X}_0 = Y$ with missing entries set to zero).
 
 \paragraph{Results.}
 
 \begin{table}[h]
 \centering
-\caption{Test-set RMSE and GPU runtime on a $10{,}000 \times 1{,}000$ rank-15 matrix, 3 seeds.}
+\caption{Test-set RMSE and GPU runtime on a $10{,}000 \times 1{,}000$ rank-15 matrix, 3 seeds (NVIDIA RTX 3090).}
 \label{tab:benchmark}
 \begin{tabular}{lrrrl}
 \hline
 Method & RMSE & Time (s) & Converged & Notes \\
 \hline
-\texttt{matlap\_grid\_lowrank} & \textbf{0.092} & \textbf{0.6} & \checkmark & Best overall \\
-\texttt{proximal\_cv}          & 0.105 & 346 & -- & 500$\times$ slower \\
-\texttt{proximal}              & 0.123 & 67  & -- & Fixed $\lambda$ \\
-\texttt{matlap\_batched}       & 0.153 & 185 & \checkmark & Exact; slow at $n=1{,}000$ \\
-\texttt{matlap\_lowrank}       & 0.257 & 1.7 & \checkmark & Auto-$\lambda$ over-shrinks \\
-\texttt{vi\_diagonal}          & 0.207 & 203 & -- & 1000 steps \\
-\texttt{vi\_diagonal\_approx}  & 0.654 & 52  & -- & rSVD approx unstable \\
-\texttt{vi\_matrix\_factor}    & 0.530 & 93  & -- & rSVD approx unstable \\
-\texttt{vi\_row\_lowrank}      & 0.529 & 141 & -- & rSVD approx unstable \\
+\texttt{matlap\_faem}          & \textbf{0.081} & \textbf{3.6}  & \checkmark & Best RMSE \\
+\texttt{matlap\_gradml}        & 0.081 & 3.2  & \checkmark & \\
+\texttt{matlap\_grid\_lowrank} & 0.099 & 1.9  & \checkmark & Fastest converged \\
+\texttt{proximal\_cv}          & 0.105 & 121  & --         & 34$\times$ slower than \texttt{matlap\_grid\_lowrank} \\
+\texttt{proximal}              & 0.123 & 23   & --         & Fixed $\lambda$ \\
+\texttt{matlap\_batched}       & 0.153 & 186  & \checkmark & Exact; slow at $n=1{,}000$ \\
+\texttt{matlap\_lowrank}       & 0.257 & 1.0  & \checkmark & Auto-$\lambda$ over-shrinks \\
+\texttt{vi\_diagonal}          & 0.242 & 42   & --         & 200 steps \\
+\texttt{vi\_matrix\_factor}    & 0.269 & 20   & --         & rSVD approx \\
+\texttt{vi\_row\_lowrank}      & 0.270 & 25   & --         & rSVD approx \\
+\texttt{vi\_diagonal\_approx}  & 0.397 & 11   & --         & rSVD approx \\
+\texttt{mcmc\_mala}            & 0.258 & 250  & --         & Not converged in $T=700$ \\
+\texttt{mcmc\_gibbs}           & 0.258 & 252  & --         & Not converged in $T=700$ \\
 \hline
 \end{tabular}
 \end{table}
 
 \paragraph{Discussion.}
-\texttt{matlap\_grid\_lowrank} achieves the lowest RMSE (0.092) and the shortest runtime (0.6 s), demonstrating that the warm-started regularisation path is both accurate and highly efficient.  By evaluating multiple $\lambda$ values on a shared low-rank basis, it avoids the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 33$) while remaining far cheaper than the proximal CV baseline.
+\texttt{matlap\_faem} and \texttt{matlap\_gradml} achieve the lowest RMSE (0.081), with runtimes under 10 s.
+Both optimise the exact marginal likelihood in the factor subspace rather than variational bounds, enabling reliable automatic $\lambda$ selection.
+\texttt{matlap\_grid\_lowrank} achieves the best efficiency trade-off (RMSE 0.099 in under 2 s) by evaluating a warm-started regularisation path on a shared low-rank basis, avoiding the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 20$).
 
 \texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
 
-The SVI methods (\texttt{vi\_diagonal}, \texttt{vi\_matrix\_factor}, \texttt{vi\_row\_lowrank}) have not converged at 1000 steps, and the rSVD nuclear-norm approximation introduces additional gradient noise at rank 30 that degrades the \texttt{approx} variants. With sufficient steps and a higher approximation rank, \texttt{vi\_diagonal} achieves competitive RMSE (0.207 at 1000 steps).
+The SVI methods (\texttt{vi\_diagonal}, \texttt{vi\_matrix\_factor}, \texttt{vi\_row\_lowrank}) have not converged at 200 steps, and the rSVD nuclear-norm approximation introduces additional gradient noise in the \texttt{approx} variants.
+
+The MCMC samplers (\texttt{mcmc\_mala} and \texttt{mcmc\_gibbs}) obtain RMSE 0.258 after 700 total steps — comparable to a zero-signal predictor — indicating that neither chain mixes adequately at the scale of $mn = 10^7$ parameters within this budget. The 250 s per-run cost reflects $O(mn\min(m,n))$ SVD calls at every step; accelerating MCMC to competitive performance at this scale would require either subsampled SVD proposals or a different parameterisation (e.g.\ sampling in the low-rank factor subspace directly), and we leave this for future work.
 
 \subsection{Lambda Selection Study}
 \label{sec:lambda-study}
