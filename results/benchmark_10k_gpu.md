@@ -1,6 +1,6 @@
 # matlap Benchmark Report
 
-Generated: 2026-05-25 10:16  |  Matrix: 10000×1000, rank 15  |  Missing: 20%  |  Seeds: 3
+Generated: 2026-05-25 12:22  |  Matrix: 10000×1000, rank 15  |  Missing: 20%  |  Seeds: 3
 
 ## Configuration
 
@@ -63,10 +63,10 @@ RMSE on held-out entries (lower is better).
 | matlap_faem | 0.0809 | 0.0002 | 100% |
 | matlap_gradml | 0.0811 | 0.0002 | 100% |
 | matlap_lowrank | 0.2574 | 0.0008 | 100% |
-| matlap_grid_lowrank | 0.0985 | 0.0001 | 100% |
-| matlap_grid_lowrank_iso_elbo | 0.1799 | 0.0002 | 100% |
-| matlap_grid_lowrank_iso_renyi | 0.1341 | 0.0001 | 100% |
-| matlap_batched | 0.1526 | 0.0001 | 100% |
+| matlap_grid_lowrank | 0.0985 | 0.0000 | 100% |
+| matlap_grid_lowrank_iso_elbo | 0.1136 | 0.0104 | 0% |
+| matlap_grid_lowrank_iso_renyi | 0.1241 | 0.0002 | 0% |
+| matlap_batched | 0.1525 | 0.0001 | 100% |
 | vi_diagonal | 0.2415 | 0.0007 | 0% |
 | vi_diagonal_approx | 0.3965 | 0.0019 | 0% |
 | vi_matrix_factor | 0.2688 | 0.0009 | 0% |
@@ -81,12 +81,12 @@ Estimated regularisation strength λ per method across seeds.
 | proximal | 50.002 | 0.008 | 49.992 | 50.009 |
 | proximal_cv | 158.121 | 0.024 | 158.088 | 158.144 |
 | matlap_faem | 0.496 | 0.003 | 0.492 | 0.499 |
-| matlap_gradml | 1.131 | 0.004 | 1.126 | 1.136 |
-| matlap_lowrank | 9978.610 | 0.145 | 9978.409 | 9978.749 |
+| matlap_gradml | 1.131 | 0.003 | 1.127 | 1.134 |
+| matlap_lowrank | 9978.611 | 0.144 | 9978.412 | 9978.750 |
 | matlap_grid_lowrank | 158.121 | 0.024 | 158.088 | 158.144 |
-| matlap_grid_lowrank_iso_elbo | 500.023 | 0.076 | 499.918 | 500.095 |
+| matlap_grid_lowrank_iso_elbo | 158.121 | 0.024 | 158.088 | 158.144 |
 | matlap_grid_lowrank_iso_renyi | 50.002 | 0.008 | 49.992 | 50.009 |
-| matlap_batched | 350.985 | 0.735 | 350.117 | 351.914 |
+| matlap_batched | 350.687 | 0.744 | 349.681 | 351.457 |
 | vi_diagonal | 2.051 | 0.000 | 2.051 | 2.051 |
 | vi_diagonal_approx | 2.054 | 0.000 | 2.054 | 2.054 |
 | vi_matrix_factor | 2.054 | 0.000 | 2.054 | 2.054 |
@@ -96,9 +96,9 @@ Estimated regularisation strength λ per method across seeds.
 
 | Seed | proximal | proximal_cv | matlap_faem | matlap_gradml | matlap_lowrank | matlap_grid_lowrank | matlap_grid_lowrank_iso_elbo | matlap_grid_lowrank_iso_renyi | matlap_batched | vi_diagonal | vi_diagonal_approx | vi_matrix_factor | vi_row_lowrank |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | 50.009 | 158.144 | 0.492 | 1.126 | 9978.409 | 158.144 | 500.095 | 50.009 | 350.117 | 2.051 | 2.054 | 2.054 | 2.054 |
-| 1 | 49.992 | 158.088 | 0.499 | 1.136 | 9978.749 | 158.088 | 499.918 | 49.992 | 351.914 | 2.051 | 2.054 | 2.054 | 2.054 |
-| 2 | 50.006 | 158.132 | 0.498 | 1.131 | 9978.672 | 158.132 | 500.058 | 50.006 | 350.923 | 2.051 | 2.054 | 2.054 | 2.054 |
+| 0 | 50.009 | 158.144 | 0.492 | 1.127 | 9978.412 | 158.144 | 158.144 | 50.009 | 349.681 | 2.051 | 2.054 | 2.054 | 2.054 |
+| 1 | 49.992 | 158.088 | 0.499 | 1.134 | 9978.750 | 158.088 | 158.088 | 49.992 | 351.457 | 2.051 | 2.054 | 2.054 | 2.054 |
+| 2 | 50.006 | 158.132 | 0.498 | 1.133 | 9978.672 | 158.132 | 158.132 | 50.006 | 350.923 | 2.051 | 2.054 | 2.054 | 2.054 |
 
 </details>
 
@@ -108,27 +108,27 @@ Wall-clock time per seed (seconds). Seed 0 may include JAX JIT compilation overh
 
 | Method | Mean (s) | Std (s) | Min (s) | Max (s) |
 |---|---|---|---|---|
-| proximal | 22.6 | 0.7 | 22.0 | 23.5 |
-| proximal_cv | 121.4 | 0.4 | 120.9 | 121.8 |
-| matlap_faem | 3.7 | 3.3 | 1.3 | 8.3 |
-| matlap_gradml | 3.2 | 1.4 | 2.2 | 5.2 |
+| proximal | 22.6 | 0.7 | 22.0 | 23.6 |
+| proximal_cv | 121.1 | 0.4 | 120.6 | 121.5 |
+| matlap_faem | 3.6 | 3.2 | 1.3 | 8.2 |
+| matlap_gradml | 3.2 | 1.3 | 2.2 | 5.0 |
 | matlap_lowrank | 1.0 | 1.3 | 0.1 | 2.9 |
-| matlap_grid_lowrank | 1.5 | 0.1 | 1.4 | 1.6 |
-| matlap_grid_lowrank_iso_elbo | 7.1 | 0.8 | 6.5 | 8.3 |
-| matlap_grid_lowrank_iso_renyi | 6.7 | 0.1 | 6.5 | 6.8 |
-| matlap_batched | 186.7 | 3.2 | 182.4 | 190.0 |
-| vi_diagonal | 41.9 | 1.3 | 41.0 | 43.7 |
-| vi_diagonal_approx | 10.7 | 0.9 | 10.0 | 12.0 |
-| vi_matrix_factor | 19.3 | 3.0 | 17.2 | 23.5 |
-| vi_row_lowrank | 24.5 | 1.1 | 23.8 | 26.1 |
+| matlap_grid_lowrank | 2.4 | 0.8 | 1.6 | 3.4 |
+| matlap_grid_lowrank_iso_elbo | 27.1 | 3.3 | 23.4 | 31.5 |
+| matlap_grid_lowrank_iso_renyi | 26.7 | 2.7 | 23.7 | 30.2 |
+| matlap_batched | 183.6 | 1.6 | 182.5 | 185.9 |
+| vi_diagonal | 41.9 | 1.1 | 40.7 | 43.3 |
+| vi_diagonal_approx | 10.9 | 1.0 | 9.9 | 12.2 |
+| vi_matrix_factor | 19.5 | 2.9 | 17.2 | 23.6 |
+| vi_row_lowrank | 24.4 | 1.1 | 23.5 | 26.0 |
 
 <details><summary>Per-seed runtimes (s)</summary>
 
 | Seed | proximal | proximal_cv | matlap_faem | matlap_gradml | matlap_lowrank | matlap_grid_lowrank | matlap_grid_lowrank_iso_elbo | matlap_grid_lowrank_iso_renyi | matlap_batched | vi_diagonal | vi_diagonal_approx | vi_matrix_factor | vi_row_lowrank |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | 23.5 | 120.9 | 8.3 | 5.2 | 2.9 | 1.6 | 8.3 | 6.8 | 190.0 | 43.7 | 12.0 | 23.5 | 26.1 |
-| 1 | 22.2 | 121.8 | 1.4 | 2.2 | 0.1 | 1.5 | 6.6 | 6.6 | 187.7 | 41.0 | 10.3 | 17.3 | 23.8 |
-| 2 | 22.0 | 121.5 | 1.3 | 2.3 | 0.1 | 1.4 | 6.5 | 6.5 | 182.4 | 41.0 | 10.0 | 17.2 | 23.8 |
+| 0 | 23.6 | 120.6 | 8.2 | 5.0 | 2.9 | 2.0 | 31.5 | 30.2 | 185.9 | 43.3 | 12.2 | 23.6 | 26.0 |
+| 1 | 22.2 | 121.5 | 1.3 | 2.4 | 0.1 | 3.4 | 23.4 | 23.7 | 182.5 | 40.7 | 9.9 | 17.2 | 23.5 |
+| 2 | 22.0 | 121.1 | 1.4 | 2.2 | 0.1 | 1.6 | 26.3 | 26.3 | 182.5 | 41.6 | 10.6 | 17.7 | 23.8 |
 
 </details>
 

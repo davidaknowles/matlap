@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 import jax
 import jax.numpy as jnp
 
-from .elbo import compute_elbo, compute_elbo_from_diag, compute_elbo_lowrank
+from .elbo import compute_elbo, compute_elbo_from_diag, compute_elbo_lowrank, compute_elbo_lowrank_iso
 from .linalg import (
     SqrtDecomp, matrix_sqrt_eigh, trace_sqrt,
     update_rows, update_rows_and_reduce,
@@ -680,8 +680,8 @@ def matlap_lowrank_isotropic(
     z_tildes: jax.Array | None = None
 
     for i in range(max_iter):
-        # Derive γ from current λ̄ and δ
-        gamma_val = float(lambda_bar) / max(delta, 1e-8)
+        # γ = λ̄ (off-subspace prior precision equals λ̄, not λ̄/δ)
+        gamma_val = float(lambda_bar)
         gamma_arr = jnp.asarray(gamma_val, dtype=jnp.float32)
 
         # Pre-row lambda update using current trace_Q
@@ -689,7 +689,7 @@ def matlap_lowrank_isotropic(
         if lambda_val is None:
             b_N = jnp.asarray(b0 + trace_Q, dtype=jnp.float32)
             lambda_bar = a_N / b_N
-            gamma_val = float(lambda_bar) / max(delta, 1e-8)
+            gamma_val = float(lambda_bar)
             gamma_arr = jnp.asarray(gamma_val, dtype=jnp.float32)
         else:
             lambda_bar = jnp.asarray(lambda_val, dtype=jnp.float32)
@@ -723,12 +723,13 @@ def matlap_lowrank_isotropic(
             b_N = jnp.asarray(b0 + trace_Q, dtype=jnp.float32)
             lambda_bar = a_N / b_N
 
-        # ELBO: q_sqrt_vals sums to Tr(Q) = Σ_k d_{r,k} + (n−r)δ
-        q_sqrt_vals = jnp.concatenate(
-            [d_r, jnp.full(n - r, delta, dtype=jnp.float32)]
-        )
-        elbo = compute_elbo_from_diag(
-            Y, S2, mus, diag_sigs, log_dets, q_sqrt_vals, lambda_bar, a_N, b_N, a0, b0,
+        # Correct hybrid ELBO: nuclear-norm normaliser for r in-subspace dims,
+        # Gaussian normaliser for (n-r) off-subspace dims.
+        # Psi_perp = (n-r)*delta² is the total off-subspace second moment.
+        Psi_perp_val = jnp.asarray(float(Psi_perp), dtype=jnp.float32)
+        elbo = compute_elbo_lowrank_iso(
+            Y, S2, mus, diag_sigs, log_dets, d_r, Psi_perp_val,
+            lambda_bar, a_N, b_N, a0, b0,
         )
         elbo_val = float(elbo)
         elbo_trace.append(elbo_val)

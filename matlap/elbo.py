@@ -227,3 +227,82 @@ def compute_elbo_lowrank(
     neg_kl_lam = -kl_lam
 
     return ll + prior_X + entropy_X + neg_kl_lam
+
+
+@jax.jit
+def compute_elbo_lowrank_iso(
+    Y: jax.Array,
+    S2: jax.Array,
+    mus: jax.Array,
+    sigma_diag: jax.Array,
+    log_det_sigmas: jax.Array,
+    d_r: jax.Array,
+    Psi_perp: jax.Array,
+    lambda_bar: jax.Array,
+    a_N: jax.Array,
+    b_N: jax.Array,
+    a0: float,
+    b0: float,
+) -> jax.Array:
+    """ELBO for the low-rank-plus-isotropic CAVI model (γ = λ̄ off-subspace prior).
+
+    The iso model is a hybrid:
+
+    * **In-subspace (r dims):** nuclear-norm prior via Q, normaliser m·r·log λ.
+    * **Off-subspace (n−r dims):** isotropic Gaussian prior N(0, λ⁻¹ I),
+      normaliser m·(n−r)/2·log λ.
+
+    Using the full nuclear-norm normaliser m·n·log λ (as in
+    :func:`compute_elbo_from_diag`) over-counts the off-subspace contribution
+    by a factor of 2, causing the ELBO to increase monotonically on any
+    reasonable grid.  This function uses the correct hybrid normaliser,
+    giving a proper ELBO peak at intermediate λ.
+
+    Args:
+        Y:               Observations, shape (m, n); NaN where missing.
+        S2:              Observation variances, shape (m, n); inf where missing.
+        mus:             Posterior means (full n-dim), shape (m, n).
+        sigma_diag:      Diagonal of per-row posterior covariances, shape (m, n).
+        log_det_sigmas:  Full n-dim log|Σ_i| for each row, shape (m,).
+        d_r:             Sqrt-eigenvalues of Ψ_r (in-subspace Q), shape (r,).
+        Psi_perp:        Total off-subspace second moment = (n−r)·δ², scalar.
+        lambda_bar:      E_q[λ] = a_N / b_N, scalar.
+        a_N:             Gamma posterior shape, scalar.
+        b_N:             Gamma posterior rate, scalar.
+        a0:              Gamma prior shape.
+        b0:              Gamma prior rate.
+
+    Returns:
+        Scalar ELBO value.
+    """
+    m, n = Y.shape
+    r = d_r.shape[0]
+
+    obs_mask = jnp.isfinite(S2) & jnp.isfinite(Y)
+    prec = jnp.where(obs_mask, 1.0 / S2, 0.0)
+    resid2 = jnp.where(obs_mask, (Y - mus) ** 2, 0.0)
+    ll = -0.5 * jnp.sum(prec * (resid2 + sigma_diag))
+    ll -= 0.5 * jnp.sum(jnp.where(obs_mask, jnp.log(2.0 * jnp.pi * S2), 0.0))
+
+    e_log_lam = jss.digamma(a_N) - jnp.log(b_N)
+    trace_d_r = jnp.sum(d_r)
+
+    # In-subspace: nuclear-norm prior → -λ·Tr(Q_r) + m·r·E[log λ]
+    # Off-subspace: Gaussian prior    → -λ/2·Ψ⊥   + m·(n−r)/2·E[log λ]
+    prior_X = (
+        -lambda_bar * trace_d_r
+        - 0.5 * lambda_bar * Psi_perp
+        + m * r * e_log_lam
+        + m * (n - r) / 2.0 * e_log_lam
+    )
+
+    entropy_X = 0.5 * (jnp.sum(log_det_sigmas) + m * n * (1.0 + jnp.log(2.0 * jnp.pi)))
+
+    kl_lam = (
+        a_N * jnp.log(b_N) - a0 * jnp.log(b0)
+        - jss.gammaln(a_N) + jss.gammaln(a0)
+        + (a_N - a0) * e_log_lam
+        + (b0 - b_N) * lambda_bar
+    )
+    return ll + prior_X + entropy_X + (-kl_lam)
+

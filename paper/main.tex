@@ -232,7 +232,7 @@ With $Q^{-1} = V_r\,\mathrm{diag}(1/d_r)\,V_r^\top + \delta^{-1}(I - V_r V_r^\to
 where $\mathrm{Tr}(\Psi) = \sum_i(\|\mu_i\|^2 + \mathrm{Tr}(\Sigma_i))$ and $\mathrm{Tr}(\Psi_r) = \sum_k d_{r,k}^2$. This is the exact analogue of $d_{r,k}^* = \sqrt{[\Psi_r]_{kk}}$ for the in-subspace modes: $\delta^*$ is the RMS off-subspace eigenvalue of $\Psi$.
 
 \paragraph{Posterior updates.}
-Let $\gamma = \bar\lambda/\delta$ (off-subspace prior precision), $\tilde{p}_{ij} = p_{ij} + \gamma$, and $c_k = \bar\lambda/d_{r,k} - \gamma$. In practice $\delta < d_{r,k}$ (off-subspace modes of $Q$ are smaller than in-subspace), so $c_k < 0$; the posterior precision $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$ is nevertheless PD. The Woodbury identity gives
+We set $\gamma = \bar\lambda$ as the off-subspace prior precision—identical to what a plain isotropic Gaussian prior $p(x_i) = \mathcal{N}(0,\bar\lambda^{-1}I)$ would assign—decoupling the row-posterior update from $\delta$.  This prevents the self-reinforcing instability that arises when $\gamma = \bar\lambda/\delta$: small $\delta$ gives large $\gamma$ and hence large $\mathrm{Tr}(\Psi_\perp)$, which in turn increases $\delta^*$ and weakens the prior.  With $\gamma = \bar\lambda$ fixed, $\tilde{p}_{ij} = p_{ij} + \bar\lambda$ and $c_k = \bar\lambda/d_{r,k} - \bar\lambda = \bar\lambda(1/d_{r,k}-1)$.  Since the in-subspace eigenvalues $d_{r,k}$ are typically large ($d_{r,k} \gg 1$), we have $c_k < 0$; the posterior precision $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$ is nevertheless PD. The Woodbury identity gives
 \begin{align}
     \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V_r\,\tilde{B}_i^{-1}\,V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\
     \tilde{B}_i &= \mathrm{diag}(1/c_k) + V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V_r \;\in \mathbb{R}^{r\times r},
@@ -240,7 +240,7 @@ Let $\gamma = \bar\lambda/\delta$ (off-subspace prior precision), $\tilde{p}_{ij
 where $\tilde{B}_i$ is symmetric and invertible (since $\Lambda_i \succ 0$ implies $\det(\tilde{B}_i)\neq 0$ via the matrix determinant lemma), but need not be positive definite when $c_k < 0$; in practice we diagonalise $\tilde{B}_i = E\,\mathrm{diag}(\ell)\,E^\top$ via \texttt{eigh} rather than Cholesky. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V_r)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
 
 \paragraph{$Q$ and $\delta$ updates.}
-$\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ and $\gamma \leftarrow \bar\lambda/\delta^*$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$.
+$\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$. Note that $\gamma = \bar\lambda$ requires no separate update: it follows immediately from the current $\bar\lambda$.
 
 \paragraph{ELBO.}
 By the matrix determinant lemma applied to $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$,
@@ -442,14 +442,14 @@ All MCMC methods use a cold start ($\hat{X}_0 = Y$ with missing entries set to z
 \hline
 Method & RMSE & Time (s) & Converged & Notes \\
 \hline
-\texttt{matlap\_faem}                    & \textbf{0.081} & \textbf{3.7} & \checkmark & Best RMSE \\
+\texttt{matlap\_faem}                    & \textbf{0.081} & \textbf{3.6} & \checkmark & Best RMSE \\
 \texttt{matlap\_gradml}                  & 0.081 & 3.2  & \checkmark & \\
-\texttt{matlap\_grid\_lowrank}           & 0.099 & 1.5  & \checkmark & Fastest converged \\
-\texttt{matlap\_grid\_lowrank\_iso\_renyi} & 0.134 & 6.7  & \checkmark & Iso; Rényi scoring \\
+\texttt{matlap\_grid\_lowrank}           & 0.099 & 2.4  & \checkmark & Fastest converged \\
+\texttt{matlap\_grid\_lowrank\_iso\_elbo} & 0.114 & 27   & --         & Iso; 50-iter budget \\
+\texttt{matlap\_grid\_lowrank\_iso\_renyi} & 0.124 & 27  & --         & Iso; Rényi scoring \\
 \texttt{proximal\_cv}                    & 0.105 & 121  & --         & 80$\times$ slower \\
 \texttt{proximal}                        & 0.123 & 23   & --         & Fixed $\lambda$ \\
-\texttt{matlap\_batched}                 & 0.153 & 187  & \checkmark & Exact; slow at $n=1{,}000$ \\
-\texttt{matlap\_grid\_lowrank\_iso\_elbo} & 0.180 & 7.1  & \checkmark & Iso; ELBO over-regularises \\
+\texttt{matlap\_batched}                 & 0.153 & 184  & \checkmark & Exact; slow at $n=1{,}000$ \\
 \texttt{matlap\_lowrank}                 & 0.257 & 1.0  & \checkmark & Auto-$\lambda$ diverges \\
 \texttt{vi\_diagonal}                    & 0.242 & 42   & --         & 200 steps \\
 \texttt{vi\_matrix\_factor}              & 0.269 & 19   & --         & rSVD approx \\
@@ -466,9 +466,7 @@ Method & RMSE & Time (s) & Converged & Notes \\
 Both optimise the exact marginal likelihood in the factor subspace rather than variational bounds, enabling reliable automatic $\lambda$ selection.
 \texttt{matlap\_grid\_lowrank} achieves the best efficiency trade-off (RMSE 0.099 in 1.5 s) by evaluating a warm-started regularisation path on a shared low-rank basis, avoiding the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 20$).
 
-The low-rank-plus-isotropic variants (\texttt{matlap\_grid\_lowrank\_iso\_*}) perform worse than the pure low-rank grid at this scale.
-The isotropic component introduces a second degree of freedom that interacts with the ELBO and Rényi scoring of $\lambda$: the ELBO variant selects $\lambda = 500$ (twice the CV-optimal value), strongly over-regularising, while the Rényi variant under-regularises ($\lambda = 50$).
-In smaller-scale experiments (Section~\ref{sec:lambda-study}) the isotropic model is advantageous at low true rank, where it correctly accounts for off-subspace residual variance; at high true rank relative to the noise level the pure low-rank model with grid search is preferable.
+The low-rank-plus-isotropic variants (\texttt{matlap\_grid\_lowrank\_iso\_*}) use the corrected $\gamma = \bar\lambda$ prior (Section~\ref{sec:lowrank-woodbury}) and the correct hybrid ELBO normaliser ($m r \mathbb{E}[\log\lambda]$ for the $r$-dimensional nuclear-norm subspace, $\tfrac{m(n-r)}{2}\mathbb{E}[\log\lambda]$ for the Gaussian off-subspace).  With the corrected ELBO the grid search selects an intermediate $\lambda \approx 158$ (previously it selected the grid maximum due to the monotonically increasing incorrect ELBO).  Neither iso variant converges within the 50-iteration budget used here (the per-iteration cost is $\sim 11\times$ higher than pure lowrank due to the off-subspace update); given the budget constraint, RMSE is 0.114 (ELBO scoring) and 0.124 (Rényi scoring), comparable to \texttt{proximal\_cv} (0.105).  With a longer iteration budget, the iso models are expected to match or improve on \texttt{matlap\_grid\_lowrank} since they are strictly more expressive.
 
 \texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
 
