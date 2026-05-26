@@ -215,6 +215,22 @@ def run_matlap_grid_lowrank_iso(Y, S, lam_grid, rank, max_iter, score_fn="elbo")
     return r.best_result.mu, float(r.best_lambda), r.best_result.converged
 
 
+def run_matlap_grid_lowrank_iso_ldlt(Y, S, lam_grid, rank, max_iter, score_fn="elbo"):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(
+        Y, S, lam_grid, rank=rank, max_iter=max_iter, score_fn=score_fn, use_ldlt=True
+    )
+    return r.best_result.mu, float(r.best_lambda), r.best_result.converged
+
+
+def run_matlap_grid_lowrank_iso_xla_ldlt(Y, S, lam_grid, rank, max_iter, score_fn="elbo"):
+    from matlap.core import matlap_grid_lowrank_isotropic
+    r = matlap_grid_lowrank_isotropic(
+        Y, S, lam_grid, rank=rank, max_iter=max_iter, score_fn=score_fn, use_xla_ldlt=True
+    )
+    return r.best_result.mu, float(r.best_lambda), r.best_result.converged
+
+
 def run_mcmc_mala(Y, S, lam, n_warmup, n_samples):
     from matlap.mcmc import mcmc_proximal_mala
     r = mcmc_proximal_mala(Y, S, lambda_val=lam, n_warmup=n_warmup, n_samples=n_samples)
@@ -255,6 +271,8 @@ def benchmark_seed(
     mcmc_warmup: int = 300,
     mcmc_samples: int = 400,
     verbose: bool = True,
+    cached: dict | None = None,
+    on_result=None,
 ) -> dict:
     """Run all methods on one seed and one device; return metrics dict."""
     with jax.default_device(device):
@@ -264,7 +282,8 @@ def benchmark_seed(
         # Lambda grid: grid_points log-spaced values ±1.5 decades from heuristic
         lam_grid = float(lam_heuristic) * np.logspace(-1.5, 1.5, grid_points)
 
-        results = {}
+        # Pre-populate from cache (results already computed in a previous run)
+        results = dict(cached) if cached else {}
 
         methods = [
             ("proximal",
@@ -291,6 +310,12 @@ def benchmark_seed(
             ("matlap_grid_lowrank_iso_renyi",
              run_matlap_grid_lowrank_iso,
              (Y, S, lam_grid, lowrank_rank, lowrank_iters, "renyi")),
+            ("matlap_grid_lowrank_iso_ldlt",
+             run_matlap_grid_lowrank_iso_ldlt,
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "elbo")),
+            ("matlap_grid_lowrank_iso_xla_ldlt",
+             run_matlap_grid_lowrank_iso_xla_ldlt,
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "elbo")),
             ("matlap_batched",
              run_matlap_batched,
              (Y, S, lowrank_iters, batch_size)),
@@ -320,6 +345,13 @@ def benchmark_seed(
             ]
 
         for name, fn, args in all_run_methods:
+            if name in results:
+                if verbose:
+                    r = results[name]
+                    print(f"  seed={seed:2d} {name:<22}  [cached]  "
+                          f"RMSE={r['rmse']:.4f}  λ={r['lambda']:.3f}  "
+                          f"t={r['time']:.1f}s")
+                continue
             t0 = time.perf_counter()
             try:
                 mu_hat, lam_est, converged = fn(*args)
@@ -348,6 +380,8 @@ def benchmark_seed(
                 }
                 if verbose:
                     print(f"  seed={seed:2d} {name:<22}  ERROR: {exc}")
+            if on_result is not None:
+                on_result(name, results[name])
 
     return results
 
@@ -382,6 +416,8 @@ METHOD_DESC = {
     "matlap_grid_lowrank":          "Low-rank CAVI on λ-grid, warm-started path, best ELBO",
     "matlap_grid_lowrank_iso_elbo":  "Low-rank+iso CAVI on λ-grid, warm-started path, best ELBO",
     "matlap_grid_lowrank_iso_renyi": "Low-rank+iso CAVI on λ-grid, warm-started path, best Rényi α=0.5",
+    "matlap_grid_lowrank_iso_ldlt":      "Low-rank+iso CAVI on λ-grid, CuPy LDL^T kernel, best ELBO",
+    "matlap_grid_lowrank_iso_xla_ldlt":  "Low-rank+iso CAVI on λ-grid, XLA FFI LDL^T kernel, best ELBO",
     "matlap_batched":       "Full CAVI, batched rows (O(batch·n²) peak mem), auto-λ",
     "vi_diagonal":          "SVI, fully-factorised Gaussian guide, auto-λ",
     "vi_diagonal_approx":   "SVI, fully-factorised Gaussian + rSVD nuclear norm, auto-λ",
@@ -579,6 +615,8 @@ def build_report(
     lines.append(f"| matlap_grid_lowrank | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | G={args.grid_points} grid pts, warm-started |")
     lines.append(f"| matlap_grid_lowrank_iso_elbo | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, ELBO scoring |")
     lines.append(f"| matlap_grid_lowrank_iso_renyi | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, Rényi α=0.5 |")
+    lines.append(f"| matlap_grid_lowrank_iso_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+CuPy LDL^T; G={args.grid_points} grid pts, ELBO scoring |")
+    lines.append(f"| matlap_grid_lowrank_iso_xla_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+XLA FFI LDL^T (no sync barriers); G={args.grid_points} grid pts, ELBO scoring |")
     lines.append("| proximal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/iter on CPU |")
     lines.append(f"| vi_diagonal_approx | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | ~30× faster per step vs full SVD |")
     lines.append(f"| vi_matrix_factor | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | Shared column-factor guide |")
@@ -630,6 +668,9 @@ def main() -> None:
     parser.add_argument("--gpu-only",             action="store_true",
                         help="Skip CPU benchmarking; GPU only")
     parser.add_argument("--output",               type=str,   default="benchmark_results")
+    parser.add_argument("--resume",               action="store_true",
+                        help="Load existing output CSV and skip already-completed "
+                             "(device, seed, method) entries")
     args = parser.parse_args()
 
     print(f"matlap benchmark  {args.rows}×{args.cols} rank-{args.rank} "
@@ -651,45 +692,87 @@ def main() -> None:
         print("  [GPU not available — running CPU only]")
     print()
 
+    # ── Load cache from existing CSV (--resume)
+    csv_path = f"{args.output}.csv"
+    # cache[device][seed][method] = result_dict
+    cache: dict[str, dict[int, dict[str, dict]]] = {}
+    if args.resume and os.path.exists(csv_path):
+        with open(csv_path, newline="") as f:
+            for row in csv.DictReader(f):
+                dev = row["device"]
+                s = int(row["seed"])
+                m_name = row["method"]
+                cache.setdefault(dev, {}).setdefault(s, {})[m_name] = {
+                    "rmse": float(row["rmse"]),
+                    "lambda": float(row["lambda"]),
+                    "time": float(row["time_s"]),
+                    "converged": row["converged"] == "True",
+                    "error": row["error"] or None,
+                }
+        n_cached = sum(len(ms) for sd in cache.values() for ms in sd.values())
+        print(f"  [--resume] loaded {n_cached} cached results from {csv_path}")
+        print()
+
     all_results: dict[str, list[dict]] = {}
 
-    for dev_name, device in devices:
-        print(f"{'─'*70}")
-        print(f"Device: {dev_name}")
-        print(f"{'─'*70}")
-        seed_results = []
-        for seed in range(args.seeds):
-            print(f"\n--- Seed {seed} ---")
-            res = benchmark_seed(
-                seed=seed,
-                m=args.rows,
-                n=args.cols,
-                rank=args.rank,
-                missing_frac=args.missing,
-                proximal_iters=args.proximal_iters,
-                vi_steps=args.vi_steps,
-                faem_iters=args.faem_iters,
-                gradml_steps=args.gradml_steps,
-                lowrank_iters=args.lowrank_iters,
-                lowrank_rank=args.lowrank_rank,
-                guide_rank=args.guide_rank,
-                approx_rank=args.approx_rank,
-                grid_points=args.grid_points,
-                batch_size=args.batch_size,
-                run_mcmc=args.mcmc,
-                mcmc_warmup=args.mcmc_warmup,
-                mcmc_samples=args.mcmc_samples,
-                device=device,
-                verbose=True,
-            )
-            seed_results.append(res)
-        all_results[dev_name] = seed_results
+    # Open CSV for incremental writing (append if resuming, write header if new)
+    csv_exists = os.path.exists(csv_path)
+    csv_mode = "a" if (args.resume and csv_exists) else "w"
+    csv_file = open(csv_path, csv_mode, newline="")  # noqa: SIM115
+    csv_writer = csv.writer(csv_file)
+    if csv_mode == "w":
+        csv_writer.writerow(["device", "seed", "method", "rmse", "lambda",
+                             "time_s", "converged", "error"])
+
+    try:
+        for dev_name, device in devices:
+            print(f"{'─'*70}")
+            print(f"Device: {dev_name}")
+            print(f"{'─'*70}")
+            seed_results = []
+            for seed in range(args.seeds):
+                print(f"\n--- Seed {seed} ---")
+                cached_seed = cache.get(dev_name, {}).get(seed, {})
+
+                def _on_result(name, r, _dev=dev_name, _seed=seed):
+                    csv_writer.writerow([_dev, _seed, name,
+                                         r["rmse"], r["lambda"],
+                                         r["time"], r["converged"], r["error"]])
+                    csv_file.flush()
+
+                res = benchmark_seed(
+                    seed=seed,
+                    m=args.rows,
+                    n=args.cols,
+                    rank=args.rank,
+                    missing_frac=args.missing,
+                    proximal_iters=args.proximal_iters,
+                    vi_steps=args.vi_steps,
+                    faem_iters=args.faem_iters,
+                    gradml_steps=args.gradml_steps,
+                    lowrank_iters=args.lowrank_iters,
+                    lowrank_rank=args.lowrank_rank,
+                    guide_rank=args.guide_rank,
+                    approx_rank=args.approx_rank,
+                    grid_points=args.grid_points,
+                    batch_size=args.batch_size,
+                    run_mcmc=args.mcmc,
+                    mcmc_warmup=args.mcmc_warmup,
+                    mcmc_samples=args.mcmc_samples,
+                    device=device,
+                    verbose=True,
+                    cached=cached_seed,
+                    on_result=_on_result,
+                )
+                seed_results.append(res)
+            all_results[dev_name] = seed_results
+    finally:
+        csv_file.close()
 
     methods = [m for m in METHOD_DESC
                if any(m in s for seed_res in all_results.values() for s in seed_res)]
 
-    # ── Write CSV
-    csv_path = f"{args.output}.csv"
+    # ── Rewrite full CSV (merges cache + new results cleanly)
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["device", "seed", "method", "rmse", "lambda",

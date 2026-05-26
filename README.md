@@ -539,6 +539,7 @@ and `results/benchmark_10k.csv` (raw numbers).
 | `matlap_gradml` | 0.081 | 3.2 | ✓ |
 | **`matlap_grid_lowrank`** | **0.099** | **2.4** | ✓ |
 | `matlap_grid_lowrank_iso_elbo` | 0.114 | 27 | — (50-iter budget) |
+| `matlap_grid_lowrank_iso_xla_ldlt` | 0.114 | ~3 | — (50-iter budget, **9× faster**) |
 | `proximal_cv` | 0.105 | 121 | — |
 | `proximal` | 0.123 | 23 | — |
 | `matlap_grid_lowrank_iso_renyi` | 0.124 | 27 | — (50-iter budget) |
@@ -553,7 +554,7 @@ and `results/benchmark_10k.csv` (raw numbers).
 **`matlap_grid_lowrank` is the best efficiency trade-off: RMSE 0.099 in 2.4 s, ~6% better than proximal CV at 50× lower cost.**
 
 - `matlap_lowrank` over-shrinks because the empirical-Bayes λ update in factor space is biased by a factor ~n/r. `matlap_grid_lowrank` fixes this by grid search.
-- The iso CAVI variants (`matlap_grid_lowrank_iso_*`) use a hybrid nuclear-norm + isotropic Gaussian prior. They are strictly more expressive than `matlap_grid_lowrank` but require more iterations to converge (11× higher per-iteration cost); within the 50-iteration benchmark budget they are competitive with `proximal_cv`.
+- The iso CAVI variants (`matlap_grid_lowrank_iso_*`) use a hybrid nuclear-norm + isotropic Gaussian prior. They are strictly more expressive than `matlap_grid_lowrank` but require more iterations to converge (11× higher per-iteration cost); within the 50-iteration benchmark budget they are competitive with `proximal_cv`. The `_xla_ldlt` variant uses the XLA-native CUDA LDL^T kernel (~9× faster per iteration than `eigh`), making iso CAVI competitive in wall-clock time.
 - `matlap_batched` gives exact full-CAVI results but is slow at n=1000 (O(n³) per row); best used when n ≤ 300.
 - rSVD nuclear-norm approximation (`vi_*_approx`) at rank 30 introduces gradient noise that prevents SVI convergence at this scale.
 
