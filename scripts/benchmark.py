@@ -312,10 +312,10 @@ def benchmark_seed(
              (Y, S, lam_grid, lowrank_rank, lowrank_iters, "renyi")),
             ("matlap_grid_lowrank_iso_ldlt",
              run_matlap_grid_lowrank_iso_ldlt,
-             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "elbo")),
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "renyi")),
             ("matlap_grid_lowrank_iso_xla_ldlt",
              run_matlap_grid_lowrank_iso_xla_ldlt,
-             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "elbo")),
+             (Y, S, lam_grid, lowrank_rank, lowrank_iters, "renyi")),
             ("matlap_batched",
              run_matlap_batched,
              (Y, S, lowrank_iters, batch_size)),
@@ -613,10 +613,10 @@ def build_report(
     lines.append(f"| matlap_gradml | O(mr² + mn) at r={args.lowrank_rank} — ~44 MB | O(mnr + mr³) per step | Free subspace; Adam on marginal LL |")
     lines.append(f"| matlap_lowrank | O(mn + nr²) at r={args.lowrank_rank} — ~44 MB | O(mn·r) Woodbury | Exact in rank-r subspace |")
     lines.append(f"| matlap_grid_lowrank | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | G={args.grid_points} grid pts, warm-started |")
-    lines.append(f"| matlap_grid_lowrank_iso_elbo | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, ELBO scoring |")
-    lines.append(f"| matlap_grid_lowrank_iso_renyi | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, Rényi α=0.5 |")
-    lines.append(f"| matlap_grid_lowrank_iso_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+CuPy LDL^T; G={args.grid_points} grid pts, ELBO scoring |")
-    lines.append(f"| matlap_grid_lowrank_iso_xla_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+XLA FFI LDL^T (no sync barriers); G={args.grid_points} grid pts, ELBO scoring |")
+    lines.append(f"| matlap_grid_lowrank_iso_elbo | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, ELBO scoring (not recommended — see note) |")
+    lines.append(f"| matlap_grid_lowrank_iso_renyi | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso; G={args.grid_points} grid pts, Rényi α=0.5 scoring |")
+    lines.append(f"| matlap_grid_lowrank_iso_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+CuPy LDL^T; G={args.grid_points} grid pts, Rényi scoring |")
+    lines.append(f"| matlap_grid_lowrank_iso_xla_ldlt | O(mn + nr²) at r={args.lowrank_rank} | O(G·mn·r) warm path | iso+XLA FFI LDL^T (no sync barriers); G={args.grid_points} grid pts, Rényi scoring |")
     lines.append("| proximal | O(mn) — 40 MB | O(mn·min(m,n)) full SVD | ~1s/iter on CPU |")
     lines.append(f"| vi_diagonal_approx | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | ~30× faster per step vs full SVD |")
     lines.append(f"| vi_matrix_factor | O(mn) — 40 MB | O(mn·r) rSVD, r={args.approx_rank} | Shared column-factor guide |")

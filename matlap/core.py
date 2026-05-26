@@ -1264,7 +1264,7 @@ def matlap_grid_lowrank_isotropic(
     b0: float = 1e-3,
     max_iter: int = 50,
     tol: float = 1e-6,
-    score_fn: str = "elbo",
+    score_fn: str = "renyi",
     alpha: float = 0.5,
     use_ldlt: bool = False,
     use_xla_ldlt: bool = False,
@@ -1276,9 +1276,12 @@ def matlap_grid_lowrank_isotropic(
     order, passing the previous point's ``(V_r, d_r, delta)`` as warm-start.
 
     Selection score:
-      * ``score_fn="elbo"`` (default): final ELBO.
+      * ``score_fn="renyi"`` (default): analytical Rényi α-ELBO (recommended).
       * ``score_fn="loo"``: analytical Gaussian leave-one-out score.
-      * ``score_fn="renyi"``: analytical Rényi α-ELBO.
+      * ``score_fn="elbo"``: final ELBO — **not recommended** for the iso model.
+        The nuclear-norm normaliser ``m·n·log λ`` grows faster than the prior
+        penalty ``-λ·Tr(Q)`` shrinks at large λ, so the ELBO is monotonically
+        increasing across the grid and always selects the largest λ value.
 
     Args:
         Y:            Observed matrix, shape (m, n). NaN/any value where missing.
@@ -1289,7 +1292,7 @@ def matlap_grid_lowrank_isotropic(
         b0:           Gamma prior rate.
         max_iter:     Maximum CAVI iterations **per grid point** (default 50).
         tol:          Convergence tolerance on relative ELBO change.
-        score_fn:     One of ``{"elbo", "loo", "renyi"}``.
+        score_fn:     One of ``{"renyi", "loo", "elbo"}``.  Default ``"renyi"``.
         alpha:        Rényi order for ``score_fn="renyi"``; must satisfy 0≤α<1.
         use_ldlt:     If True, use the CuPy CUDA LDL^T kernel (requires GPU + CuPy).
         use_xla_ldlt: If True, use the XLA-native CUDA LDL^T kernel (no sync barriers).

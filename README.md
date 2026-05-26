@@ -107,27 +107,29 @@ On CPU-only machines that method is skipped automatically.
 
 | Method | RMSE | GPU time (s) | Converged |
 |---|---|---|---|
-| **`matlap_faem`** | **0.081** | **3.6** | ✓ |
-| `matlap_gradml` | 0.081 | 3.2 | ✓ |
-| **`matlap_grid_lowrank`** | **0.099** | **2.4** | ✓ |
-| `matlap_grid_lowrank_iso_elbo` | 0.114 | 27 | — (50-iter budget) |
-| `matlap_grid_lowrank_iso_xla_ldlt` | 0.114 | ~3 | — (50-iter budget, **9× faster**) |
-| `proximal_cv` | 0.105 | 121 | — |
-| `proximal` | 0.123 | 23 | — |
-| `matlap_grid_lowrank_iso_renyi` | 0.124 | 27 | — (50-iter budget) |
-| `matlap_batched` | 0.153 | 184 | ✓ |
-| `vi_diagonal` | 0.242 | 42 | — (200 steps) |
-| `matlap_lowrank` | 0.257 | 1.0 | ✓ |
-| `vi_matrix_factor` | 0.269 | 19 | — (200 steps) |
+| **`matlap_faem`** | **0.081** | **2.4** | ✓ |
+| `matlap_gradml` | 0.081 | 2.8 | ✓ |
+| **`matlap_grid_lowrank`** | **0.098** | **2.1** | ✓ |
+| `matlap_grid_lowrank_iso_ldlt` | 0.119 | 3.3 | ✓ (**3× faster than iso_renyi**) |
+| `matlap_grid_lowrank_iso_xla_ldlt` | 0.122 | 3.4 | ✓ |
+| `matlap_grid_lowrank_iso_renyi` | 0.120 | 10.2 | ✓ |
+| `proximal_cv` | 0.105 | 122 | — |
+| `proximal` | 0.123 | 22 | — |
+| `matlap_batched` | 0.153 | 188 | ✓ |
+| `vi_diagonal` | 0.242 | 41 | — (200 steps) |
+| `matlap_lowrank` | 0.258 | 0.5 | ✓ |
+| `vi_matrix_factor` | 0.270 | 19 | — (200 steps) |
 | `vi_row_lowrank` | 0.270 | 25 | — (200 steps) |
-| `vi_diagonal_approx` | 0.397 | 11 | — (200 steps) |
+| `vi_diagonal_approx` | 0.398 | 11 | — (200 steps) |
+| `matlap_grid_lowrank_iso_elbo` | 0.254 | 11 | — (ELBO scoring broken, see note) |
 
-**`matlap_faem` / `matlap_gradml` achieve the lowest RMSE (0.081) — ~23% better than proximal CV at 30× lower cost.**
-**`matlap_grid_lowrank` is the best efficiency trade-off: RMSE 0.099 in 2.4 s, ~6% better than proximal CV at 50× lower cost.**
-**`matlap_grid_lowrank_iso_xla_ldlt` matches `iso_elbo` accuracy in ~3 s (vs 27 s) by fusing the entire CAVI update into a single XLA kernel — 9× faster with no sync barriers.**
+**`matlap_faem` / `matlap_gradml` achieve the lowest RMSE (0.081) — ~23% better than proximal CV at 50× lower cost.**
+**`matlap_grid_lowrank` is the best efficiency trade-off: RMSE 0.098 in 2.1 s, ~7% better than proximal CV at 58× lower cost.**
+**`matlap_grid_lowrank_iso_ldlt` (Rényi scoring) matches iso_renyi in accuracy (RMSE 0.119) in 3.3 s — 3× faster, using the CuPy LDL^T kernel.**
 
 - `matlap_lowrank` over-shrinks because the empirical-Bayes λ update in factor space is biased by a factor ~n/r. `matlap_grid_lowrank` fixes this by grid search.
-- The iso CAVI variants (`matlap_grid_lowrank_iso_*`) use a hybrid nuclear-norm + isotropic Gaussian prior. They are strictly more expressive than `matlap_grid_lowrank` but require more iterations to converge (11× higher per-iteration cost); within the 50-iteration benchmark budget they are competitive with `proximal_cv`. The `_xla_ldlt` variant uses the XLA-native CUDA LDL^T kernel (~9× faster per iteration than `eigh`), making iso CAVI competitive in wall-clock time.
+- The iso CAVI variants (`matlap_grid_lowrank_iso_*`) converge in ~12 CAVI steps (well within the 50-iteration budget). They use a nuclear-norm + isotropic prior; the `_ldlt` and `_xla_ldlt` variants accelerate the per-step B̃ factorisation ~3–4× vs `eigh`, making them competitive with `matlap_grid_lowrank` in wall-clock time at better RMSE.
+- **ELBO scoring does not work for the iso model** (`iso_elbo`, RMSE 0.254): the nuclear-norm normaliser `m·n·log λ` grows faster than the prior penalty `-λ·Tr(Q)` at large λ, so the ELBO is monotonically increasing across the grid and always selects the largest λ. Use `score_fn="renyi"` (default) instead.
 - `matlap_batched` gives exact full-CAVI results but is slow at n=1000 (O(n³) per row); best used when n ≤ 300.
 - rSVD nuclear-norm approximation (`vi_*_approx`) at rank 30 introduces gradient noise that prevents SVI convergence at this scale.
 
