@@ -22,6 +22,7 @@ from .scoring import (
     compute_iso_prior_var, make_elbo_scorer, make_loo_scorer, make_renyi_scorer,
 )
 from .adaptive import adaptive_lambda_search, batched_warm_state, iso_warm_state, lowrank_warm_state
+from .simulate import sample_nnd
 
 __all__ = [
     # FA EM and gradient marginal likelihood
@@ -80,4 +81,6 @@ __all__ = [
     "batched_warm_state",
     "iso_warm_state",
     "lowrank_warm_state",
+    # Data simulation
+    "sample_nnd",
 ]

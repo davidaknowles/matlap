@@ -133,6 +133,50 @@ On CPU-only machines that method is skipped automatically.
 - `matlap_batched` gives exact full-CAVI results but is slow at n=1000 (O(n³) per row); best used when n ≤ 300.
 - rSVD nuclear-norm approximation (`vi_*_approx`) at rank 30 introduces gradient noise that prevents SVI convergence at this scale.
 
+## NND benchmark (model-matched data)
+
+The standard benchmark above uses synthetic low-rank data, which favours `matlap_grid_lowrank`.
+To assess each method on data that matches its prior, `scripts/benchmark_nnd.py` simulates matrices
+directly from the Nuclear Norm Distribution (NND) — the Matrix Laplace prior — using the SVD
+representation from the paper:
+
+```
+σᵢ ~ Exp(λ_true)  (Gamma(1, λ) for square matrices), sorted descending
+U ~ Stiefel(n, m) via QR decomposition (Haar measure)
+V ~ O(n) via QR decomposition (Haar measure)
+X = U diag(σ) Vᵀ,  Y = X + ε,  ε ~ N(0, σ²_noise I)
+```
+
+With `m=n=100, λ_true=0.05, σ_noise=1.0`:
+
+```bash
+python scripts/benchmark_nnd.py
+```
+
+### Results (m=n=100, λ_true=0.05, σ_noise=1.0, 10 seeds)
+
+| Method | RMSE | λ selected |
+|---|---|---|
+| **`batched_loo`** | **0.904 ± 0.012** | 5.0 |
+| `batched_eb` | 0.905 ± 0.012 | 4.56 (median) |
+| `iso_r10` | 0.927 ± 0.014 | 0.20 |
+| `iso_r20` | 0.942 ± 0.018 | 0.50 |
+| `iso_r30` | 0.976 ± 0.015 | 1.00 |
+| `lowrank_r50` | 1.035 ± 0.041 | 5.0 |
+| `lowrank_r5` | 2.178 ± 0.198 | 5.0 |
+| Noise floor (Y as estimate) | 1.000 | — |
+
+**Key observations:**
+
+- `batched_loo` (the correctly-specified model) achieves the lowest RMSE and is the only method
+  that beats the noise floor on *all* seeds. This validates the CAVI derivation for NND data.
+- Lowrank methods `(r ≤ 50)` perform **worse than no denoising** because NND matrices are full-rank;
+  zeroing out the bottom `n−r` singular-value directions introduces more error than the noise.
+- `iso_r10` (isotropic floor + rank-10 subspace) benefits from the isotropic floor covering 90
+  dimensions, partially compensating for the full-rank structure.
+- The CAVI-optimal λ (~5) is much larger than the true NND λ (0.05): within the Gaussian
+  row-factorised approximation, stronger regularisation is needed to correctly shrink noisy singular values.
+
 ## λ selection strategy comparison
 
 ```bash
