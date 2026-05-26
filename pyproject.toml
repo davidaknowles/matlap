@@ -16,6 +16,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+docs = [
+    "sphinx>=7",
+    "sphinx-rtd-theme>=2",
+    "sphinx-autodoc-typehints>=2",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

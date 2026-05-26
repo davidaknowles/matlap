@@ -298,7 +298,7 @@ def update_row_lowrank_isotropic(
     B̃_i = diag(1/c_k) + V_r^T diag(p̃_i^{−1}) V_r is symmetric but may be
     indefinite (when c_k < 0), so we solve via eigh rather than Cholesky.
     The sign of det(B̃_i) always equals the sign of ∏c_k (since Λ_i ≻ 0),
-    so |det(Λ_i)| = |diag(p̃)| · |∏c_k| · |det(B̃_i)| is real and positive.
+    so abs(det(Λ_i)) = abs(det(diag(p̃))) · abs(∏c_k) · abs(det(B̃_i)) is real and positive.
 
     Args:
         y_i:        Observations for row i, shape (n,).
