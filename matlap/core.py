@@ -1374,7 +1374,7 @@ def matlap_grid_lowrank_isotropic(
 
 from .adaptive import adaptive_lambda_search, batched_warm_state, iso_warm_state, lowrank_warm_state
 from .scoring import (
-    closed_form_loo, data_prior_var, make_elbo_scorer, make_loo_scorer,
+    _get_prior_var, closed_form_loo, make_elbo_scorer, make_loo_scorer,
     make_renyi_scorer, renyi_elbo,
 )
 
@@ -1419,10 +1419,10 @@ def matlap_grid_batched(
 
     * ``score_fn="loo"`` (default): analytical Gaussian leave-one-out score.
       Unimodal for the batched model; peaks at the best-RMSE lambda.
-    * ``score_fn="renyi"``: Rényi α-ELBO with a **constant** data-derived
-      prior variance ``mean_i(y²_ij)`` per column (λ-independent).  This
-      avoids the self-referential collapse of ``psi_sqrt_diag/λ`` and at
-      α=0.5 recovers the same peak λ as LOO.
+    * ``score_fn="renyi"``: Rényi α-ELBO using the model-derived prior variance
+      ``psi_sqrt_diag_j/λ`` (diagonal of Q/λ where Q = Ψ^{1/2} is the CAVI
+      shape matrix).  This is the correct prior covariance for the row-factorised
+      Gaussian approximation and approximates the marginal likelihood p(Y|λ).
     * ``score_fn="elbo"``: final ELBO at each grid point.  The ELBO peaks at
       the empirical-Bayes λ (same as :func:`matlap_batched`); not recommended
       for prediction-optimal lambda selection.
@@ -1454,14 +1454,6 @@ def matlap_grid_batched(
 
     lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
 
-    # Pre-compute constant data-derived prior variance for Rényi scoring.
-    # Using mean_i(y²_ij) as a λ-independent prior variance avoids the
-    # self-referential collapse of psi_sqrt_diag/λ and recovers the same
-    # peak λ as LOO at α=0.5.
-    pv_const: jax.Array | None = None
-    if score_mode == "renyi":
-        pv_const = data_prior_var(Y, S)  # shape (n,), constant across λ
-
     mu_init: jax.Array | None = None
 
     results: list[tuple[float, BatchedCAVIResult]] = []
@@ -1482,7 +1474,7 @@ def matlap_grid_batched(
         elif score_mode == "loo":
             score = float(closed_form_loo(res.mu, res.sigma_diag, Y, S))
         else:
-            pv = jnp.maximum(jnp.asarray(pv_const, dtype=jnp.float32), 1e-12)
+            pv = _get_prior_var(res, lam_val, delta_fallback=1e-6)
             score = float(renyi_elbo(res.mu, res.sigma_diag, pv, Y, S, alpha=alpha))
 
         if score > best_score:
