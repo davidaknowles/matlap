@@ -85,19 +85,22 @@ class BatchedCAVIResult:
     """Result of matlap_batched() — full CAVI with O(batch*n²) peak memory.
 
     Attributes:
-        mu:          Posterior mean of X, shape (m, n).
-        sigma_diag:  Diagonal of per-row posterior covariances, shape (m, n).
-                     Full Sigma_i (n×n per row) is never stored simultaneously.
-        lambda_bar:  E_q[lambda], scalar.
-        a_N:         Gamma posterior shape, scalar.
-        b_N:         Gamma posterior rate, scalar.
-        elbo_trace:  ELBO at the end of each iteration, list of floats.
-        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
-        n_iter:      Number of iterations executed.
+        mu:              Posterior mean of X, shape (m, n).
+        sigma_diag:      Diagonal of per-row posterior covariances, shape (m, n).
+                         Full Sigma_i (n×n per row) is never stored simultaneously.
+        psi_sqrt_diag:   Diagonal of √Ψ (= Q), shape (n,), where Ψ = Σᵢ E[xᵢxᵢᵀ].
+                         Used as prior-variance proxy: prior_var_j = psi_sqrt_diag_j / λ.
+        lambda_bar:      E_q[lambda], scalar.
+        a_N:             Gamma posterior shape, scalar.
+        b_N:             Gamma posterior rate, scalar.
+        elbo_trace:      ELBO at the end of each iteration, list of floats.
+        converged:       True if |ΔELBO|/|ELBO| < tol before max_iter.
+        n_iter:          Number of iterations executed.
     """
 
     mu: jax.Array
     sigma_diag: jax.Array
+    psi_sqrt_diag: jax.Array
     lambda_bar: float
     a_N: float
     b_N: float
@@ -910,9 +913,13 @@ def matlap_batched(
                 converged = True
                 break
 
+    # diag(√Ψ)_j = Σ_k sqrt_vals[k] * vecs[j,k]²  — used as prior-var proxy
+    psi_sqrt_diag = (decomp.vecs ** 2) @ decomp.sqrt_vals
+
     return BatchedCAVIResult(
         mu=mus,
         sigma_diag=sigma_diag,
+        psi_sqrt_diag=psi_sqrt_diag,
         lambda_bar=float(lambda_bar),
         a_N=float(a_N),
         b_N=float(b_N),
@@ -1365,8 +1372,24 @@ def matlap_grid_lowrank_isotropic(
     )
 
 
-from .adaptive import adaptive_lambda_search, iso_warm_state, lowrank_warm_state
+from .adaptive import adaptive_lambda_search, batched_warm_state, iso_warm_state, lowrank_warm_state
 from .scoring import make_elbo_scorer, make_loo_scorer, make_renyi_scorer
+
+
+@dataclass
+class BatchedGridResult:
+    """Result of :func:`matlap_adaptive_batched`.
+
+    Attributes:
+        best_lambda:  λ with the highest score.
+        best_result:  :class:`BatchedCAVIResult` for the best λ.
+        results:      List of (lambda, BatchedCAVIResult) for every λ tried,
+                      sorted ascending by λ.
+    """
+
+    best_lambda: float
+    best_result: BatchedCAVIResult
+    results: list[tuple[float, BatchedCAVIResult]]
 
 
 def matlap_adaptive_lowrank_isotropic(
@@ -1500,6 +1523,83 @@ def matlap_adaptive_lowrank(
         verbose=verbose,
     )
     return LowRankGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
+    )
+
+
+def matlap_adaptive_batched(
+    Y: jax.Array,
+    S: jax.Array,
+    *,
+    lambda_start: float | None = None,
+    lambda_min: float = 1e-4,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    batch_size: int = 64,
+    score_fn: str = "loo",
+    alpha: float = 0.5,
+    n_folds: int = 3,
+    patience: int = 2,
+    verbose: bool = False,
+) -> BatchedGridResult:
+    """Adaptive golden-ratio λ search for the full CAVI (batched) model.
+
+    Identical search strategy to :func:`matlap_adaptive_lowrank` but uses
+    :func:`matlap_batched` as the fitting function.  Each CAVI run is fixed
+    at the candidate λ (``lambda_val``) and warm-started from the previous
+    posterior mean via ``mu_init``.
+
+    The empirical-Bayes λ update inside :func:`matlap_batched` inflates λ on
+    low-rank data (all n dimensions contribute to Tr(√Ψ), not just the r
+    signal dims).  LOO scoring (default) bypasses this mis-calibration and
+    recovers the correct λ.  The Rényi scorer is **not recommended** for the
+    batched model: it requires a prior-variance proxy derived from the
+    current run's posterior, which becomes self-referential as λ→∞ and
+    produces a non-unimodal score surface.
+
+    Args:
+        Y:             Observed matrix, shape (m, n).
+        S:             Noise std matrix, shape (m, n). ``jnp.inf`` where missing.
+        lambda_start:  Starting λ. If None, set to 100 × data heuristic.
+        lambda_min:    Hard lower bound on λ (safety stop).
+        a0:            Gamma prior shape (default: 1e-3).
+        b0:            Gamma prior rate (default: 1e-3).
+        max_iter:      Maximum CAVI iterations per λ value.
+        tol:           Convergence tolerance on relative ELBO change.
+        batch_size:    Row batch size (controls peak memory, default 64).
+        score_fn:      One of ``{"loo", "renyi", "elbo", "cv"}`` (default ``"loo"``).
+                       ``"loo"`` is recommended; ``"renyi"`` is not recommended for
+                       the batched model (non-unimodal score surface).
+        alpha:         Rényi order for ``score_fn="renyi"``; 0 ≤ α < 1.
+        n_folds:       Number of CV folds for ``score_fn="cv"``.
+        patience:      Stop after this many consecutive non-improving reductions.
+        verbose:       Print progress per λ step.
+
+    Returns:
+        :class:`BatchedGridResult` with best lambda and per-lambda results.
+    """
+    def fit_fn(Y_, S_, lam, **warm):
+        return matlap_batched(
+            Y_, S_,
+            a0=a0, b0=b0, max_iter=max_iter, tol=tol,
+            batch_size=batch_size, lambda_val=lam, **warm,
+        )
+
+    scorer = _make_scorer(score_fn, alpha=alpha, n_folds=n_folds, fit_fn=fit_fn)
+
+    best_lam, best_res, results = adaptive_lambda_search(
+        Y, S, fit_fn, scorer,
+        extract_warm_state=batched_warm_state,
+        lambda_start=lambda_start,
+        lambda_min=lambda_min,
+        patience=patience,
+        verbose=verbose,
+    )
+    return BatchedGridResult(
         best_lambda=best_lam,
         best_result=best_res,
         results=results,

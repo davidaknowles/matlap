@@ -11,6 +11,10 @@ Score factories (for use with :func:`~matlap.adaptive.adaptive_lambda_search`):
 4. ``make_elbo_scorer``: returns a scorer that reads ``result.elbo_trace[-1]``.
 5. ``make_loo_scorer``: returns a scorer using ``closed_form_loo``.
 6. ``make_renyi_scorer``: returns a scorer using ``renyi_elbo``.
+
+All scorer factories handle both low-rank results (``diag_sigma``, ``V_r``,
+``d_r``) and full-rank batched results (``sigma_diag`` field name; prior
+variance estimated as ``diag(Ψ)/λ²`` with Ψ = Σᵢ(μᵢμᵢᵀ + Σᵢ)).
 """
 
 from __future__ import annotations
@@ -56,6 +60,35 @@ def compute_iso_prior_var(
 
 # Backward-compatible alias
 iso_prior_var = compute_iso_prior_var
+
+
+def _get_diag_sigma(result: Any) -> jax.Array:
+    """Return diagonal posterior variance from any result type.
+
+    Handles both low-rank results (field ``diag_sigma``) and full-rank batched
+    results (field ``sigma_diag``).
+    """
+    sigma = getattr(result, "diag_sigma", None)
+    if sigma is None:
+        sigma = result.sigma_diag
+    return sigma
+
+
+def _get_prior_var(result: Any, lam: float, delta_fallback: float) -> jax.Array:
+    """Return per-column prior variance proxy for any result type.
+
+    * Low-rank results (have ``V_r``): ``compute_iso_prior_var`` with ``d_r``
+      and ``delta`` (falls back to ``delta_fallback`` if absent).
+    * Full-rank batched results: ``diag(√Ψ)/λ`` where Ψ = Σᵢ E[xᵢxᵢᵀ] and
+      ``psi_sqrt_diag = diag(√Ψ)`` is stored in the result.  This matches the
+      actual prior covariance diagonal Q_jj/λ (Q = √Ψ = prior covariance matrix
+      times λ).
+    """
+    if hasattr(result, "V_r"):
+        delta = getattr(result, "delta", delta_fallback)
+        return compute_iso_prior_var(result.V_r, result.d_r, delta=delta, lambda_bar=lam)
+    lam_safe = jnp.maximum(jnp.asarray(lam, dtype=jnp.float32), 1e-12)
+    return jnp.maximum(result.psi_sqrt_diag / lam_safe, 1e-12)
 
 
 def closed_form_loo(
@@ -224,13 +257,14 @@ def make_elbo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:
 def make_loo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:
     """Return a scorer that computes the analytical closed-form LOO score.
 
-    The result must expose ``.mu`` and ``.diag_sigma`` arrays.
+    Works with low-rank results (field ``diag_sigma``) and full-rank batched
+    results (field ``sigma_diag``).
 
     Returns:
         ``score_fn(result, Y, S, lam) -> float``
     """
     def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
-        return closed_form_loo(result.mu, result.diag_sigma, Y, S)
+        return closed_form_loo(result.mu, _get_diag_sigma(result), Y, S)
     return score
 
 
@@ -240,9 +274,14 @@ def make_renyi_scorer(
 ) -> Callable[[Any, jax.Array, jax.Array, float], float]:
     """Return a scorer that computes the analytical Rényi α-ELBO.
 
-    Works with both :class:`~matlap.core.LowRankIsotropicResult` (uses
-    ``result.delta``) and :class:`~matlap.core.LowRankCAVIResult` (falls back
-    to ``delta_fallback`` for the off-subspace component).
+    Works with:
+
+    * :class:`~matlap.core.LowRankIsotropicResult` — uses ``result.delta``,
+      ``result.V_r``, ``result.d_r`` via :func:`compute_iso_prior_var`.
+    * :class:`~matlap.core.LowRankCAVIResult` — falls back to
+      ``delta_fallback`` for the off-subspace component.
+    * :class:`~matlap.core.BatchedCAVIResult` — prior variance estimated as
+      ``diag(Ψ)/λ²`` where ``Ψ_jj = Σᵢ(μᵢⱼ² + σᵢⱼ²)``.
 
     Args:
         alpha:          Rényi order; must satisfy 0 ≤ α < 1 (default 0.5).
@@ -256,7 +295,7 @@ def make_renyi_scorer(
         raise ValueError(f"alpha must be in [0, 1), got {alpha}")
 
     def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
-        delta = getattr(result, "delta", delta_fallback)
-        prior_var = compute_iso_prior_var(result.V_r, result.d_r, delta=delta, lambda_bar=lam)
-        return renyi_elbo(result.mu, result.diag_sigma, prior_var, Y, S, alpha=alpha)
+        sigma = _get_diag_sigma(result)
+        prior_var = _get_prior_var(result, lam, delta_fallback)
+        return renyi_elbo(result.mu, sigma, prior_var, Y, S, alpha=alpha)
     return score

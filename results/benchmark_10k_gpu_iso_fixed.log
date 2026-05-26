@@ -1,0 +1,2 @@
+nohup: ignoring input
+E0525 11:20:53.129682 4176196 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.

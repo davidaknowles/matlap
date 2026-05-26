@@ -160,3 +160,12 @@ def lowrank_warm_state(result: Any) -> dict:
         "V_r_init": result.V_r,
         "d_r_init": result.d_r,
     }
+
+
+def batched_warm_state(result: Any) -> dict:
+    """Extract warm-start kwargs from a :class:`~matlap.core.BatchedCAVIResult`.
+
+    Returns:
+        dict with ``mu_init`` key (posterior mean to warm-start the next run).
+    """
+    return {"mu_init": result.mu}

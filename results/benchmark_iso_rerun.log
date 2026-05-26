@@ -1,0 +1,210 @@
+matlap benchmark  10000×1000 rank-15 | seeds=10 | missing=20%
+  proximal_iters=100  vi_steps=200  faem_iters=100  gradml_steps=500  lowrank_iters=50  lowrank_rank=50  guide_rank=15  approx_rank=30  grid_points=7  batch_size=64
+
+
+  [--resume] loaded 131 cached results from results/benchmark_iso_rerun.csv
+
+──────────────────────────────────────────────────────────────────────
+Device: GPU
+──────────────────────────────────────────────────────────────────────
+
+--- Seed 0 ---
+  seed= 0 proximal                [cached]  RMSE=0.1231  λ=50.009  t=23.6s
+  seed= 0 proximal_cv             [cached]  RMSE=0.1053  λ=158.144  t=120.6s
+  seed= 0 matlap_faem             [cached]  RMSE=0.0812  λ=0.492  t=8.2s
+  seed= 0 matlap_gradml           [cached]  RMSE=0.0814  λ=1.127  t=5.0s
+  seed= 0 matlap_lowrank          [cached]  RMSE=0.2585  λ=9978.412  t=2.9s
+  seed= 0 matlap_grid_lowrank     [cached]  RMSE=0.0986  λ=158.144  t=2.0s
+  seed= 0 matlap_grid_lowrank_iso_elbo  RMSE=0.2544  λ=1581.439  t=13.2s  conv=True
+  seed= 0 matlap_grid_lowrank_iso_renyi  RMSE=0.1184  λ=50.009  t=6.5s  conv=True
+  seed= 0 matlap_grid_lowrank_iso_ldlt  RMSE=0.2543  λ=1581.439  t=6.6s  conv=True
+  seed= 0 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2544  λ=1581.439  t=4.0s  conv=True
+  seed= 0 matlap_batched          [cached]  RMSE=0.1525  λ=349.681  t=185.9s
+  seed= 0 vi_diagonal             [cached]  RMSE=0.2424  λ=2.051  t=43.3s
+  seed= 0 vi_diagonal_approx      [cached]  RMSE=0.3991  λ=2.054  t=12.2s
+  seed= 0 vi_matrix_factor        [cached]  RMSE=0.2701  λ=2.054  t=23.6s
+  seed= 0 vi_row_lowrank          [cached]  RMSE=0.2709  λ=2.054  t=26.0s
+
+--- Seed 1 ---
+  seed= 1 proximal                [cached]  RMSE=0.1225  λ=49.992  t=22.2s
+  seed= 1 proximal_cv             [cached]  RMSE=0.1050  λ=158.088  t=121.5s
+  seed= 1 matlap_faem             [cached]  RMSE=0.0808  λ=0.499  t=1.3s
+  seed= 1 matlap_gradml           [cached]  RMSE=0.0810  λ=1.134  t=2.4s
+  seed= 1 matlap_lowrank          [cached]  RMSE=0.2568  λ=9978.750  t=0.1s
+  seed= 1 matlap_grid_lowrank     [cached]  RMSE=0.0985  λ=158.088  t=3.4s
+  seed= 1 matlap_grid_lowrank_iso_elbo  RMSE=0.2527  λ=1580.879  t=13.4s  conv=True
+  seed= 1 matlap_grid_lowrank_iso_renyi  RMSE=0.1225  λ=49.992  t=13.5s  conv=True
+  seed= 1 matlap_grid_lowrank_iso_ldlt  RMSE=0.2528  λ=1580.879  t=2.2s  conv=True
+  seed= 1 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2527  λ=1580.879  t=2.1s  conv=True
+  seed= 1 matlap_batched          [cached]  RMSE=0.1526  λ=351.457  t=182.5s
+  seed= 1 vi_diagonal             [cached]  RMSE=0.2410  λ=2.051  t=40.7s
+  seed= 1 vi_diagonal_approx      [cached]  RMSE=0.3952  λ=2.054  t=9.9s
+  seed= 1 vi_matrix_factor        [cached]  RMSE=0.2680  λ=2.054  t=17.2s
+  seed= 1 vi_row_lowrank          [cached]  RMSE=0.2689  λ=2.054  t=23.5s
+
+--- Seed 2 ---
+  seed= 2 proximal                [cached]  RMSE=0.1227  λ=50.006  t=22.0s
+  seed= 2 proximal_cv             [cached]  RMSE=0.1049  λ=158.132  t=121.1s
+  seed= 2 matlap_faem             [cached]  RMSE=0.0808  λ=0.498  t=1.4s
+  seed= 2 matlap_gradml           [cached]  RMSE=0.0810  λ=1.133  t=2.2s
+  seed= 2 matlap_lowrank          [cached]  RMSE=0.2569  λ=9978.672  t=0.1s
+  seed= 2 matlap_grid_lowrank     [cached]  RMSE=0.0985  λ=158.132  t=1.6s
+  seed= 2 matlap_grid_lowrank_iso_elbo  RMSE=0.2529  λ=1581.322  t=5.6s  conv=True
+  seed= 2 matlap_grid_lowrank_iso_renyi  RMSE=0.1169  λ=50.006  t=5.7s  conv=True
+  seed= 2 matlap_grid_lowrank_iso_ldlt  RMSE=0.2529  λ=1581.322  t=2.0s  conv=True
+  seed= 2 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2528  λ=1581.322  t=1.8s  conv=True
+  seed= 2 matlap_batched          [cached]  RMSE=0.1524  λ=350.923  t=182.5s
+  seed= 2 vi_diagonal             [cached]  RMSE=0.2411  λ=2.051  t=41.6s
+  seed= 2 vi_diagonal_approx      [cached]  RMSE=0.3951  λ=2.054  t=10.6s
+  seed= 2 vi_matrix_factor        [cached]  RMSE=0.2683  λ=2.054  t=17.7s
+  seed= 2 vi_row_lowrank          [cached]  RMSE=0.2691  λ=2.054  t=23.8s
+
+--- Seed 3 ---
+  seed= 3 proximal                [cached]  RMSE=0.1227  λ=49.999  t=22.5s
+  seed= 3 proximal_cv             [cached]  RMSE=0.1050  λ=158.111  t=121.6s
+  seed= 3 matlap_faem             [cached]  RMSE=0.0804  λ=0.485  t=4.9s
+  seed= 3 matlap_gradml           [cached]  RMSE=0.0806  λ=1.124  t=5.0s
+  seed= 3 matlap_lowrank          [cached]  RMSE=0.2604  λ=9978.173  t=1.8s
+  seed= 3 matlap_grid_lowrank     [cached]  RMSE=0.0984  λ=158.111  t=1.9s
+  seed= 3 matlap_grid_lowrank_iso_elbo  RMSE=0.2562  λ=1581.107  t=11.3s  conv=True
+  seed= 3 matlap_grid_lowrank_iso_renyi  RMSE=0.1192  λ=49.999  t=11.2s  conv=True
+  seed= 3 matlap_grid_lowrank_iso_ldlt  RMSE=0.2563  λ=1581.107  t=2.3s  conv=True
+  seed= 3 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2563  λ=1581.107  t=1.4s  conv=True
+  seed= 3 matlap_batched          [cached]  RMSE=0.1527  λ=348.848  t=185.6s
+  seed= 3 vi_diagonal             [cached]  RMSE=0.2442  λ=2.051  t=42.9s
+  seed= 3 vi_diagonal_approx      [cached]  RMSE=0.4013  λ=2.054  t=11.8s
+  seed= 3 vi_matrix_factor        [cached]  RMSE=0.2722  λ=2.054  t=23.4s
+  seed= 3 vi_row_lowrank          [cached]  RMSE=0.2730  λ=2.054  t=26.0s
+
+--- Seed 4 ---
+  seed= 4 proximal                [cached]  RMSE=0.1227  λ=49.997  t=22.1s
+  seed= 4 proximal_cv             [cached]  RMSE=0.1050  λ=158.103  t=121.1s
+  seed= 4 matlap_faem             [cached]  RMSE=0.0807  λ=0.496  t=1.3s
+  seed= 4 matlap_gradml           [cached]  RMSE=0.0809  λ=1.135  t=2.4s
+  seed= 4 matlap_lowrank          [cached]  RMSE=0.2574  λ=9978.597  t=0.1s
+  seed= 4 matlap_grid_lowrank     [cached]  RMSE=0.0983  λ=158.103  t=3.3s
+  seed= 4 matlap_grid_lowrank_iso_elbo  RMSE=0.2533  λ=1581.030  t=11.9s  conv=True
+  seed= 4 matlap_grid_lowrank_iso_renyi  RMSE=0.1220  λ=49.997  t=11.9s  conv=True
+  seed= 4 matlap_grid_lowrank_iso_ldlt  RMSE=0.2533  λ=1581.030  t=1.5s  conv=True
+  seed= 4 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2532  λ=1581.030  t=3.4s  conv=True
+  seed= 4 matlap_batched          [cached]  RMSE=0.1524  λ=350.768  t=182.6s
+  seed= 4 vi_diagonal             [cached]  RMSE=0.2415  λ=2.051  t=40.6s
+  seed= 4 vi_diagonal_approx      [cached]  RMSE=0.3981  λ=2.054  t=10.1s
+  seed= 4 vi_matrix_factor        [cached]  RMSE=0.2693  λ=2.054  t=17.1s
+  seed= 4 vi_row_lowrank          [cached]  RMSE=0.2702  λ=2.054  t=23.6s
+
+--- Seed 5 ---
+  seed= 5 proximal                [cached]  RMSE=0.1226  λ=50.003  t=22.1s
+  seed= 5 proximal_cv             [cached]  RMSE=0.1049  λ=158.125  t=121.6s
+  seed= 5 matlap_faem             [cached]  RMSE=0.0807  λ=0.502  t=1.2s
+  seed= 5 matlap_gradml           [cached]  RMSE=0.0810  λ=1.135  t=2.3s
+  seed= 5 matlap_lowrank          [cached]  RMSE=0.2556  λ=9978.894  t=0.1s
+  seed= 5 matlap_grid_lowrank     [cached]  RMSE=0.0982  λ=158.125  t=1.7s
+  seed= 5 matlap_grid_lowrank_iso_elbo  RMSE=0.2515  λ=1581.248  t=11.8s  conv=True
+  seed= 5 matlap_grid_lowrank_iso_renyi  RMSE=0.1199  λ=50.003  t=11.8s  conv=True
+  seed= 5 matlap_grid_lowrank_iso_ldlt  RMSE=0.2515  λ=1581.248  t=3.1s  conv=True
+  seed= 5 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2515  λ=1581.248  t=3.3s  conv=True
+  seed= 5 matlap_batched          [cached]  RMSE=0.1524  λ=352.007  t=182.6s
+  seed= 5 vi_diagonal             [cached]  RMSE=0.2399  λ=2.051  t=40.7s
+  seed= 5 vi_diagonal_approx      [cached]  RMSE=0.3942  λ=2.054  t=9.8s
+  seed= 5 vi_matrix_factor        [cached]  RMSE=0.2673  λ=2.054  t=17.1s
+  seed= 5 vi_row_lowrank          [cached]  RMSE=0.2681  λ=2.054  t=24.1s
+
+--- Seed 6 ---
+  seed= 6 proximal                [cached]  RMSE=0.1228  λ=50.001  t=21.8s
+  seed= 6 proximal_cv             [cached]  RMSE=0.1051  λ=158.117  t=121.9s
+  seed= 6 matlap_faem             [cached]  RMSE=0.0809  λ=0.484  t=1.4s
+  seed= 6 matlap_gradml           [cached]  RMSE=0.0811  λ=1.124  t=2.2s
+  seed= 6 matlap_lowrank          [cached]  RMSE=0.2604  λ=9978.125  t=0.1s
+  seed= 6 matlap_grid_lowrank     [cached]  RMSE=0.0985  λ=158.117  t=1.1s
+  seed= 6 matlap_grid_lowrank_iso_elbo  RMSE=0.2562  λ=1581.170  t=7.6s  conv=True
+  seed= 6 matlap_grid_lowrank_iso_renyi  RMSE=0.1180  λ=50.001  t=7.7s  conv=True
+  seed= 6 matlap_grid_lowrank_iso_ldlt  RMSE=0.2562  λ=1581.170  t=1.1s  conv=True
+  seed= 6 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2562  λ=1581.170  t=3.4s  conv=True
+  seed= 6 matlap_batched          [cached]  RMSE=0.1526  λ=349.065  t=187.6s
+  seed= 6 vi_diagonal             [cached]  RMSE=0.2441  λ=2.051  t=41.2s
+  seed= 6 vi_diagonal_approx      [cached]  RMSE=0.4016  λ=2.054  t=10.5s
+  seed= 6 vi_matrix_factor        [cached]  RMSE=0.2721  λ=2.054  t=17.6s
+  seed= 6 vi_row_lowrank          [cached]  RMSE=0.2730  λ=2.054  t=24.3s
+
+--- Seed 7 ---
+  seed= 7 proximal                [cached]  RMSE=0.1226  λ=49.988  t=23.1s
+  seed= 7 proximal_cv             [cached]  RMSE=0.1050  λ=158.074  t=128.2s
+  seed= 7 matlap_faem             [cached]  RMSE=0.0808  λ=0.493  t=1.4s
+  seed= 7 matlap_gradml           [cached]  RMSE=0.0810  λ=1.129  t=2.4s
+  seed= 7 matlap_lowrank          [cached]  RMSE=0.2581  λ=9978.503  t=0.1s
+  seed= 7 matlap_grid_lowrank     [cached]  RMSE=0.0983  λ=158.074  t=1.5s
+  seed= 7 matlap_grid_lowrank_iso_elbo  RMSE=0.2541  λ=1580.744  t=8.6s  conv=True
+  seed= 7 matlap_grid_lowrank_iso_renyi  RMSE=0.1188  λ=49.988  t=8.7s  conv=True
+  seed= 7 matlap_grid_lowrank_iso_ldlt  RMSE=0.2540  λ=1580.744  t=3.6s  conv=True
+  seed= 7 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2541  λ=1580.744  t=4.3s  conv=True
+  seed= 7 matlap_batched          [cached]  RMSE=0.1526  λ=350.581  t=211.8s
+  seed= 7 vi_diagonal             [cached]  RMSE=0.2422  λ=2.051  t=41.2s
+  seed= 7 vi_diagonal_approx      [cached]  RMSE=0.3972  λ=2.054  t=10.5s
+  seed= 7 vi_matrix_factor        [cached]  RMSE=0.2695  λ=2.054  t=18.7s
+  seed= 7 vi_row_lowrank          [cached]  RMSE=0.2703  λ=2.054  t=26.3s
+
+--- Seed 8 ---
+  seed= 8 proximal                [cached]  RMSE=0.1227  λ=50.008  t=21.9s
+  seed= 8 proximal_cv             [cached]  RMSE=0.1051  λ=158.140  t=121.6s
+  seed= 8 matlap_faem             [cached]  RMSE=0.0810  λ=0.490  t=1.4s
+  seed= 8 matlap_gradml           [cached]  RMSE=0.0811  λ=1.126  t=2.3s
+  seed= 8 matlap_lowrank          [cached]  RMSE=0.2591  λ=9978.402  t=0.1s
+  seed= 8 matlap_grid_lowrank     [cached]  RMSE=0.0985  λ=158.140  t=1.9s
+  seed= 8 matlap_grid_lowrank_iso_elbo  RMSE=0.2550  λ=1581.403  t=11.4s  conv=True
+  seed= 8 matlap_grid_lowrank_iso_renyi  RMSE=0.1214  λ=50.008  t=11.6s  conv=True
+  seed= 8 matlap_grid_lowrank_iso_ldlt  RMSE=0.2550  λ=1581.403  t=1.0s  conv=True
+  seed= 8 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2550  λ=1581.403  t=1.4s  conv=True
+  seed= 8 matlap_batched          [cached]  RMSE=0.1527  λ=349.989  t=187.7s
+  seed= 8 vi_diagonal             [cached]  RMSE=0.2431  λ=2.051  t=40.7s
+  seed= 8 vi_diagonal_approx      [cached]  RMSE=0.4004  λ=2.054  t=9.8s
+  seed= 8 vi_matrix_factor        [cached]  RMSE=0.2708  λ=2.054  t=17.2s
+  seed= 8 vi_row_lowrank          [cached]  RMSE=0.2716  λ=2.054  t=23.9s
+
+--- Seed 9 ---
+  seed= 9 proximal                [cached]  RMSE=0.1227  λ=49.992  t=22.0s
+  seed= 9 proximal_cv             [cached]  RMSE=0.1050  λ=158.090  t=121.1s
+  seed= 9 matlap_faem             [cached]  RMSE=0.0806  λ=0.502  t=1.1s
+  seed= 9 matlap_gradml           [cached]  RMSE=0.0809  λ=1.135  t=2.4s
+  seed= 9 matlap_lowrank          [cached]  RMSE=0.2555  λ=9978.876  t=0.1s
+  seed= 9 matlap_grid_lowrank     [cached]  RMSE=0.0983  λ=158.090  t=2.7s
+  seed= 9 matlap_grid_lowrank_iso_elbo  RMSE=0.2515  λ=1580.897  t=13.6s  conv=True
+  seed= 9 matlap_grid_lowrank_iso_renyi  RMSE=0.1208  λ=49.992  t=13.6s  conv=True
+  seed= 9 matlap_grid_lowrank_iso_ldlt  RMSE=0.2514  λ=1580.897  t=1.5s  conv=True
+  seed= 9 matlap_grid_lowrank_iso_xla_ldlt  RMSE=0.2514  λ=1580.897  t=3.3s  conv=True
+  seed= 9 matlap_batched          [cached]  RMSE=0.1524  λ=352.431  t=187.7s
+  seed= 9 vi_diagonal             [cached]  RMSE=0.2398  λ=2.051  t=41.0s
+  seed= 9 vi_diagonal_approx      [cached]  RMSE=0.3946  λ=2.054  t=10.0s
+  seed= 9 vi_matrix_factor        [cached]  RMSE=0.2672  λ=2.054  t=17.5s
+  seed= 9 vi_row_lowrank          [cached]  RMSE=0.2680  λ=2.054  t=24.2s
+
+CSV saved to results/benchmark_iso_rerun.csv
+Report saved to results/benchmark_iso_rerun.md
+
+========================================================================
+SUMMARY
+========================================================================
+
+GPU:
+  Method                          RMSE         λ    Time(s)
+  ─────────────────────────────────────────────────────────
+  proximal                  0.1227±0.0002    50.000       22.3
+  proximal_cv               0.1050±0.0001   158.112      122.0
+  matlap_faem               0.0808±0.0002     0.494        2.4
+  matlap_gradml             0.0810±0.0002     1.130        2.8
+  matlap_lowrank            0.2579±0.0017  9978.540        0.5
+  matlap_grid_lowrank       0.0984±0.0001   158.112        2.1
+  matlap_grid_lowrank_iso_elbo  0.2538±0.0016  1581.124       10.9
+  matlap_grid_lowrank_iso_renyi  0.1198±0.0018    50.000       10.2
+  matlap_grid_lowrank_iso_ldlt  0.2538±0.0016  1581.124        2.5
+  matlap_grid_lowrank_iso_xla_ldlt  0.2538±0.0016  1581.124        2.8
+  matlap_batched            0.1525±0.0001   350.575      187.7
+  vi_diagonal               0.2419±0.0015     2.051       41.4
+  vi_diagonal_approx        0.3977±0.0027     2.054       10.5
+  vi_matrix_factor          0.2695±0.0017     2.054       18.7
+  vi_row_lowrank            0.2703±0.0017     2.054       24.6
+  mcmc_mala                 0.2580±0.0017    50.000      252.1
+  mcmc_gibbs                0.2580±0.0017   206.823      252.8
+========================================================================
+
+Full report: results/benchmark_iso_rerun.md

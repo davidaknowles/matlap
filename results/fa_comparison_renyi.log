@@ -1,0 +1,284 @@
+nohup: ignoring input
+
+missing=2%  seed=0
+Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 201, in _version_check
+    version = get_version()
+              ^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:85: operation cusparseGetProperty(MAJOR_VERSION, &major) failed: The cuSPARSE library was not found.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 497, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 348, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 266, in _check_cuda_versions
+    _version_check("cuSPARSE", cuda_versions.cusparse_get_version,
+  File "/home/david/venvs/jax/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 205, in _version_check
+    raise RuntimeError(err_msg) from e
+RuntimeError: Unable to load cuSPARSE. Is it installed?
+An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+    proximal_cv     RMSE=0.5391  λ=8.3458  t=9.0s
+    batched_auto    RMSE=0.6971  λ=15.6295  t=1.3s
+    batched_grid    RMSE=0.7431  λ=23.2226  t=1.2s
+    batched_warmstart  RMSE=0.6970  λ=15.6163  t=1.6s
+    iso_auto        RMSE=0.6980  λ=15.5913  t=0.6s
+    iso_grid        RMSE=0.7434  λ=23.2226  t=0.4s
+    iso_cv          RMSE=0.6785  λ=8.3458  t=1.3s
+    iso_warmstart   RMSE=0.6796  λ=15.6204  t=0.2s
+    iso_then_proximal  RMSE=0.5158  λ=15.5913  t=0.2s
+    iso_renyi       RMSE=0.6830  λ=11.6923  t=3.5s
+    faem            RMSE=0.4499  λ=0.3343  t=0.1s
+    gradml          RMSE=0.4494  λ=0.7198  t=0.7s
+
+missing=2%  seed=1
+    proximal_cv     RMSE=0.4989  λ=8.5870  t=9.7s
+    batched_auto    RMSE=0.6942  λ=15.1437  t=0.2s
+    batched_grid    RMSE=0.7553  λ=23.8939  t=0.6s
+    batched_warmstart  RMSE=0.6942  λ=15.1420  t=0.3s
+    iso_auto        RMSE=0.6970  λ=15.1164  t=0.1s
+    iso_grid        RMSE=0.7576  λ=23.8939  t=0.3s
+    iso_cv          RMSE=0.6750  λ=8.5870  t=1.2s
+    iso_warmstart   RMSE=0.6759  λ=15.1271  t=0.1s
+    iso_then_proximal  RMSE=0.4877  λ=15.1164  t=0.2s
+    iso_renyi       RMSE=0.6816  λ=11.7373  t=1.7s
+    faem            RMSE=0.4137  λ=0.3246  t=0.1s
+    gradml          RMSE=0.4149  λ=0.7080  t=0.1s
+
+missing=2%  seed=2
+    proximal_cv     RMSE=0.5015  λ=8.2792  t=8.5s
+    batched_auto    RMSE=0.6474  λ=15.4581  t=0.1s
+    batched_grid    RMSE=0.6921  λ=23.0373  t=0.6s
+    batched_warmstart  RMSE=0.6474  λ=15.4655  t=0.3s
+    iso_auto        RMSE=0.6490  λ=15.4369  t=0.1s
+    iso_grid        RMSE=0.6927  λ=23.0373  t=0.3s
+    iso_cv          RMSE=0.6315  λ=8.2792  t=1.4s
+    iso_warmstart   RMSE=0.6302  λ=15.4506  t=0.2s
+    iso_then_proximal  RMSE=0.4704  λ=15.4369  t=0.2s
+    iso_renyi       RMSE=0.6355  λ=11.7435  t=1.8s
+    faem            RMSE=0.4126  λ=0.3342  t=0.2s
+    gradml          RMSE=0.4150  λ=0.7209  t=0.2s
+
+missing=10%  seed=0
+    proximal_cv     RMSE=0.5496  λ=8.3464  t=7.9s
+    batched_auto    RMSE=0.7455  λ=15.4501  t=0.2s
+    batched_grid    RMSE=0.7914  λ=23.2244  t=0.6s
+    batched_warmstart  RMSE=0.7455  λ=15.4490  t=0.3s
+    iso_auto        RMSE=0.7477  λ=15.4187  t=0.1s
+    iso_grid        RMSE=0.7930  λ=23.2244  t=0.4s
+    iso_cv          RMSE=0.7331  λ=8.3464  t=1.2s
+    iso_warmstart   RMSE=0.7285  λ=15.4296  t=0.2s
+    iso_then_proximal  RMSE=0.5462  λ=15.4187  t=0.2s
+    iso_renyi       RMSE=0.7341  λ=11.4503  t=1.7s
+    faem            RMSE=0.4642  λ=0.3582  t=0.1s
+    gradml          RMSE=0.4635  λ=0.7168  t=0.2s
+
+missing=10%  seed=1
+    proximal_cv     RMSE=0.5508  λ=8.5887  t=8.5s
+    batched_auto    RMSE=0.7639  λ=14.9906  t=0.2s
+    batched_grid    RMSE=0.8212  λ=23.8986  t=0.7s
+    batched_warmstart  RMSE=0.7639  λ=15.0013  t=0.3s
+    iso_auto        RMSE=0.7655  λ=14.9769  t=0.1s
+    iso_grid        RMSE=0.8228  λ=23.8986  t=0.4s
+    iso_cv          RMSE=0.7497  λ=8.5887  t=1.2s
+    iso_warmstart   RMSE=0.7432  λ=14.9843  t=0.1s
+    iso_then_proximal  RMSE=0.5423  λ=14.9769  t=0.2s
+    iso_renyi       RMSE=0.7526  λ=11.4869  t=1.7s
+    faem            RMSE=0.4554  λ=0.3504  t=0.1s
+    gradml          RMSE=0.4546  λ=0.6988  t=0.1s
+
+missing=10%  seed=2
+    proximal_cv     RMSE=0.5296  λ=8.2726  t=8.6s
+    batched_auto    RMSE=0.7070  λ=15.2905  t=0.2s
+    batched_grid    RMSE=0.7502  λ=23.0190  t=0.6s
+    batched_warmstart  RMSE=0.7070  λ=15.3008  t=0.3s
+    iso_auto        RMSE=0.7091  λ=15.2606  t=0.1s
+    iso_grid        RMSE=0.7518  λ=23.0190  t=0.3s
+    iso_cv          RMSE=0.6970  λ=8.2726  t=1.2s
+    iso_warmstart   RMSE=0.6892  λ=15.2805  t=0.1s
+    iso_then_proximal  RMSE=0.5091  λ=15.2606  t=0.2s
+    iso_renyi       RMSE=0.6975  λ=11.4801  t=3.4s
+    faem            RMSE=0.4567  λ=0.3585  t=0.1s
+    gradml          RMSE=0.4551  λ=0.7167  t=0.1s
+
+missing=30%  seed=0
+    proximal_cv     RMSE=0.5929  λ=8.3872  t=8.1s
+    batched_auto    RMSE=0.8218  λ=14.9036  t=0.2s
+    batched_grid    RMSE=0.8553  λ=23.3379  t=0.6s
+    batched_warmstart  RMSE=0.8218  λ=14.9070  t=0.4s
+    iso_auto        RMSE=0.8217  λ=14.8540  t=0.1s
+    iso_grid        RMSE=0.8551  λ=23.3379  t=0.3s
+    iso_cv          RMSE=0.8195  λ=8.3872  t=1.2s
+    iso_warmstart   RMSE=0.8063  λ=14.8834  t=0.2s
+    iso_then_proximal  RMSE=0.6113  λ=14.8540  t=1.1s
+    iso_renyi       RMSE=0.8159  λ=10.8636  t=1.7s
+    faem            RMSE=0.5379  λ=0.4313  t=0.1s
+    gradml          RMSE=0.5386  λ=0.7209  t=0.1s
+
+missing=30%  seed=1
+    proximal_cv     RMSE=0.6131  λ=8.6222  t=7.5s
+    batched_auto    RMSE=0.8649  λ=14.5621  t=0.2s
+    batched_grid    RMSE=0.9053  λ=23.9917  t=0.6s
+    batched_warmstart  RMSE=0.8649  λ=14.5666  t=0.4s
+    iso_auto        RMSE=0.8651  λ=14.5327  t=0.1s
+    iso_grid        RMSE=0.9058  λ=23.9917  t=0.4s
+    iso_cv          RMSE=0.8615  λ=8.6222  t=1.3s
+    iso_warmstart   RMSE=0.8475  λ=14.5227  t=0.2s
+    iso_then_proximal  RMSE=0.6362  λ=14.5327  t=0.3s
+    iso_renyi       RMSE=0.8590  λ=10.8847  t=1.8s
+    faem            RMSE=0.5482  λ=0.4253  t=0.2s
+    gradml          RMSE=0.5484  λ=0.6969  t=0.1s
+
+missing=30%  seed=2
+    proximal_cv     RMSE=0.5752  λ=8.2831  t=8.7s
+    batched_auto    RMSE=0.8324  λ=14.8881  t=0.2s
+    batched_grid    RMSE=0.8692  λ=23.0483  t=0.6s
+    batched_warmstart  RMSE=0.8323  λ=14.8810  t=0.4s
+    iso_auto        RMSE=0.8310  λ=14.8450  t=0.1s
+    iso_grid        RMSE=0.8682  λ=23.0483  t=0.4s
+    iso_cv          RMSE=0.8294  λ=8.2831  t=1.3s
+    iso_warmstart   RMSE=0.8176  λ=14.8471  t=0.2s
+    iso_then_proximal  RMSE=0.6027  λ=14.8450  t=0.3s
+    iso_renyi       RMSE=0.8245  λ=10.8794  t=1.7s
+    faem            RMSE=0.5378  λ=0.4307  t=0.1s
+    gradml          RMSE=0.5340  λ=0.7217  t=0.1s
+
+missing=60%  seed=0
+    proximal_cv     RMSE=0.8705  λ=8.4927  t=7.7s
+    batched_auto    RMSE=1.0085  λ=14.3616  t=0.3s
+    batched_grid    RMSE=1.0126  λ=23.6314  t=0.6s
+    batched_warmstart  RMSE=1.0085  λ=14.3649  t=0.7s
+    iso_auto        RMSE=1.0076  λ=14.3132  t=0.3s
+    iso_grid        RMSE=1.0123  λ=23.6314  t=0.6s
+    iso_cv          RMSE=1.0078  λ=8.4927  t=1.2s
+    iso_warmstart   RMSE=1.0055  λ=14.3152  t=0.3s
+    iso_then_proximal  RMSE=0.9455  λ=14.3132  t=1.4s
+    iso_renyi       RMSE=1.0072  λ=10.2031  t=1.5s
+    faem            RMSE=0.8208  λ=0.6475  t=0.1s
+    gradml          RMSE=0.8200  λ=0.7538  t=0.2s
+
+missing=60%  seed=1
+    proximal_cv     RMSE=0.8801  λ=8.6082  t=7.0s
+    batched_auto    RMSE=1.0000  λ=14.5090  t=0.3s
+    batched_grid    RMSE=1.0038  λ=23.9528  t=0.6s
+    batched_warmstart  RMSE=1.0000  λ=14.5341  t=0.7s
+    iso_auto        RMSE=0.9995  λ=14.4579  t=0.3s
+    iso_grid        RMSE=1.0036  λ=23.9528  t=0.4s
+    iso_cv          RMSE=0.9995  λ=8.6082  t=1.2s
+    iso_warmstart   RMSE=0.9963  λ=14.4614  t=0.3s
+    iso_then_proximal  RMSE=0.9495  λ=14.4579  t=0.6s
+    iso_renyi       RMSE=0.9990  λ=10.1747  t=1.3s
+    faem            RMSE=0.8502  λ=0.6371  t=0.1s
+    gradml          RMSE=0.8493  λ=0.7732  t=0.2s
+
+missing=60%  seed=2
+    proximal_cv     RMSE=0.8894  λ=8.4040  t=6.7s
+    batched_auto    RMSE=0.9879  λ=14.7296  t=0.3s
+    batched_grid    RMSE=0.9911  λ=23.3846  t=0.6s
+    batched_warmstart  RMSE=0.9879  λ=14.7335  t=1.5s
+    iso_auto        RMSE=0.9880  λ=14.7089  t=0.3s
+    iso_grid        RMSE=0.9914  λ=23.3846  t=0.3s
+    iso_cv          RMSE=0.9882  λ=8.4040  t=1.3s
+    iso_warmstart   RMSE=0.9858  λ=14.6885  t=0.3s
+    iso_then_proximal  RMSE=0.9422  λ=14.7089  t=0.6s
+    iso_renyi       RMSE=0.9876  λ=10.1879  t=1.4s
+    faem            RMSE=0.8865  λ=0.6536  t=0.1s
+    gradml          RMSE=0.8871  λ=0.7599  t=0.3s
+
+missing=90%  seed=0
+    proximal_cv     RMSE=0.9324  λ=23.2211  t=6.7s
+    batched_auto    RMSE=0.9324  λ=13.6177  t=0.0s
+    batched_grid    RMSE=0.9324  λ=23.2211  t=0.6s
+    batched_warmstart  RMSE=0.9324  λ=13.3167  t=1.6s
+    iso_auto        RMSE=0.9324  λ=12.7958  t=0.7s
+    iso_grid        RMSE=0.9324  λ=23.2211  t=0.3s
+    iso_cv          RMSE=0.9324  λ=8.3452  t=1.2s
+    iso_warmstart   RMSE=0.9326  λ=12.8017  t=0.7s
+    iso_then_proximal  RMSE=0.9323  λ=12.7958  t=0.7s
+    iso_renyi       RMSE=0.9324  λ=9.8741  t=1.7s
+    faem            RMSE=1.0633  λ=0.8584  t=0.2s
+    gradml          RMSE=1.0834  λ=0.1315  t=1.5s
+
+missing=90%  seed=1
+    proximal_cv     RMSE=0.9854  λ=8.6338  t=6.7s
+    batched_auto    RMSE=0.9819  λ=13.5236  t=0.0s
+    batched_grid    RMSE=0.9820  λ=24.0241  t=0.6s
+    batched_warmstart  RMSE=0.9819  λ=12.8307  t=2.3s
+    iso_auto        RMSE=0.9820  λ=12.3852  t=0.7s
+    iso_grid        RMSE=0.9820  λ=24.0241  t=0.4s
+    iso_cv          RMSE=0.9820  λ=24.0241  t=1.3s
+    iso_warmstart   RMSE=0.9818  λ=12.3706  t=0.7s
+    iso_then_proximal  RMSE=0.9820  λ=12.3852  t=0.8s
+    iso_renyi       RMSE=0.9820  λ=80649.3359  t=2.4s
+    faem            RMSE=1.1106  λ=0.8462  t=0.2s
+    gradml          RMSE=1.1111  λ=0.0819  t=1.6s
+
+missing=90%  seed=2
+    proximal_cv     RMSE=0.9446  λ=23.0783  t=6.8s
+    batched_auto    RMSE=0.9445  λ=13.6374  t=0.1s
+    batched_grid    RMSE=0.9446  λ=23.0783  t=0.6s
+    batched_warmstart  RMSE=0.9445  λ=13.7530  t=1.5s
+    iso_auto        RMSE=0.9445  λ=13.3065  t=0.6s
+    iso_grid        RMSE=0.9446  λ=23.0783  t=0.3s
+    iso_cv          RMSE=0.9446  λ=8.2939  t=1.3s
+    iso_warmstart   RMSE=0.9446  λ=13.3051  t=0.7s
+    iso_then_proximal  RMSE=0.9446  λ=13.3065  t=0.6s
+    iso_renyi       RMSE=0.9445  λ=9.8424  t=2.0s
+    faem            RMSE=1.0367  λ=0.8578  t=0.3s
+    gradml          RMSE=1.0421  λ=0.0931  t=1.7s
+
+Wrote /home/david/projects/matlap/results/fa_comparison.csv
+Wrote /home/david/projects/matlap/results/fa_comparison.md
+# All-methods comparison across missing fractions
+
+Generated 2026-05-20 12:23
+
+Settings: m=200, n=50, true_rank=5, model_rank=10, SNR=1.0, seeds=[0, 1, 2]
+
+## RMSE on held-out entries (lower is better)
+
+| Missing | proximal_cv      (FISTA + 3-fold CV) | batched_auto     (full CAVI, auto-λ) | batched_grid     (full CAVI, best ELBO over grid) | batched_warmstart(full CAVI, FA-EM warm-start) | iso_auto         (lowrank+iso CAVI, auto-λ) | iso_grid         (lowrank+iso CAVI, best ELBO over grid) | iso_cv           (lowrank+iso CAVI, grid+CV) | iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start) | iso_then_proximal(iso λ → proximal_gradient) | iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ) | faem             (FA EM, free subspace, Gaussian factor model) | gradml           (gradient marginal LL, free subspace) |
+|--------:|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|
+| 2%    | 0.5131 | 0.6796 | 0.7302 | 0.6795 | 0.6814 | 0.7312 | 0.6617 | 0.6619 | 0.4913 | 0.6667 | 0.4254 | 0.4264 |
+| 10%    | 0.5433 | 0.7388 | 0.7876 | 0.7388 | 0.7408 | 0.7892 | 0.7266 | 0.7203 | 0.5325 | 0.7281 | 0.4588 | 0.4577 |
+| 30%    | 0.5938 | 0.8397 | 0.8766 | 0.8397 | 0.8393 | 0.8764 | 0.8368 | 0.8238 | 0.6168 | 0.8332 | 0.5413 | 0.5403 |
+| 60%    | 0.8800 | 0.9988 | 1.0025 | 0.9988 | 0.9984 | 1.0024 | 0.9985 | 0.9959 | 0.9457 | 0.9979 | 0.8525 | 0.8521 |
+| 90%    | 0.9542 | 0.9529 | 0.9530 | 0.9529 | 0.9530 | 0.9530 | 0.9530 | 0.9530 | 0.9530 | 0.9530 | 1.0702 | 1.0789 |
+
+## Auto/CV-selected λ
+
+| Missing | proximal_cv      (FISTA + 3-fold CV) | batched_auto     (full CAVI, auto-λ) | batched_grid     (full CAVI, best ELBO over grid) | batched_warmstart(full CAVI, FA-EM warm-start) | iso_auto         (lowrank+iso CAVI, auto-λ) | iso_grid         (lowrank+iso CAVI, best ELBO over grid) | iso_cv           (lowrank+iso CAVI, grid+CV) | iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start) | iso_then_proximal(iso λ → proximal_gradient) | iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ) | faem             (FA EM, free subspace, Gaussian factor model) | gradml           (gradient marginal LL, free subspace) |
+|--------:|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|
+| 2%    | 8.404 | 15.410 | 23.385 | 15.408 | 15.382 | 23.385 | 8.404 | 15.399 | 15.382 | 11.724 | 0.331 | 0.716 |
+| 10%    | 8.403 | 15.244 | 23.381 | 15.250 | 15.219 | 23.381 | 8.403 | 15.231 | 15.219 | 11.472 | 0.356 | 0.711 |
+| 30%    | 8.431 | 14.785 | 23.459 | 14.785 | 14.744 | 23.459 | 8.431 | 14.751 | 14.744 | 10.876 | 0.429 | 0.713 |
+| 60%    | 8.502 | 14.533 | 23.656 | 14.544 | 14.493 | 23.656 | 8.502 | 14.488 | 14.493 | 10.189 | 0.646 | 0.762 |
+| 90%    | 18.311 | 13.593 | 23.441 | 13.300 | 12.829 | 23.441 | 13.554 | 12.826 | 12.829 | 26889.684 | 0.854 | 0.102 |
+
+## Wall-clock time (seconds)
+
+| Missing | proximal_cv      (FISTA + 3-fold CV) | batched_auto     (full CAVI, auto-λ) | batched_grid     (full CAVI, best ELBO over grid) | batched_warmstart(full CAVI, FA-EM warm-start) | iso_auto         (lowrank+iso CAVI, auto-λ) | iso_grid         (lowrank+iso CAVI, best ELBO over grid) | iso_cv           (lowrank+iso CAVI, grid+CV) | iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start) | iso_then_proximal(iso λ → proximal_gradient) | iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ) | faem             (FA EM, free subspace, Gaussian factor model) | gradml           (gradient marginal LL, free subspace) |
+|--------:|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|------------------------------|
+| 2%    | 9.1 | 0.5 | 0.8 | 0.8 | 0.3 | 0.3 | 1.3 | 0.2 | 0.2 | 2.3 | 0.1 | 0.3 |
+| 10%    | 8.3 | 0.2 | 0.7 | 0.3 | 0.1 | 0.4 | 1.2 | 0.1 | 0.2 | 2.2 | 0.1 | 0.1 |
+| 30%    | 8.1 | 0.2 | 0.6 | 0.4 | 0.1 | 0.4 | 1.3 | 0.2 | 0.6 | 1.7 | 0.1 | 0.1 |
+| 60%    | 7.1 | 0.3 | 0.6 | 0.9 | 0.3 | 0.4 | 1.3 | 0.3 | 0.9 | 1.4 | 0.1 | 0.2 |
+| 90%    | 6.7 | 0.0 | 0.6 | 1.8 | 0.7 | 0.3 | 1.2 | 0.7 | 0.7 | 2.0 | 0.3 | 1.6 |
+
+## Method descriptions
+
+- **`proximal_cv`**: proximal_cv      (FISTA + 3-fold CV)
+- **`batched_auto`**: batched_auto     (full CAVI, auto-λ)
+- **`batched_grid`**: batched_grid     (full CAVI, best ELBO over grid)
+- **`batched_warmstart`**: batched_warmstart(full CAVI, FA-EM warm-start)
+- **`iso_auto`**: iso_auto         (lowrank+iso CAVI, auto-λ)
+- **`iso_grid`**: iso_grid         (lowrank+iso CAVI, best ELBO over grid)
+- **`iso_cv`**: iso_cv           (lowrank+iso CAVI, grid+CV)
+- **`iso_warmstart`**: iso_warmstart    (lowrank+iso CAVI, FA-EM warm-start)
+- **`iso_then_proximal`**: iso_then_proximal(iso λ → proximal_gradient)
+- **`iso_renyi`**: iso_renyi        (lowrank+iso CAVI, Rényi α=0.5 λ)
+- **`faem`**: faem             (FA EM, free subspace, Gaussian factor model)
+- **`gradml`**: gradml           (gradient marginal LL, free subspace)
