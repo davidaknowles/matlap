@@ -513,7 +513,7 @@ component, implemented via `jax.custom_vjp`.
 ### Benchmark
 
 ```bash
-# Full-scale benchmark (10k×1k, all 9 methods, CPU+GPU)
+# Full-scale benchmark (10k×1k, all methods, CPU+GPU)
 python scripts/benchmark.py
 
 # Faster run for testing
@@ -530,6 +530,12 @@ python scripts/benchmark.py \
 
 Results are written to `results/benchmark_10k.md` (human-readable report)
 and `results/benchmark_10k.csv` (raw numbers).
+
+The benchmark includes `matlap_grid_lowrank_iso_xla_ldlt`, which uses the
+XLA FFI CUDA LDL^T kernel (`use_xla_ldlt=True`). This requires the
+pre-compiled `matlap/xla_ext/_ldlt_kernel.so` and the NVIDIA CUDA libs on
+`LD_LIBRARY_PATH` (see [GPU acceleration](#gpu-acceleration-cuda-ldlt-kernels) above).
+On CPU-only machines that method is skipped automatically.
 
 ### Results (10k×1k, rank-15, RTX 3090)
 
@@ -552,6 +558,7 @@ and `results/benchmark_10k.csv` (raw numbers).
 
 **`matlap_faem` / `matlap_gradml` achieve the lowest RMSE (0.081) — ~23% better than proximal CV at 30× lower cost.**
 **`matlap_grid_lowrank` is the best efficiency trade-off: RMSE 0.099 in 2.4 s, ~6% better than proximal CV at 50× lower cost.**
+**`matlap_grid_lowrank_iso_xla_ldlt` matches `iso_elbo` accuracy in ~3 s (vs 27 s) by fusing the entire CAVI update into a single XLA kernel — 9× faster with no sync barriers.**
 
 - `matlap_lowrank` over-shrinks because the empirical-Bayes λ update in factor space is biased by a factor ~n/r. `matlap_grid_lowrank` fixes this by grid search.
 - The iso CAVI variants (`matlap_grid_lowrank_iso_*`) use a hybrid nuclear-norm + isotropic Gaussian prior. They are strictly more expressive than `matlap_grid_lowrank` but require more iterations to converge (11× higher per-iteration cost); within the 50-iteration benchmark budget they are competitive with `proximal_cv`. The `_xla_ldlt` variant uses the XLA-native CUDA LDL^T kernel (~9× faster per iteration than `eigh`), making iso CAVI competitive in wall-clock time.
