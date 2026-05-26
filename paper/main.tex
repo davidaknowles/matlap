@@ -128,7 +128,7 @@ The expected value is updated as $\bar{\lambda} = \frac{a_N}{b_N}$.
 where $\mathcal{O}$ is the set of observed entries and
 \begin{equation}
     \mathrm{KL}\!\left(\mathrm{Gamma}(a_N,b_N)\,\|\,\mathrm{Gamma}(a_0,b_0)\right)
-    = a_N \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
+    = a_0 \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
     + (a_N - a_0)\,\psi(a_N) + (b_0-b_N)\frac{a_N}{b_N}.
 \end{equation}
 
@@ -248,6 +248,18 @@ By the matrix determinant lemma applied to $\Lambda_i = \mathrm{diag}(\tilde{p}_
     \log|\Sigma_i| = -\sum_{k=1}^r \log|c_k| - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
 \end{equation}
 an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. Absolute values are required because $c_k < 0$ in the typical case ($\delta < d_{r,k}$); since $\Lambda_i \succ 0$, the signs of $\prod_k c_k$ and $\det(\tilde{B}_i)$ agree, so $|\det(\Sigma_i)| = (\prod_j \tilde{p}_j)^{-1} \cdot |\prod_k c_k|^{-1} \cdot |\det(\tilde{B}_i)|^{-1}$ is real and positive.
+
+The full ELBO evaluated at the optimal $Q$ (i.e.\ after substituting $\delta^*$) is
+\begin{align}
+    \mathcal{L}_{\mathrm{iso}} &=
+    \underbrace{-\frac{1}{2}\!\sum_{(i,j)\in\mathcal{O}}\!\left[\frac{(y_{ij}-\mu_{ij})^2+\Sigma_i[j,j]}{s_{ij}^2}+\log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
+    \underbrace{-\bar\lambda\,\mathrm{Tr}(Q)+mn\,\mathbb{E}_q[\log\lambda]}_{\text{nuclear-norm bound at }Q^*} \notag\\
+    &\quad+\underbrace{\frac{1}{2}\!\sum_{i=1}^m\!\left[\log|\Sigma_i|+n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
+    -\underbrace{\mathrm{KL}(q(\lambda)\|p(\lambda))}_{\text{KL for }\lambda}, \label{eq:elbo-iso}
+\end{align}
+where $\mathrm{Tr}(Q)=\sum_k d_{r,k}+(n-r)\delta^*$.  This form is \emph{consistent}: the $b_N$ update $b_N=b_0+\mathrm{Tr}(Q)$ is the exact minimiser of~\eqref{eq:elbo-iso} with respect to $q(\lambda)$, and the $\delta^*$ update minimises the nuclear-norm bound for fixed $\Psi$.
+
+\textbf{ELBO consistency note.}  One might instead use a Gaussian off-subspace prior $p(x^{\perp})\!=\!\mathcal{N}(0,\bar\lambda^{-1}I)$, which gives the prior term $-\tfrac{\bar\lambda}{2}\mathrm{Tr}(\Psi_\perp)+\tfrac{m(n-r)}{2}\mathbb{E}[\log\lambda]$.  At $\delta^*$ this equals $-\tfrac{\bar\lambda}{2}(n-r)\delta^{*2}$, whereas the nuclear-norm bound gives $-\bar\lambda(n-r)\delta^*$; the two coincide only when $\delta^*=2$.  Using the Gaussian ELBO while updating $\delta$ and $b_N$ via the nuclear-norm formulae creates an inconsistency that can break ELBO monotonicity for the $\delta$ and $\lambda$ sub-updates.  Equation~\eqref{eq:elbo-iso} avoids this by using the nuclear-norm bound uniformly.
 
 \paragraph{Summary.}
 At the same $O(mnr + mr^3)$ per-iteration cost and $O(mr^2 + mn)$ memory as the factor-space CAVI: (i) $\mu_i$ captures off-subspace signal; (ii) the entropy is $n$-dimensional, correcting the auto-$\lambda$ over-shrinkage; (iii) no new hyperparameters are introduced—$\delta$ is optimized from the data in closed form each iteration.

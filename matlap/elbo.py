@@ -244,19 +244,29 @@ def compute_elbo_lowrank_iso(
     a0: float,
     b0: float,
 ) -> jax.Array:
-    """ELBO for the low-rank-plus-isotropic CAVI model (γ = λ̄ off-subspace prior).
+    """ELBO for the low-rank-plus-isotropic CAVI model.
 
-    The iso model is a hybrid:
+    Uses the nuclear-norm variational bound for **both** in-subspace and
+    off-subspace dimensions, evaluated at the optimal Q:
 
-    * **In-subspace (r dims):** nuclear-norm prior via Q, normaliser m·r·log λ.
-    * **Off-subspace (n−r dims):** isotropic Gaussian prior N(0, λ⁻¹ I),
-      normaliser m·(n−r)/2·log λ.
+    .. math::
 
-    Using the full nuclear-norm normaliser m·n·log λ (as in
-    :func:`compute_elbo_from_diag`) over-counts the off-subspace contribution
-    by a factor of 2, causing the ELBO to increase monotonically on any
-    reasonable grid.  This function uses the correct hybrid normaliser,
-    giving a proper ELBO peak at intermediate λ.
+        Q = V_r\\,\\mathrm{diag}(d_r)\\,V_r^\\top + \\delta^*(I - V_r V_r^\\top),
+        \\quad \\delta^* = \\sqrt{\\mathrm{Tr}(\\Psi_\\perp)/(n-r)}
+
+    which gives :math:`\\mathrm{Tr}(Q) = \\sum_k d_{r,k} + (n-r)\\delta^*` and
+    the tightened nuclear-norm bound:
+
+    .. math::
+
+        -\\bar\\lambda\\,\\mathrm{Tr}(Q) + mn\\,\\mathbb{E}[\\log\\lambda]
+
+    This is consistent with the λ update :math:`b_N = b_0 + \\mathrm{Tr}(Q)`
+    and :math:`a_N = a_0 + mn`, ensuring ELBO monotonicity for the Q and λ
+    sub-updates.  The row update (which uses :math:`\\gamma=\\bar\\lambda`
+    rather than the exact :math:`\\gamma=\\bar\\lambda/\\delta`) is an
+    approximation that does not affect the ELBO formula but may cause small
+    non-monotonicities in the log-likelihood term in practice.
 
     Args:
         Y:               Observations, shape (m, n); NaN where missing.
@@ -264,11 +274,11 @@ def compute_elbo_lowrank_iso(
         mus:             Posterior means (full n-dim), shape (m, n).
         sigma_diag:      Diagonal of per-row posterior covariances, shape (m, n).
         log_det_sigmas:  Full n-dim log|Σ_i| for each row, shape (m,).
-        d_r:             Sqrt-eigenvalues of Ψ_r (in-subspace Q), shape (r,).
-        Psi_perp:        Total off-subspace second moment = (n−r)·δ², scalar.
+        d_r:             Sqrt-eigenvalues of Ψ_r (in-subspace Q diagonal), shape (r,).
+        Psi_perp:        Off-subspace second moment Tr(Ψ_⊥) = (n−r)·δ*², scalar.
         lambda_bar:      E_q[λ] = a_N / b_N, scalar.
-        a_N:             Gamma posterior shape, scalar.
-        b_N:             Gamma posterior rate, scalar.
+        a_N:             Gamma posterior shape = a_0 + m·n, scalar.
+        b_N:             Gamma posterior rate = b_0 + Tr(Q), scalar.
         a0:              Gamma prior shape.
         b0:              Gamma prior rate.
 
@@ -287,13 +297,13 @@ def compute_elbo_lowrank_iso(
     e_log_lam = jss.digamma(a_N) - jnp.log(b_N)
     trace_d_r = jnp.sum(d_r)
 
-    # In-subspace: nuclear-norm prior → -λ·Tr(Q_r) + m·r·E[log λ]
-    # Off-subspace: Gaussian prior    → -λ/2·Ψ⊥   + m·(n−r)/2·E[log λ]
+    # Nuclear-norm bound at optimal Q: −λ̄·Tr(Q) + m·n·E[log λ]
+    # Tr(Q) = Σ_k d_{r,k}  +  (n−r)·δ* = trace_d_r + sqrt((n−r)·Tr(Ψ_⊥))
+    # Psi_perp = (n−r)·δ*², so (n−r)·δ* = sqrt((n−r)·Psi_perp)
+    trace_Q_perp = jnp.sqrt((n - r) * Psi_perp)   # = (n−r)·δ*
     prior_X = (
-        -lambda_bar * trace_d_r
-        - 0.5 * lambda_bar * Psi_perp
-        + m * r * e_log_lam
-        + m * (n - r) / 2.0 * e_log_lam
+        -lambda_bar * (trace_d_r + trace_Q_perp)   # −λ̄·Tr(Q)
+        + m * n * e_log_lam                         # m·n·E[log λ]
     )
 
     entropy_X = 0.5 * (jnp.sum(log_det_sigmas) + m * n * (1.0 + jnp.log(2.0 * jnp.pi)))
