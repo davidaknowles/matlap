@@ -161,6 +161,7 @@ python scripts/benchmark_nnd.py
 | `batched_eb` | 0.905 ± 0.012 | 4.56 (median) |
 | `iso_r10` | 0.927 ± 0.014 | 0.20 |
 | `iso_r20` | 0.942 ± 0.018 | 0.50 |
+| `batched_renyi` | 0.951 ± 0.021 | 10.0 |
 | `iso_r30` | 0.976 ± 0.015 | 1.00 |
 | `lowrank_r50` | 1.035 ± 0.041 | 5.0 |
 | `lowrank_r5` | 2.178 ± 0.198 | 5.0 |
@@ -176,6 +177,8 @@ python scripts/benchmark_nnd.py
   dimensions, partially compensating for the full-rank structure.
 - The CAVI-optimal λ (~5) is much larger than the true NND λ (0.05): within the Gaussian
   row-factorised approximation, stronger regularisation is needed to correctly shrink noisy singular values.
+- `batched_renyi` over-regularises (selects λ=10) and scores RMSE=0.951, worse than LOO/EB on
+  full-rank data. This reverses the pattern on low-rank data, where Rényi outperforms LOO.
 
 ## λ selection strategy comparison
 

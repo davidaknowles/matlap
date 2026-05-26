@@ -21,6 +21,7 @@ Methods compared
 ----------------
 batched_eb        : matlap_batched with empirical-Bayes λ
 batched_loo       : matlap_grid_batched, LOO scoring
+batched_renyi     : matlap_grid_batched, Rényi scoring
 lowrank_r{k}      : matlap_grid_lowrank, ranks k ∈ {5,10,20,30,50}, LOO
 iso_r{k}          : matlap_grid_lowrank_isotropic, ranks k ∈ {10,20,30}, LOO
 """
@@ -82,6 +83,13 @@ def run_seed(seed: int) -> dict:
     t0 = time.time()
     res = matlap_grid_batched(Y, S, LAM_GRID, max_iter=MAX_ITER, score_fn="loo")
     results["batched_loo"] = dict(
+        rmse=rmse(res.best_result.mu), lam=float(res.best_lambda), t=time.time() - t0
+    )
+
+    # batched: grid + Rényi
+    t0 = time.time()
+    res = matlap_grid_batched(Y, S, LAM_GRID, max_iter=MAX_ITER, score_fn="renyi")
+    results["batched_renyi"] = dict(
         rmse=rmse(res.best_result.mu), lam=float(res.best_lambda), t=time.time() - t0
     )
 
