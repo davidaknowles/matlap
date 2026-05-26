@@ -1373,12 +1373,15 @@ def matlap_grid_lowrank_isotropic(
 
 
 from .adaptive import adaptive_lambda_search, batched_warm_state, iso_warm_state, lowrank_warm_state
-from .scoring import make_elbo_scorer, make_loo_scorer, make_renyi_scorer
+from .scoring import (
+    closed_form_loo, data_prior_var, make_elbo_scorer, make_loo_scorer,
+    make_renyi_scorer, renyi_elbo,
+)
 
 
 @dataclass
 class BatchedGridResult:
-    """Result of :func:`matlap_adaptive_batched`.
+    """Result of :func:`matlap_grid_batched` or :func:`matlap_adaptive_batched`.
 
     Attributes:
         best_lambda:  λ with the highest score.
@@ -1390,6 +1393,116 @@ class BatchedGridResult:
     best_lambda: float
     best_result: BatchedCAVIResult
     results: list[tuple[float, BatchedCAVIResult]]
+
+
+def matlap_grid_batched(
+    Y: jax.Array,
+    S: jax.Array,
+    lambda_grid: jax.Array,
+    *,
+    a0: float = 1e-3,
+    b0: float = 1e-3,
+    max_iter: int = 200,
+    tol: float = 1e-6,
+    batch_size: int = 64,
+    score_fn: str = "loo",
+    alpha: float = 0.5,
+    verbose: bool = False,
+) -> BatchedGridResult:
+    """Grid search over lambda using the full CAVI (batched) model.
+
+    Evaluates :func:`matlap_batched` for each lambda in **decreasing** order
+    (warm-starting each run from the previous posterior mean) and returns the
+    solution with the highest score.
+
+    Selection score:
+
+    * ``score_fn="loo"`` (default): analytical Gaussian leave-one-out score.
+      Unimodal for the batched model; peaks at the best-RMSE lambda.
+    * ``score_fn="renyi"``: Rényi α-ELBO with a **constant** data-derived
+      prior variance ``mean_i(y²_ij)`` per column (λ-independent).  This
+      avoids the self-referential collapse of ``psi_sqrt_diag/λ`` and at
+      α=0.5 recovers the same peak λ as LOO.
+    * ``score_fn="elbo"``: final ELBO at each grid point.  The ELBO peaks at
+      the empirical-Bayes λ (same as :func:`matlap_batched`); not recommended
+      for prediction-optimal lambda selection.
+
+    Args:
+        Y:            Observed matrix, shape (m, n).
+        S:            Noise std devs, shape (m, n). ``jnp.inf`` where missing.
+        lambda_grid:  1-D array of lambda values to evaluate.
+        a0:           Gamma prior shape (default: 1e-3).
+        b0:           Gamma prior rate (default: 1e-3).
+        max_iter:     Maximum CAVI iterations per grid point (default 200).
+        tol:          Convergence tolerance on relative ELBO change.
+        batch_size:   Row batch size (controls peak memory, default 64).
+        score_fn:     One of ``{"loo", "renyi", "elbo"}`` (default ``"loo"``).
+        alpha:        Rényi order for ``score_fn="renyi"``; must satisfy 0≤α<1.
+        verbose:      Print progress per grid point.
+
+    Returns:
+        :class:`BatchedGridResult` with best lambda and per-lambda results.
+    """
+    score_mode = score_fn.lower()
+    if score_mode not in {"elbo", "loo", "renyi"}:
+        raise ValueError(f"Unknown score_fn={score_fn!r}; expected 'elbo', 'loo', or 'renyi'.")
+    if score_mode == "renyi" and not (0.0 <= alpha < 1.0):
+        raise ValueError(f"alpha must be in [0, 1) for Rényi scoring, got {alpha}")
+
+    Y = jnp.asarray(Y, dtype=jnp.float32)
+    S = jnp.asarray(S, dtype=jnp.float32)
+
+    lambda_vals = sorted([float(lv) for lv in lambda_grid], reverse=True)
+
+    # Pre-compute constant data-derived prior variance for Rényi scoring.
+    # Using mean_i(y²_ij) as a λ-independent prior variance avoids the
+    # self-referential collapse of psi_sqrt_diag/λ and recovers the same
+    # peak λ as LOO at α=0.5.
+    pv_const: jax.Array | None = None
+    if score_mode == "renyi":
+        pv_const = data_prior_var(Y, S)  # shape (n,), constant across λ
+
+    mu_init: jax.Array | None = None
+
+    results: list[tuple[float, BatchedCAVIResult]] = []
+    best_score = -float("inf")
+    best_lam = lambda_vals[0]
+    best_res: BatchedCAVIResult | None = None
+
+    for lam_val in lambda_vals:
+        warm = {"mu_init": mu_init} if mu_init is not None else {}
+        res = matlap_batched(
+            Y, S, a0=a0, b0=b0, max_iter=max_iter, tol=tol,
+            batch_size=batch_size, lambda_val=lam_val, **warm,
+        )
+        mu_init = res.mu
+
+        if score_mode == "elbo":
+            score = float(res.elbo_trace[-1])
+        elif score_mode == "loo":
+            score = float(closed_form_loo(res.mu, res.sigma_diag, Y, S))
+        else:
+            pv = jnp.maximum(jnp.asarray(pv_const, dtype=jnp.float32), 1e-12)
+            score = float(renyi_elbo(res.mu, res.sigma_diag, pv, Y, S, alpha=alpha))
+
+        if score > best_score:
+            best_score = score
+            best_lam = lam_val
+            best_res = res
+
+        results.append((lam_val, res))
+        if verbose:
+            print(
+                f"  lambda={lam_val:.4f}  {score_mode.upper()}={score:.4f}  "
+                f"ELBO={res.elbo_trace[-1]:.4f}  iters={res.n_iter}  converged={res.converged}"
+            )
+
+    results.sort(key=lambda x: x[0])
+    return BatchedGridResult(
+        best_lambda=best_lam,
+        best_result=best_res,
+        results=results,
+    )
 
 
 def matlap_adaptive_lowrank_isotropic(

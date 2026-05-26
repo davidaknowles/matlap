@@ -268,9 +268,36 @@ def make_loo_scorer() -> Callable[[Any, jax.Array, jax.Array, float], float]:
     return score
 
 
+def data_prior_var(Y: jax.Array, S: jax.Array) -> jax.Array:
+    """Per-column data variance as a fixed prior-variance proxy for Rényi scoring.
+
+    Returns ``mean_i(y²_ij)`` for each column j over observed entries.  This
+    is used as a **constant** (λ-independent) prior variance in
+    :func:`renyi_elbo` for the full batched model, where the posterior-derived
+    proxy ``psi_sqrt_diag/λ`` collapses as λ→∞ and produces a non-unimodal
+    score surface.
+
+    A constant prior variance of ``mean(y²_j)`` encodes the belief that X_ij is
+    no larger than the typical scale of Y_ij, without coupling the score to the
+    current run's posterior.  At α=0.5 this recovers the same peak λ as LOO.
+
+    Args:
+        Y:  Observations, shape (m, n).
+        S:  Noise std devs, shape (m, n).  ``inf`` where missing.
+
+    Returns:
+        ``pv``, shape (n,): ``mean_i(y²_ij)`` per column.
+    """
+    obs_mask = jnp.isfinite(Y) & jnp.isfinite(S)
+    m_obs = jnp.maximum(obs_mask.sum(axis=0).astype(jnp.float32), 1.0)
+    y_ssq = jnp.where(obs_mask, Y ** 2, 0.0).sum(axis=0)
+    return jnp.maximum(y_ssq / m_obs, 1e-12)
+
+
 def make_renyi_scorer(
     alpha: float = 0.5,
     delta_fallback: float = 1e-6,
+    prior_var_fixed: jax.Array | None = None,
 ) -> Callable[[Any, jax.Array, jax.Array, float], float]:
     """Return a scorer that computes the analytical Rényi α-ELBO.
 
@@ -281,12 +308,20 @@ def make_renyi_scorer(
     * :class:`~matlap.core.LowRankCAVIResult` — falls back to
       ``delta_fallback`` for the off-subspace component.
     * :class:`~matlap.core.BatchedCAVIResult` — prior variance estimated as
-      ``diag(Ψ)/λ²`` where ``Ψ_jj = Σᵢ(μᵢⱼ² + σᵢⱼ²)``.
+      ``psi_sqrt_diag/λ`` by default.  Pass
+      ``prior_var_fixed = data_prior_var(Y, S)`` to use a **constant**
+      data-derived prior that avoids self-referential collapse at large λ
+      (recommended for the batched model; at α=0.5 recovers the same peak as
+      LOO).
 
     Args:
-        alpha:          Rényi order; must satisfy 0 ≤ α < 1 (default 0.5).
-        delta_fallback: Off-subspace scale used when ``result`` has no ``.delta``
-                        attribute (e.g. plain low-rank model).
+        alpha:           Rényi order; must satisfy 0 ≤ α < 1 (default 0.5).
+        delta_fallback:  Off-subspace scale used when ``result`` has no
+                         ``.delta`` attribute (e.g. plain low-rank model).
+        prior_var_fixed: Optional fixed per-column prior-variance array,
+                         shape (n,).  If provided, this is used **directly**
+                         (constant across λ) instead of the posterior-derived
+                         proxy.  Compute with :func:`data_prior_var`.
 
     Returns:
         ``score_fn(result, Y, S, lam) -> float``
@@ -296,6 +331,9 @@ def make_renyi_scorer(
 
     def score(result: Any, Y: jax.Array, S: jax.Array, lam: float) -> float:
         sigma = _get_diag_sigma(result)
-        prior_var = _get_prior_var(result, lam, delta_fallback)
-        return renyi_elbo(result.mu, sigma, prior_var, Y, S, alpha=alpha)
+        if prior_var_fixed is not None:
+            pv = jnp.maximum(jnp.asarray(prior_var_fixed, dtype=jnp.float32), 1e-12)
+        else:
+            pv = _get_prior_var(result, lam, delta_fallback)
+        return renyi_elbo(result.mu, sigma, pv, Y, S, alpha=alpha)
     return score
