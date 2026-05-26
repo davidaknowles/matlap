@@ -29,19 +29,21 @@ def compute_iso_prior_var(
 ) -> jax.Array:
     """Diagonal of the prior covariance Ψ/λ² for the low-rank+isotropic model.
 
-    The row prior is x_i ~ N(0, Ψ/λ²) where
-    Ψ = V_r diag(d_r²) V_r^T + δ² (I − V_r V_r^T).
+    Used as a heuristic prior-variance proxy for Rényi α-ELBO and LOO scoring.
+    Ψ = Q² = V_r diag(d_r²) V_r^T + δ² (I − V_r V_r^T) is the posterior
+    second-moment matrix; Ψ_jj/λ² decays as ~1/λ⁴ at large λ (since d_r → 0),
+    which gives the Rényi score a well-defined peak at a finite λ.
 
-    The per-column marginal variance (Ψ_jj / λ²) is:
-    v_j = (Σ_k d_r[k]² V_r[j,k]² + δ²) / λ².
+    The per-column proxy (Ψ_jj / λ²) is:
+        v_j = (Σ_k d_r[k]² V_r[j,k]² + δ²) / λ².
 
     For the pure low-rank model (no isotropic component) set ``delta`` to a
     small positive value (e.g. 1e-6) so no column is zero.
 
     Args:
         V_r:        Factor loadings, shape (n, r); orthonormal columns.
-        d_r:        Sqrt-eigenvalues of Ψ_r, shape (r,).
-        delta:      Off-subspace scale δ (scalar > 0).
+        d_r:        Sqrt-eigenvalues of Ψ_r (= Q-eigenvalues in-subspace), shape (r,).
+        delta:      Off-subspace posterior δ (scalar > 0).
         lambda_bar: E_q[λ], scalar.
 
     Returns:

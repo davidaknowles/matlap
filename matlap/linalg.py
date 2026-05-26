@@ -287,7 +287,8 @@ def update_row_lowrank_isotropic(
     """Woodbury row update for the improved low-rank-plus-isotropic CAVI model.
 
     Implements the model Q = V_r diag(d_r) V_r^T + δ(I − V_r V_r^T), where
-    γ = λ̄/δ is the off-subspace prior precision.  The posterior precision is:
+    γ = λ̄ is the off-subspace prior precision (equal to λ̄, not λ̄/δ).
+    The posterior precision is:
 
         Λ_i = diag(p̃_i) + V_r diag(c_k) V_r^T
 
@@ -305,7 +306,7 @@ def update_row_lowrank_isotropic(
         V_r:        Factor loading matrix, shape (n, r); orthonormal columns.
         d_r:        Sqrt-eigenvalues of Ψ_r (> 0), shape (r,).
         lambda_bar: E_q[λ], scalar.
-        gamma:      Off-subspace prior precision γ = λ̄/δ, scalar.
+        gamma:      Off-subspace prior precision γ = λ̄, scalar.
 
     Returns:
         mu_i:        Full n-dim posterior mean (has off-subspace components), shape (n,).
