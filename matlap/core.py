@@ -50,7 +50,7 @@ class CAVIResult:
         a_N:         Gamma posterior shape, scalar.
         b_N:         Gamma posterior rate, scalar.
         elbo_trace:  ELBO at the end of each iteration, list of floats.
-        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
+        converged:   True if abs(ΔELBO)/abs(ELBO) < tol before max_iter.
         n_iter:      Number of iterations executed.
     """
 
@@ -94,7 +94,7 @@ class BatchedCAVIResult:
         a_N:             Gamma posterior shape, scalar.
         b_N:             Gamma posterior rate, scalar.
         elbo_trace:      ELBO at the end of each iteration, list of floats.
-        converged:       True if |ΔELBO|/|ELBO| < tol before max_iter.
+        converged:       True if abs(ΔELBO)/abs(ELBO) < tol before max_iter.
         n_iter:          Number of iterations executed.
     """
 
@@ -395,7 +395,7 @@ class LowRankCAVIResult:
         b_N:         Gamma posterior rate, scalar.
         diag_sigma:  Diagonal posterior variances, shape (m, n).
         elbo_trace:  ELBO at the end of each iteration, list of floats.
-        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
+        converged:   True if abs(ΔELBO)/abs(ELBO) < tol before max_iter.
         n_iter:      Number of iterations executed.
     """
 
@@ -431,7 +431,7 @@ class LowRankIsotropicResult:
         delta:       Converged off-subspace Q eigenvalue δ* = sqrt(Tr(Ψ⊥)/(n-r)).
         diag_sigma:  Diagonal posterior variances, shape (m, n).
         elbo_trace:  ELBO at the end of each iteration, list of floats.
-        converged:   True if |ΔELBO|/|ELBO| < tol before max_iter.
+        converged:   True if abs(ΔELBO)/abs(ELBO) < tol before max_iter.
         n_iter:      Number of iterations executed.
     """
 

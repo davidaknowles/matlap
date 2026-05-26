@@ -21,15 +21,16 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
-    "sphinx_autodoc_typehints",
 ]
 
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = True
 
-autodoc_typehints = "description"
+autodoc_typehints = "signature"
 autodoc_member_order = "bysource"
+
+suppress_warnings = ["ref.duplicate_object"]
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

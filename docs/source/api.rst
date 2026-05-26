@@ -1,17 +1,11 @@
 API Reference
 =============
 
-.. automodule:: matlap
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Core CAVI
 ---------
 
 .. automodule:: matlap.core
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Linear Algebra
@@ -19,7 +13,6 @@ Linear Algebra
 
 .. automodule:: matlap.linalg
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Scoring
@@ -27,7 +20,6 @@ Scoring
 
 .. automodule:: matlap.scoring
    :members:
-   :undoc-members:
    :show-inheritance:
 
 ELBO
@@ -35,7 +27,6 @@ ELBO
 
 .. automodule:: matlap.elbo
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Cross-validation
@@ -43,7 +34,6 @@ Cross-validation
 
 .. automodule:: matlap.cv
    :members:
-   :undoc-members:
    :show-inheritance:
 
 Adaptive λ search
@@ -51,7 +41,34 @@ Adaptive λ search
 
 .. automodule:: matlap.adaptive
    :members:
-   :undoc-members:
+   :show-inheritance:
+
+Factor Analysis EM
+------------------
+
+.. automodule:: matlap.faem
+   :members:
+   :show-inheritance:
+
+Proximal Gradient
+-----------------
+
+.. automodule:: matlap.proximal
+   :members:
+   :show-inheritance:
+
+Variational Inference
+---------------------
+
+.. automodule:: matlap.vi
+   :members:
+   :show-inheritance:
+
+MCMC
+----
+
+.. automodule:: matlap.mcmc
+   :members:
    :show-inheritance:
 
 Simulation
@@ -59,5 +76,4 @@ Simulation
 
 .. automodule:: matlap.simulate
    :members:
-   :undoc-members:
    :show-inheritance:

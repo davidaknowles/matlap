@@ -23,16 +23,13 @@ import jax.scipy.linalg as jsla
 
 
 class SqrtDecomp(NamedTuple):
-    """Eigendecomposition of a symmetric PSD matrix A = vecs @ diag(vals) @ vecs.T.
-
-    Attributes:
-        vals: eigenvalues, shape (n,), non-negative
-        vecs: eigenvectors (columns), shape (n, n), orthonormal
-        sqrt_vals: sqrt of eigenvalues, shape (n,)
-    """
+    """Eigendecomposition of a symmetric PSD matrix A = vecs @ diag(vals) @ vecs.T."""
     vals: jax.Array
+    """Eigenvalues, shape (n,), non-negative."""
     vecs: jax.Array
+    """Eigenvectors (columns), shape (n, n), orthonormal."""
     sqrt_vals: jax.Array
+    """Square root of eigenvalues, shape (n,)."""
 
 
 def matrix_sqrt_eigh(A: jax.Array) -> SqrtDecomp:

@@ -27,18 +27,20 @@ def compute_elbo(
 ) -> jax.Array:
     """Compute the ELBO for the CAVI model.
 
-    ELBO = E_q[log p(Y|X)]           (log-likelihood)
-         + E_q[log p(X|lambda)]       (prior; variational lower bound at optimal Q)
-         + E_q[log p(lambda)]         (hyperprior)
-         - E_q[log q(X)]              (entropy of q(X))
-         - E_q[log q(lambda)]         (entropy of q(lambda))
+    ::
+
+        ELBO = E_q[log p(Y|X)]           (log-likelihood)
+             + E_q[log p(X|lambda)]       (prior; variational lower bound at optimal Q)
+             + E_q[log p(lambda)]         (hyperprior)
+             - E_q[log q(X)]              (entropy of q(X))
+             - E_q[log q(lambda)]         (entropy of q(lambda))
 
     Args:
         Y:               observations, shape (m, n); NaN where missing
         S2:              observation variances, shape (m, n); inf where missing
         mus:             posterior means, shape (m, n)
         sigmas:          posterior covariances, shape (m, n, n)
-        log_det_sigmas:  log|Sigma_i| for each row, shape (m,)
+        log_det_sigmas:  log abs(Sigma_i) for each row, shape (m,)
         q_sqrt_vals:     sqrt eigenvalues of Psi (= eigenvalues of Q), shape (n,)
         lambda_bar:      E_q[lambda] = a_N / b_N, scalar
         a_N:             Gamma posterior shape, scalar
@@ -79,7 +81,7 @@ def compute_elbo(
 
     # ------------------------------------------------------------------ #
     # 3. Entropy of q(X) = sum_i H[N(mu_i, Sigma_i)]                     #
-    #    = 1/2 * sum_i [log|Sigma_i| + n*(1 + log(2*pi))]                #
+    #    = 1/2 * sum_i [log abs(Sigma_i) + n*(1 + log(2*pi))]                #
     # ------------------------------------------------------------------ #
     entropy_X = 0.5 * (jnp.sum(log_det_sigmas) + m * n * (1.0 + jnp.log(2.0 * jnp.pi)))
 
@@ -128,7 +130,7 @@ def compute_elbo_from_diag(
         S2:              observation variances, shape (m, n); inf where missing
         mus:             posterior means, shape (m, n)
         sigma_diag:      diagonal of per-row posterior covariances, shape (m, n)
-        log_det_sigmas:  log|Sigma_i| for each row, shape (m,)
+        log_det_sigmas:  log abs(Sigma_i) for each row, shape (m,)
         q_sqrt_vals:     sqrt eigenvalues of Psi, shape (n,)
         lambda_bar:      E_q[lambda] = a_N / b_N, scalar
         a_N:             Gamma posterior shape, scalar

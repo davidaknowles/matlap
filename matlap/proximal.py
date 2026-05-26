@@ -1,11 +1,13 @@
 """
 Nuclear-norm penalized matrix regression via FISTA proximal gradient.
 
-Solves:
+Solves::
+
     min_{X}  0.5 * sum_{obs(i,j)} (Y_ij - X_ij)^2 / s_ij^2  +  lambda * ||X||_*
 
 The proximal operator of (t * lambda) * ||X||_* is singular value
-soft-thresholding (SVT):
+soft-thresholding (SVT)::
+
     SVT(Z, threshold)[U, Sigma, V] = U @ diag(max(sigma_k - threshold, 0)) @ V.T
 
 Lambda can be supplied directly via ``proximal_gradient``, or selected by

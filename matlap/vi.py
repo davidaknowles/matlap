@@ -2,14 +2,14 @@
 Numpyro SVI for Bayesian matrix denoising with three variational guide families.
 
 All three guides approximate the same generative model as the CAVI algorithm
-in ``matlap.core``:
+in ``matlap.core``::
 
     lambda ~ Gamma(a0, b0)              (or fixed)
     X      ~ MatrixLaplace(lambda)      implemented as
              ImproperUniform + factor(-lambda*||X||_* + mn*log(lambda))
     Y[obs] ~ N(X[obs], S[obs]^2)
 
-Three variational families for q(X) are available:
+Three variational families for q(X) are available::
 
     'diagonal'      -- fully factorised: q(X_ij) = N(mu_ij, sigma_ij^2)
     'row_mvn'       -- row-factorised:   q(X) = prod_i MVN(mu_i, L_i L_i^T)

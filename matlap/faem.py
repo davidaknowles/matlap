@@ -56,7 +56,7 @@ class FAEMResult:
         a_N:         Gamma posterior shape (= a0 + m·r/2), scalar.
         b_N:         Gamma posterior rate, scalar.
         ll_trace:    Marginal log-likelihood at each iteration.
-        converged:   True if relative |ΔLL| < tol before max_iter.
+        converged:   True if relative abs(ΔLL) < tol before max_iter.
         n_iter:      Number of iterations executed.
     """
 
@@ -79,7 +79,7 @@ class GradMLResult:
         W_r:         Loading matrix at convergence, shape (n, r).
         lambda_bar:  Estimated λ, scalar.
         ll_trace:    Marginal log-likelihood (+ log prior) at each iteration.
-        converged:   True if relative |ΔLL| < tol before max_iter.
+        converged:   True if relative abs(ΔLL) < tol before max_iter.
         n_iter:      Number of optimiser steps executed.
     """
 
@@ -210,7 +210,7 @@ def matlap_faem(
         a0:           Gamma prior shape for λ (default: 1e-3).
         b0:           Gamma prior rate for λ (default: 1e-3).
         max_iter:     Maximum EM iterations.
-        tol:          Convergence tolerance on relative |ΔLL| change.
+        tol:          Convergence tolerance on relative abs(ΔLL) change.
         verbose:      Print LL at each iteration.
         W_r_init:     Warm-start loading matrix, shape (n, r). If None, uses rSVD init.
         lambda_init:  Warm-start λ value. If None, initialised from W_r_init.
@@ -358,7 +358,7 @@ def matlap_gradml(
         a0:            Gamma prior shape for λ (default: 1e-3).
         b0:            Gamma prior rate for λ (default: 1e-3).
         max_iter:      Maximum Adam steps (default 2000).
-        tol:           Convergence tolerance on relative |ΔLL|.
+        tol:           Convergence tolerance on relative abs(ΔLL).
         learning_rate: Adam step size (default 1e-2).
         verbose:       Print LL every 100 steps.
         W_r_init:      Warm-start loading matrix, shape (n, r). If None, uses rSVD init.
