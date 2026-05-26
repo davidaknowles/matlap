@@ -1,15 +1,15 @@
 # Fdb version 4
-["biber main"] 1779643219.06101 "main.bcf" "main.bbl" "main" 1779795767.83483 0
-  "main.bcf" 1779795767.77706 107583 94e676e9c40d43bbb5abe341a15b04b9 "pdflatex"
+["biber main"] 1779811770.24673 "main.bcf" "main.bbl" "main" 1779812154.57483 0
+  "main.bcf" 1779812154.51693 107583 94e676e9c40d43bbb5abe341a15b04b9 "pdflatex"
   "references.bib" 1779640125.09431 2733 41dcf35ed930a039213a04e8db369a99 ""
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1779795767.09318 "/home/david/projects/matlap/paper/main.tex" "main.pdf" "main" 1779795767.83506 0
+["pdflatex"] 1779812153.81141 "/home/david/projects/matlap/paper/main.tex" "main.pdf" "main" 1779812154.57507 0
   "/etc/texmf/web2c/texmf.cnf" 1779362673.1813 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/david/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ectt1095.600pk" 1779365224.91646 21952 b0e3e23d8a3bb5dfdb0adf240144f87f ""
-  "/home/david/projects/matlap/paper/main.tex" 1779795765.72607 52342 9b362901bdb89a0a34a6c4a3417d3f01 ""
+  "/home/david/projects/matlap/paper/main.tex" 1779812153.19592 50840 9ac43fcb1ffc45d1668200ec2a37caab ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm" 1136768653 2532 9ad73cf4dd2173a847f2a5f5608e0b9a ""
@@ -144,12 +144,12 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1779365316.2261 165012 f177baa1c39a3ebd62c3096a43521a0d ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1779365336 6830975 e747935effb432544cb1fe3ff8d60597 ""
-  "main.aux" 1779795767.77606 11004 876371e57f8adeb330961d38b3675723 "pdflatex"
-  "main.bbl" 1779643219.57911 14509 02179072679b93b74737843932bb9e42 "biber main"
-  "main.out" 1779795767.77606 4508 7966ce142659027f251ec69329c5fbef "pdflatex"
-  "main.run.xml" 1779795767.77806 2339 1ed341041bd1fbe5a1f3b1992463a6cc "pdflatex"
-  "main.tex" 1779795765.72607 52342 9b362901bdb89a0a34a6c4a3417d3f01 ""
-  "main.toc" 1779795767.77806 4561 fc2a9651a066cec69293b93806562370 "pdflatex"
+  "main.aux" 1779812154.51592 10990 db7e092350264afeddb3d3152413a68a "pdflatex"
+  "main.bbl" 1779811770.80501 14509 02179072679b93b74737843932bb9e42 "biber main"
+  "main.out" 1779812154.51592 4508 7966ce142659027f251ec69329c5fbef "pdflatex"
+  "main.run.xml" 1779812154.51793 2339 1ed341041bd1fbe5a1f3b1992463a6cc "pdflatex"
+  "main.tex" 1779812153.19592 50840 9ac43fcb1ffc45d1668200ec2a37caab ""
+  "main.toc" 1779812154.51793 4547 845d2effb369e521ed3a11cd589cf10c "pdflatex"
   (generated)
   "main.aux"
   "main.bcf"

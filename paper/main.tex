@@ -78,59 +78,42 @@ where $q(X)$ is the variational distribution approximating the true posterior $p
 \begin{equation}
     \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
 \end{equation}
-Augmenting the optimization with $Q$ gives a tractable variational bound on the nuclear norm term, and naturally results in $q(X)$ factorizing over rows of $X$. Given the symmetry of the nuclear norm, there is an equivalent representation with $Q \in \mathbb{S}_{++}^m$ and $X^T Q^{-1} X$, which would result in a column-wise factorization of $q(X)$. The choice between these is a matter of computational convenience: the row factorization is more efficient when $m \gg n$ and the column factorization is more efficient when $n \gg m$. 
+Augmenting the optimization with $Q$ and applying Jensen's inequality gives a tractable bound on the nuclear norm term of the ELBO: 
+\begin{equation}
+    \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \lambda \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \lambda \mathrm{Tr}(Q).
+\end{equation}
+and naturally results in $q(X)$ factorizing over rows of $X$. Given the symmetry of the nuclear norm, there is an equivalent representation with $Q \in \mathbb{S}_{++}^m$ and $X^T Q^{-1} X$, which would result in a column-wise factorization of $q(X)$. The choice between these is a matter of computational convenience: the row factorization is more efficient when $m \gg n$ and the column factorization is more efficient when $n \gg m$. 
 
 \paragraph{Update for $q(X)$.} Given $Q$ and $\lambda$, the posterior for each row $x_i$ is a multivariate Gaussian, i.e. $q(X) = \prod_{i=1}^m \mathcal{N}(x_i \mid \mu_i, \Sigma_i)$, with mean and covariance given by
 \begin{align}
-    \Sigma_i &= \left( S_i^{-1} + \bar{\lambda} Q^{-1} \right)^{-1}, \qquad
+    \Sigma_i &= \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}, \qquad
     \mu_i = \Sigma_i \left( S_i^{-1} y_i \right)
 \end{align}
-where $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ be the known noise variance matrix for row $i$. The auxiliary matrix $Q$ induces correlation across the columns of $X$, even though the noise $S_i$ is diagonal.
+where $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ is the known noise variance matrix for row $i$. The auxiliary matrix $Q$ induces correlation across the columns of $X$, even though the noise $S_i$ is diagonal. 
 
-\textbf{Row factorization.} Let , where $x_i \in \mathbb{R}^n$ is the $i$-th row of $X$. The expected second moment is
+\paragraph{Update for Auxiliary Matrix $Q$.} Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root $Q^* = \Psi^{1/2}$. 
+
+\paragraph{Update for Hyperparameter $\lambda$.} Because $Z(\lambda) \propto \lambda^{-mn}$, the objective contributes $mn \log \lambda$. With a Gamma prior $p(\lambda) \propto \lambda^{a_0-1}e^{-b_0\lambda}$ and the variational bound term $-\lambda\,\mathrm{Tr}(Q)$, the $\lambda$-dependent objective is
 \begin{equation}
-    \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m \left( \mu_i \mu_i^T + \Sigma_i \right) \in \mathbb{S}_{++}^n,
+    (a_0 + mn - 1)\log\lambda - (b_0 + \mathrm{Tr}(Q))\lambda,
 \end{equation}
-which pairs directly with the $Q \in \mathbb{S}_{++}^n$ auxiliary variable above. When optimizing the Evidence Lower Bound (ELBO), we must evaluate $\mathbb{E}_{q}[-\lambda \|X\|_*]$. Substituting the variational representation and applying Jensen's inequality gives the tractable lower bound:
+which is strictly concave in $\lambda>0$ and has closed-form maximizer
 \begin{equation}
-    \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \mathbb{E}_q[\lambda]\, \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \mathbb{E}_q[\lambda]\, \mathrm{Tr}(Q).
+    \lambda^* = \frac{a_0 + mn - 1}{b_0 + \mathrm{Tr}(Q)}.
 \end{equation}
-This requires $O(n^3)$ matrix operations per iteration.
-
-\textbf{Column factorization.} We could in principle factorize $q(X)$ over columns instead of rows, but this is equivalent to the row factorization by simply transposing the input data. 
-
-We place a Gamma hyperprior on the regularization parameter: $\lambda \sim \text{Gamma}(a_0, b_0)$. We iteratively update the variational distributions to maximize the ELBO.
-
-\paragraph{Update for Auxiliary Matrix $Q$.} Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root of $\Psi$:
-\begin{equation}
-    Q^* = \Psi^{1/2} = \left( \sum_{i=1}^m \mu_i \mu_i^T + \Sigma_i \right)^{1/2}
-\end{equation}
-
-
 
 \paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this with \texttt{matlap\_batched}, which processes rows in mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. With $B=64$ and $n=1{,}000$ this is approximately 256 MB versus 40 GB. The algorithm is otherwise identical to full CAVI (Section~\ref{sec:cavi}) and converges to the same solution.
 
-\paragraph{Update for Hyperparameter Posterior $q(\lambda)$.} Because $Z(\lambda) \propto \lambda^{-mn}$, the log-prior contributes $mn \log \lambda$. Combined with the Gamma prior and the variational bound on the nuclear norm, the optimal $q(\lambda)$ is $\text{Gamma}(a_N, b_N)$. 
-Notably, the scale update simplifies beautifully because $\text{Tr}(\Psi Q^{-1}) + \text{Tr}(Q) = \text{Tr}(\Psi \Psi^{-1/2}) + \text{Tr}(\Psi^{1/2}) = 2\text{Tr}(\Psi^{1/2})$.
-\begin{align}
-    a_N &= a_0 + mn \\
-    b_N &= b_0 + \text{Tr}(\Psi^{1/2})
-\end{align}
-The expected value is updated as $\bar{\lambda} = \frac{a_N}{b_N}$. 
+
 
 \paragraph{Evidence Lower Bound.} Convergence is monitored via the ELBO. Using the variational bound at the optimal $Q = \Psi^{1/2}$ and the normalizing constant $\log Z(\lambda) = -mn\log\lambda + \mathrm{const}$, the ELBO decomposes as
 \begin{align}
     \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
-    \underbrace{- \bar{\lambda}\,\mathrm{Tr}(Q) + mn\,\mathbb{E}_q[\log\lambda]}_{\text{prior on }X\text{ (lower bound)}} \notag\\
+    \underbrace{- \lambda\,\mathrm{Tr}(Q) + mn\log\lambda}_{\text{prior on }X\text{ (lower bound)}} \notag\\
     &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
-    - \underbrace{\mathrm{KL}\!\left(q(\lambda)\,\|\,p(\lambda)\right)}_{\text{KL for }\lambda}
+    + \underbrace{(a_0-1)\log\lambda - b_0\lambda}_{\text{Gamma prior on }\lambda}
 \end{align}
-where $\mathcal{O}$ is the set of observed entries and
-\begin{equation}
-    \mathrm{KL}\!\left(\mathrm{Gamma}(a_N,b_N)\,\|\,\mathrm{Gamma}(a_0,b_0)\right)
-    = a_0 \log b_N - a_0 \log b_0 - \log\Gamma(a_N) + \log\Gamma(a_0)
-    + (a_N - a_0)\,\psi(a_N) + (b_0-b_N)\frac{a_N}{b_N}.
-\end{equation}
+where $\mathcal{O}$ is the set of observed entries.
 
 The full procedure is summarized in Algorithm 1. 
 
@@ -139,24 +122,22 @@ The full procedure is summarized in Algorithm 1.
 \begin{algorithmic}[1]
 \Require Data $Y \in \mathbb{R}^{m \times n}$, Variances $S \in \mathbb{R}^{m \times n}$, Prior $a_0, b_0$.
 \State Initialize $\mu_i = y_i$ and $\Sigma_i = I_n$ for $i=1,\dots,m$.
-\State Initialize $\bar{\lambda} = \frac{mn}{\|Y\|_*}$.
+\State Initialize $\lambda = \frac{mn}{\|Y\|_*}$.
 \Repeat
     \State \textbf{1. Estimate uncentered expected covariance:}
     \State \quad $\Psi \gets \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$
     \State \textbf{2. Update auxiliary matrix:}
     \State \quad $Q \gets \Psi^{1/2}$
-    \State \textbf{3. Update regularization parameter posterior:}
-    \State \quad $a_N \gets a_0 + mn$
-    \State \quad $b_N \gets b_0 + \text{Tr}(Q)$
-    \State \quad $\bar{\lambda} \gets \frac{a_N}{b_N}$
+    \State \textbf{3. Update regularization parameter:}
+    \State \quad $\lambda \gets \frac{a_0 + mn - 1}{b_0 + \text{Tr}(Q)}$
     \State \textbf{4. Update latent matrix posterior row-by-row:}
     \For{$i = 1, \dots, m$}
         \State $S_i \gets \text{diag}(s_{i1}^2, \dots, s_{in}^2)$
-        \State $\Sigma_i \gets \left( S_i^{-1} + \bar{\lambda} Q^{-1} \right)^{-1}$
+        \State $\Sigma_i \gets \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}$
         \State $\mu_i \gets \Sigma_i S_i^{-1} y_i$
     \EndFor
 \Until{ELBO converges}
-\Ensure Posterior mean $M = [\mu_1, \dots, \mu_m]^T$, uncertainties $\{\Sigma_i\}_{i=1}^m$, expected penalty $\bar{\lambda}$.
+    \Ensure Posterior mean $M = [\mu_1, \dots, \mu_m]^T$, uncertainties $\{\Sigma_i\}_{i=1}^m$, optimized penalty $\lambda$.
 \end{algorithmic}
 \end{algorithm}
 

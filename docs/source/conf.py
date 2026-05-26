@@ -29,6 +29,7 @@ napoleon_include_init_with_doc = True
 
 autodoc_typehints = "signature"
 autodoc_member_order = "bysource"
+autodoc_mock_imports = ["jax", "jaxlib", "jax.numpy", "jax.scipy", "numpyro", "optax", "numpy"]
 
 suppress_warnings = ["ref.duplicate_object"]
 

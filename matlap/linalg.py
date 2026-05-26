@@ -13,6 +13,7 @@ Low-rank utilities
 ``update_row_lowrank_isotropic`` -- O(nr²) Woodbury update, low-rank-plus-isotropic prior
 ``update_rows_lowrank_isotropic``-- vmapped + JIT version
 """
+from __future__ import annotations
 
 import functools
 from typing import NamedTuple
