@@ -15,6 +15,7 @@ from .core import (
     matlap_adaptive_batched,
 )
 from .proximal import ProximalResult, proximal_cv, proximal_gradient
+from .taylor import TaylorResult, taylor_cv, taylor_gradient
 from .vi import VIResult, fit_vi
 from .cv import cv_lambda, cv_score_single, make_cv_scorer
 from .scoring import (
@@ -57,6 +58,10 @@ __all__ = [
     "proximal_gradient",
     "proximal_cv",
     "ProximalResult",
+    # Taylor-delta proximal gradient
+    "taylor_gradient",
+    "taylor_cv",
+    "TaylorResult",
     # Numpyro SVI
     "fit_vi",
     "VIResult",

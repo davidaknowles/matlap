@@ -13,6 +13,7 @@
 \addbibresource{references.bib}
 \usepackage{hyperref}
 \usepackage{xcolor}
+\usepackage{bm}
 
 \hypersetup{
     colorlinks=true,
@@ -82,7 +83,7 @@ Augmenting the optimization with $Q$ and applying Jensen's inequality gives a tr
 \begin{equation}
     \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \lambda \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \lambda \mathrm{Tr}(Q).
 \end{equation}
-and naturally results in $q(X)$ factorizing over rows of $X$. Given the symmetry of the nuclear norm, there is an equivalent representation with $Q \in \mathbb{S}_{++}^m$ and $X^T Q^{-1} X$, which would result in a column-wise factorization of $q(X)$. The choice between these is a matter of computational convenience: the row factorization is more efficient when $m \gg n$ and the column factorization is more efficient when $n \gg m$. 
+and naturally results in $q(X)$ factorizing over rows of $X$. Given the symmetry of the nuclear norm, there is an alternative representation with $Q \in \mathbb{S}_{++}^m$ and $X^T Q^{-1} X$, which would result in a column-wise factorization of $q(X)$. The choice between these is a matter of computational convenience: the row factorization is more efficient when $m \gg n$ and the column factorization is more efficient when $n \gg m$. 
 
 \paragraph{Update for $q(X)$.} Given $Q$ and $\lambda$, the posterior for each row $x_i$ is a multivariate Gaussian, i.e. $q(X) = \prod_{i=1}^m \mathcal{N}(x_i \mid \mu_i, \Sigma_i)$, with mean and covariance given by
 \begin{align}
@@ -362,6 +363,63 @@ Each row $i$ has its own low-rank factor $F_i \in \mathbb{R}^{n \times k}$:
 At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, versus 40 GB for full row-MVN covariances.
 
 Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariateNormal} distribution and combined with the rSVD nuclear norm approximation, reducing per-step cost to $O(mnr)$.
+
+\section{Taylor series expansion for the nuclear norm expectation}
+
+Here we assume the row-factorized variational $q$ but approximate the expected nuclear norm via Taylor expansion. The Evidence Lower Bound (ELBO) is, 
+\begin{align}
+    \mathcal{L}(\bm{\mu}, \bm{\Sigma}) &= \sum_{i=1}^m \left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] - \lambda \mathbb{E}_q[\|\bm{X}\|_*] + \text{const.}
+\end{align}
+
+To circumvent the analytical intractability of $\mathbb{E}_q[\|\bm{X}\|_*]$ without resorting to the bound above, we apply a second-order matrix Taylor expansion (the Matrix Delta Method). 
+
+We rewrite the nuclear norm via the trace identity $\|\bm{X}\|_* = \text{Tr}\big((\bm{X}^T \bm{X})^{1/2}\big)$ and define the matrix function $f(\bm{A}) = \text{Tr}(\bm{A}^{1/2})$ over positive semi-definite matrices $\bm{A} = \bm{X}^T \bm{X}$. Decomposing $\bm{X} = \bm{\mu} + \bm{E}$, where $\mathbb{E}_q[\bm{E}] = \bm{0}$ and $\mathbb{E}_q[\bm{E}^T \bm{E}] = \sum_{i=1}^m \bm{\Sigma}_i \equiv \bm{\Sigma}_{\text{tot}}$, we have,
+\begin{equation}
+    \bm{X}^T \bm{X} = \bm{\mu}^T \bm{\mu} + \bm{\mu}^T \bm{E} + \bm{E}^T \bm{\mu} + \bm{E}^T \bm{E}
+\end{equation}
+Expanding $f(\bm{X}^T \bm{X})$ in a multivariate Taylor series centered at the deterministic component $\bm{A}_0 = \bm{\mu}^T \bm{\mu}$, and taking the expectation under $q(\bm{X})$, the first-order perturbation vanishes since $\mathbb{E}_q[\bm{E}]=\bm{0}$. Evaluating the dominant remaining terms yields the deterministic surrogate,
+\begin{equation}
+    \mathbb{E}_q[\|\bm{X}\|_*] \approx \|\bm{\mu}\|_* + \frac{1}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \bm{\Sigma}_{\text{tot}} \right)
+\end{equation}
+Substituting this approximation back into the ELBO gives,
+\begin{align}
+    \mathcal{L}_{\text{delta}}(\bm{\mu}, \bm{\Sigma}) = \sum_{i=1}^m &\left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] \nonumber \\
+    &- \lambda \|\bm{\mu}\|_* - \frac{\lambda}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \sum_{i=1}^m \bm{\Sigma}_i \right)
+\end{align}
+
+Isolating the objective with respect to a singular row covariance block $\bm{\Sigma}_i$ yields:
+\begin{equation}
+    \mathcal{L}_{\text{delta}}(\bm{\Sigma}_i) = \frac{1}{2} \log |\bm{\Sigma}_i| - \frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i \right)
+\end{equation}
+Taking the matrix derivative with respect to $\bm{\Sigma}_i$ and setting it to the zero matrix:
+\begin{equation}
+    \frac{\partial \mathcal{L}_{\text{delta}}}{\partial \bm{\Sigma}_i} = \frac{1}{2} \bm{\Sigma}_i^{-1} - \frac{1}{2} \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] = \bm{0}
+\end{equation}
+Solving for $\bm{\Sigma}_i$ reveals a closed-form solution,
+\begin{equation}
+    \bm{\Sigma}_i^* = \left( \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right)^{-1}
+\end{equation}
+
+\paragraph{Marginalization and the Collapsed Loss.} Because $\bm{\Sigma}_i^*$ is uniquely determined by $\bm{\mu}$, we can substitute this closed-form solution directly back into the surrogate ELBO. The trace terms collapse identically into a scalar constant:
+\begin{equation}
+    -\frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i^* \right) = -\frac{1}{2} \text{Tr}(\bm{I}_n) = -\frac{n}{2}
+\end{equation}
+Omitting additive constants, this marginalization yields a fully collapsed loss function depending solely on the mean matrix $\bm{\mu}$:
+\begin{equation}
+    \mathcal{L}_{\text{collapsed}}(\bm{\mu}) = -\frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \lambda \|\bm{\mu}\|_* - \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right|
+\end{equation}
+
+\paragraph{Numerical Optimization Landscape.} The optimization of $\mathcal{L}_{\text{collapsed}}(\bm{\mu})$ splits into a smooth, non-linear regularized function $g(\bm{\mu})$ and a non-smooth convex penalty $h(\bm{\mu})$:
+\begin{align}
+    g(\bm{\mu}) &= \frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) + \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right| \\
+    h(\bm{\mu}) &= \lambda \|\bm{\mu}\|_*
+\end{align}
+Given a learning rate $\eta$, optimization proceeds via proximal gradient steps where the non-smooth nuclear norm is solved exactly via Singular Value Soft-Thresholding ($\mathcal{S}_{\eta \lambda}$):
+\begin{align}
+    \tilde{\bm{\mu}}^{(t)} &= \bm{\mu}^{(t)} - \eta \nabla_{\bm{\mu}} g(\bm{\mu}^{(t)}) \\
+    \bm{\mu}^{(t+1)} &= \text{prox}_{\eta h}(\tilde{\bm{\mu}}^{(t)}) = \bm{U} \cdot \max(\bm{0}, \bm{D} - \eta \lambda) \cdot \bm{V}^T
+\end{align}
+where $\bm{U} \bm{D} \bm{V}^T = \text{SVD}(\tilde{\bm{\mu}}^{(t)})$. Once convergence is reached on $\bm{\mu}^*$, downstream uncertainty matrices $\bm{\Sigma}_i^*$ are recovered globally in a single deterministic pass.
 
 \subsection{Factor Analysis EM and Gradient Marginal Likelihood}
 \label{sec:faem}

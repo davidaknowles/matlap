@@ -77,6 +77,7 @@ def _get_diag_sigma(result: Any) -> jax.Array:
 def _get_prior_var(result: Any, lam: float, delta_fallback: float) -> jax.Array:
     """Return per-column prior variance proxy for any result type.
 
+    * Results with ``prior_var`` (e.g. Taylor approximation): use it directly.
     * Low-rank results (have ``V_r``): ``compute_iso_prior_var`` with ``d_r``
       and ``delta`` (falls back to ``delta_fallback`` if absent).
     * Full-rank batched results: ``diag(√Ψ)/λ`` where Ψ = Σᵢ E[xᵢxᵢᵀ] and
@@ -84,6 +85,9 @@ def _get_prior_var(result: Any, lam: float, delta_fallback: float) -> jax.Array:
       actual prior covariance diagonal Q_jj/λ (Q = √Ψ = prior covariance matrix
       times λ).
     """
+    prior_var = getattr(result, "prior_var", None)
+    if prior_var is not None:
+        return jnp.maximum(jnp.asarray(prior_var, dtype=jnp.float32), 1e-12)
     if hasattr(result, "V_r"):
         delta = getattr(result, "delta", delta_fallback)
         return compute_iso_prior_var(result.V_r, result.d_r, delta=delta, lambda_bar=lam)
