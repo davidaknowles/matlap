@@ -49,6 +49,7 @@ CONDITION_LIMIT = int(os.environ.get("MATLAP_BENCH_CONDITION_LIMIT", "0"))
 # Use separate grids so each family can find its optimum.
 LAM_GRID_BATCHED = [0.1, 0.3, 0.7, 1.5, 3.0, 7.0, 15.0, 30.0, 70.0]
 LAM_GRID_LR      = [0.003, 0.007, 0.015, 0.03, 0.07, 0.15, 0.3, 0.7, 1.5, 3.0]
+PROX_CV_FOLDS    = 3
 
 RANK = 30  # fixed rank for lowrank / iso models
 
@@ -79,6 +80,7 @@ DIM_CONDITIONS = [
 # All grid methods use the same LAM_GRID; EB = matlap_batched (no grid)
 def _make_methods():
     methods = [
+        ("proximal_cv",    "proximal_cv",   {}),
         ("batched_eb",     "batched", {}),
         ("batched_elbo",   "batched_grid", {"score_fn": "elbo"}),
         ("batched_loo",    "batched_grid", {"score_fn": "loo"}),
@@ -147,6 +149,16 @@ def run_taylor_grid(Y, S, lambda_grid, *, score_fn: str, prox_init: bool):
     return best_lam, best_res, best_score
 
 
+def run_proximal_cv(Y, S):
+    """Entry-wise CV comparator for nuclear-norm proximal gradient."""
+    from matlap.proximal import proximal_cv
+
+    best_lam, res = proximal_cv(
+        Y, S, jnp.array(LAM_GRID_LR), n_folds=PROX_CV_FOLDS, max_iter=PROX_INIT_ITER, tol=1e-6
+    )
+    return best_lam, res
+
+
 # ── Per-seed runner ────────────────────────────────────────────────────────────
 def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
     rng = np.random.default_rng(seed)
@@ -184,6 +196,9 @@ def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
             elif kind == "taylor_grid":
                 lam, res, _ = run_taylor_grid(Y, S, LAM_GRID_LR, **kw)
                 mu = res.mu
+            elif kind == "proximal_cv":
+                lam, res = run_proximal_cv(Y, S)
+                mu = res.X
             results[name] = {"rmse": rmse(mu), "lam": lam, "t": time.time() - t0}
         except Exception as e:
             results[name] = {"rmse": float("nan"), "lam": float("nan"), "t": time.time() - t0,
@@ -227,6 +242,7 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
     # Group by model family for readability
     families = [
         ("baseline", ["noisy_Y"]),
+        ("proximal", ["proximal_cv"]),
         ("batched", ["batched_eb", "batched_elbo", "batched_loo", "batched_renyi"]),
         ("lowrank", ["lowrank_elbo", "lowrank_loo", "lowrank_renyi"]),
         ("iso",     ["iso_elbo",    "iso_loo",     "iso_renyi"]),
