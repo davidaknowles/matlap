@@ -15,7 +15,10 @@ from __future__ import annotations
 import os
 import sys
 import time
+import csv
+from pathlib import Path
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -32,6 +35,20 @@ from matlap import (
 )
 from matlap.scoring import closed_form_loo
 
+GPU_DEVICES = jax.devices("gpu")
+if not GPU_DEVICES:
+    raise RuntimeError("benchmark_lambda.py requires a JAX GPU device.")
+GPU_DEVICE = GPU_DEVICES[0]
+
+
+def _to_gpu(x):
+    return jax.device_put(jnp.asarray(x, dtype=jnp.float32), GPU_DEVICE)
+
+
+def _block_until_ready(x):
+    if hasattr(x, "block_until_ready"):
+        x.block_until_ready()
+
 # ── Shared config ──────────────────────────────────────────────────────────────
 SIGMA_NOISE = 1.0
 N_SEEDS     = int(os.environ.get("MATLAP_BENCH_N_SEEDS", "5"))
@@ -42,6 +59,7 @@ METHOD_FILTER = {
     s.strip() for s in os.environ.get("MATLAP_BENCH_METHODS", "").split(",") if s.strip()
 }
 CONDITION_LIMIT = int(os.environ.get("MATLAP_BENCH_CONDITION_LIMIT", "0"))
+OUTPUT_PREFIX = os.environ.get("MATLAP_BENCH_OUTPUT", "results/benchmark_lambda_taylor_gpu")
 
 # The batched model's λ is a per-element precision; its optimal value scales
 # with element variance (~mean_SV/sqrt(m)), which is much larger than λ_true.
@@ -97,6 +115,9 @@ def _make_methods():
         ("taylor_prox_elbo",       "taylor_grid", {"score_fn": "elbo",  "prox_init": True}),
         ("taylor_prox_loo",        "taylor_grid", {"score_fn": "loo",   "prox_init": True}),
         ("taylor_prox_renyi",      "taylor_grid", {"score_fn": "renyi", "prox_init": True}),
+        ("prox_taylor_elbo",       "prox_taylor_grid", {"score_fn": "elbo"}),
+        ("prox_taylor_loo",        "prox_taylor_grid", {"score_fn": "loo"}),
+        ("prox_taylor_renyi",      "prox_taylor_grid", {"score_fn": "renyi"}),
     ]
     if METHOD_FILTER:
         methods = [m for m in methods if m[0] in METHOD_FILTER or m[1] in METHOD_FILTER]
@@ -149,6 +170,28 @@ def run_taylor_grid(Y, S, lambda_grid, *, score_fn: str, prox_init: bool):
     return best_lam, best_res, best_score
 
 
+def run_proximal_taylor_grid(Y, S, lambda_grid, *, score_fn: str):
+    """Fit proximal at each λ, then score that μ with the Taylor expansion."""
+    best_score = -float("inf")
+    best_lam = float(lambda_grid[0])
+    best_prox = None
+    best_taylor = None
+
+    for lam in [float(lv) for lv in lambda_grid]:
+        prox = proximal_gradient(Y, S, lam, max_iter=PROX_INIT_ITER, tol=1e-6)
+        taylor_score = taylor_gradient(
+            Y, S, lam, max_iter=0, init_mu=prox.X, recover_sigma=False,
+        )
+        score = _score_taylor_result(taylor_score, Y, S, score_fn)
+        if score > best_score:
+            best_score = score
+            best_lam = lam
+            best_prox = prox
+            best_taylor = taylor_score
+
+    return best_lam, best_prox, best_taylor, best_score
+
+
 def run_proximal_cv(Y, S):
     """Entry-wise CV comparator for nuclear-norm proximal gradient."""
     from matlap.proximal import proximal_cv
@@ -163,11 +206,12 @@ def run_proximal_cv(Y, S):
 def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
     rng = np.random.default_rng(seed)
     X_true, _ = sample_nnd(rng, m, n, lam_true)
-    Y = jnp.array(X_true + rng.standard_normal((m, n)) * SIGMA_NOISE)
-    S = SIGMA_NOISE * jnp.ones((m, n))
+    X_true_gpu = _to_gpu(X_true)
+    Y = _to_gpu(X_true + rng.standard_normal((m, n)) * SIGMA_NOISE)
+    S = _to_gpu(SIGMA_NOISE * np.ones((m, n), dtype=np.float32))
 
     def rmse(mu):
-        return float(jnp.sqrt(jnp.mean((jnp.array(mu) - X_true) ** 2)))
+        return float(jnp.sqrt(jnp.mean((jnp.asarray(mu) - X_true_gpu) ** 2)))
 
     results: dict[str, dict] = {}
 
@@ -196,10 +240,15 @@ def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
             elif kind == "taylor_grid":
                 lam, res, _ = run_taylor_grid(Y, S, LAM_GRID_LR, **kw)
                 mu = res.mu
+            elif kind == "prox_taylor_grid":
+                lam, res, _, _ = run_proximal_taylor_grid(Y, S, LAM_GRID_LR, **kw)
+                mu = res.X
             elif kind == "proximal_cv":
                 lam, res = run_proximal_cv(Y, S)
                 mu = res.X
-            results[name] = {"rmse": rmse(mu), "lam": lam, "t": time.time() - t0}
+            _block_until_ready(mu)
+            elapsed = time.time() - t0
+            results[name] = {"rmse": rmse(mu), "lam": lam, "t": elapsed}
         except Exception as e:
             results[name] = {"rmse": float("nan"), "lam": float("nan"), "t": time.time() - t0,
                              "error": str(e)}
@@ -229,6 +278,144 @@ def _nanmedian_or_nan(values):
     return float(np.nanmedian(arr))
 
 
+def _nanmean_or_nan(values):
+    arr = np.asarray(values, dtype=float)
+    finite = np.isfinite(arr)
+    if arr.size == 0 or not np.any(finite):
+        return float("nan")
+    return float(np.nanmean(arr))
+
+
+def _nanstd_or_nan(values):
+    arr = np.asarray(values, dtype=float)
+    finite = np.isfinite(arr)
+    if arr.size == 0 or not np.any(finite):
+        return float("nan")
+    return float(np.nanstd(arr))
+
+
+def _format_float(x, ndigits=4):
+    if x is None or not np.isfinite(x):
+        return "nan"
+    return f"{x:.{ndigits}f}"
+
+
+def _aggregate_rows(sweep_name: str, conditions: list[dict], all_accum: list[dict]) -> list[dict]:
+    rows = []
+    for cond, accum in zip(conditions, all_accum):
+        for method, d in accum.items():
+            rmse_mean = _nanmean_or_nan(d["rmse"])
+            rmse_std = _nanstd_or_nan(d["rmse"])
+            lam_med = _nanmedian_or_nan(d["lam"])
+            t_med = _nanmedian_or_nan(d["t"])
+            log_ratio = (
+                float(np.log(lam_med / cond["lam_true"]))
+                if lam_med > 0 and np.isfinite(lam_med)
+                else float("nan")
+            )
+            rows.append({
+                "sweep": sweep_name,
+                "condition": cond["label"],
+                "m": cond["m"],
+                "n": cond["n"],
+                "lambda_true": cond["lam_true"],
+                "method": method,
+                "rmse_mean": rmse_mean,
+                "rmse_std": rmse_std,
+                "lambda_median": lam_med,
+                "log_lambda_ratio": log_ratio,
+                "time_median_s": t_med,
+                "n_seeds": N_SEEDS,
+                "max_iter": MAX_ITER,
+                "taylor_iter": TAYLOR_ITER,
+                "prox_init_iter": PROX_INIT_ITER,
+                "rank": RANK,
+                "gpu_device": str(GPU_DEVICE),
+            })
+    return rows
+
+
+def _markdown_table(rows: list[dict], sweep_name: str, metric: str, title: str) -> list[str]:
+    sweep_rows = [r for r in rows if r["sweep"] == sweep_name]
+    if not sweep_rows:
+        return []
+    conditions = []
+    for r in sweep_rows:
+        if r["condition"] not in conditions:
+            conditions.append(r["condition"])
+    methods = []
+    for r in sweep_rows:
+        if r["method"] not in methods:
+            methods.append(r["method"])
+    by_key = {(r["method"], r["condition"]): r for r in sweep_rows}
+
+    lines = [f"### {title}", ""]
+    header = "| Method | " + " | ".join(conditions) + " |"
+    sep = "|---|" + "|".join(["---:"] * len(conditions)) + "|"
+    lines.extend([header, sep])
+    for method in methods:
+        vals = []
+        for cond in conditions:
+            row = by_key.get((method, cond))
+            vals.append(_format_float(row[metric]) if row else "N/A")
+        lines.append("| " + method + " | " + " | ".join(vals) + " |")
+    lines.append("")
+    return lines
+
+
+def build_markdown_report(rows: list[dict]) -> str:
+    lines = [
+        "# Lambda Benchmark: Taylor GPU",
+        "",
+        f"- GPU: `{GPU_DEVICE}`",
+        f"- N_SEEDS: `{N_SEEDS}`",
+        f"- MAX_ITER: `{MAX_ITER}`",
+        f"- TAYLOR_ITER: `{TAYLOR_ITER}`",
+        f"- PROX_INIT_ITER: `{PROX_INIT_ITER}`",
+        f"- RANK: `{RANK}`",
+        f"- SIGMA_NOISE: `{SIGMA_NOISE}`",
+        f"- LAM_GRID_BATCHED: `{LAM_GRID_BATCHED}`",
+        f"- LAM_GRID_LR: `{LAM_GRID_LR}`",
+    ]
+    if METHOD_FILTER:
+        lines.append(f"- METHOD_FILTER: `{sorted(METHOD_FILTER)}`")
+    if CONDITION_LIMIT:
+        lines.append(f"- CONDITION_LIMIT: `{CONDITION_LIMIT}`")
+    lines.append("")
+
+    for sweep_name in ["snr", "dimension"]:
+        if any(r["sweep"] == sweep_name for r in rows):
+            title = "SNR Sweep" if sweep_name == "snr" else "Dimension Sweep"
+            lines.extend([f"## {title}", ""])
+            lines.extend(_markdown_table(rows, sweep_name, "rmse_mean", "RMSE Mean"))
+            lines.extend(_markdown_table(rows, sweep_name, "lambda_median", "Lambda Median"))
+            lines.extend(_markdown_table(rows, sweep_name, "log_lambda_ratio", "Log Lambda Ratio"))
+            lines.extend(_markdown_table(rows, sweep_name, "time_median_s", "Median Time (s)"))
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_outputs(rows: list[dict]) -> tuple[Path, Path]:
+    prefix = Path(OUTPUT_PREFIX)
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    csv_path = prefix.with_suffix(".csv")
+    md_path = prefix.with_suffix(".md")
+
+    fieldnames = [
+        "sweep", "condition", "m", "n", "lambda_true", "method",
+        "rmse_mean", "rmse_std", "lambda_median", "log_lambda_ratio",
+        "time_median_s", "n_seeds", "max_iter", "taylor_iter",
+        "prox_init_iter", "rank", "gpu_device",
+    ]
+    with csv_path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    md_path.write_text(build_markdown_report(rows))
+    return csv_path, md_path
+
+
 def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
     lam_true = cond["lam_true"]
     noise_thr = 2.0 * SIGMA_NOISE * cond["n"] ** 0.5
@@ -242,7 +429,7 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
     # Group by model family for readability
     families = [
         ("baseline", ["noisy_Y"]),
-        ("proximal", ["proximal_cv"]),
+        ("proximal", ["proximal_cv", "prox_taylor_elbo", "prox_taylor_loo", "prox_taylor_renyi"]),
         ("batched", ["batched_eb", "batched_elbo", "batched_loo", "batched_renyi"]),
         ("lowrank", ["lowrank_elbo", "lowrank_loo", "lowrank_renyi"]),
         ("iso",     ["iso_elbo",    "iso_loo",     "iso_renyi"]),
@@ -250,7 +437,7 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
                       "taylor_prox_elbo", "taylor_prox_loo", "taylor_prox_renyi"]),
     ]
 
-    hdr = f"  {'Method':22s}  {'RMSE mean±std':>18s}  {'λ median':>10s}  {'log(λ/λt)':>10s}"
+    hdr = f"  {'Method':22s}  {'RMSE mean±std':>18s}  {'λ median':>10s}  {'log(λ/λt)':>10s}  {'time med':>10s}"
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
 
@@ -266,7 +453,8 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
             lam_med  = _nanmedian_or_nan(d["lam"])
             log_r    = np.log(lam_med / lam_true) if (lam_med > 0 and np.isfinite(lam_med)) else float("nan")
             log_str  = f"{log_r:+.2f}" if np.isfinite(log_r) else "  N/A"
-            print(f"  {method:22s}  {rmse_m:.4f} ± {rmse_s:.4f}   {lam_med:>8.4f}     {log_str}")
+            t_med = _nanmedian_or_nan(d["t"])
+            print(f"  {method:22s}  {rmse_m:.4f} ± {rmse_s:.4f}   {lam_med:>8.4f}     {log_str}   {t_med:>8.2f}s")
 
 
 # ── Summary table across conditions ───────────────────────────────────────────
@@ -309,9 +497,25 @@ def print_summary(conditions: list[dict], all_accum: list[dict], title: str):
         print(row)
 
 
+    print(f"\n  time median (s) — rows=methods, cols=conditions")
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+    for method in method_names:
+        row = f"  {method:22s}"
+        for accum in all_accum:
+            if method in accum:
+                t_med = _nanmedian_or_nan(accum[method]["t"])
+                t_str = f"{t_med:.2f}" if np.isfinite(t_med) else "N/A"
+                row += f"  {t_str:>{col_w}s}"
+            else:
+                row += f"  {'N/A':>{col_w}s}"
+        print(row)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("Lambda estimation benchmark (NND data)")
+    print(f"  GPU_DEVICE={GPU_DEVICE}")
     print(f"  N_SEEDS={N_SEEDS}, MAX_ITER={MAX_ITER}, TAYLOR_ITER={TAYLOR_ITER}, "
           f"PROX_INIT_ITER={PROX_INIT_ITER}, RANK={RANK}, σ_noise={SIGMA_NOISE}")
     if METHOD_FILTER:
@@ -320,6 +524,7 @@ if __name__ == "__main__":
         print(f"  CONDITION_LIMIT={CONDITION_LIMIT}")
     print(f"  LAM_GRID_BATCHED = {LAM_GRID_BATCHED}")
     print(f"  LAM_GRID_LR      = {LAM_GRID_LR}")
+    print(f"  OUTPUT_PREFIX    = {OUTPUT_PREFIX}")
 
     # ── SNR sweep ──────────────────────────────────────────────────────────────
     print("\n" + "=" * 76)
@@ -352,3 +557,11 @@ if __name__ == "__main__":
         print_condition(cond, accum)
 
     print_summary(dim_conditions, dim_accums, "DIMENSION SWEEP — RMSE & λ selection summary")
+
+    rows = (
+        _aggregate_rows("snr", snr_conditions, snr_accums)
+        + _aggregate_rows("dimension", dim_conditions, dim_accums)
+    )
+    csv_path, md_path = write_outputs(rows)
+    print(f"\nSaved CSV results to {csv_path}")
+    print(f"Saved Markdown report to {md_path}")
