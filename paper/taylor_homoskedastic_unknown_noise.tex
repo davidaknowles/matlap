@@ -1,0 +1,133 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{geometry}
+\geometry{margin=1.15in}
+
+\title{Taylor-Proximal Approximation for Homoskedastic Matrix Noise}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Model}
+
+We narrow the Taylor-proximal approximation to an isotropic Gaussian
+likelihood with unknown variance.  Let
+$\Omega \subseteq \{1,\ldots,m\}\times\{1,\ldots,n\}$ be the observed entries,
+and let $g=\gamma^2$.  The model is
+\begin{align}
+    Y_{ij} \mid X_{ij}, g
+        &\sim \mathcal{N}(X_{ij}, g),
+        \qquad (i,j)\in\Omega, \\
+    X \mid g,\lambda
+        &\sim \mathrm{NND}\!\left(\frac{\lambda}{\sqrt{g}}\right), \\
+    g &\sim P_g .
+\end{align}
+Equivalently, if $E=Y-X$, then $E_{ij}\mid g\sim\mathcal{N}(0,g)$ on
+observed entries.  The scale factor $1/\sqrt{g}$ in the nuclear-norm prior is
+the homoskedastic analogue of the scale coupling used by the Lasso: larger
+noise weakens the effective penalty, while smaller noise strengthens it.  Since
+the nuclear-norm distribution has normalizing constant proportional to
+$\eta^{-mn}$ for parameter $\eta$, the prior density contributes
+\begin{equation}
+    \log p(X\mid g,\lambda)
+        = \mathrm{const}
+        + mn\log\!\left(\frac{\lambda}{\sqrt{g}}\right)
+        - \frac{\lambda}{\sqrt{g}}\|X\|_* .
+\end{equation}
+Thus the negative log density contains both
+$(\lambda/\sqrt{g})\|X\|_*$ and $(mn/2)\log g$.  This scaling is the piece that
+keeps the posterior mode from degenerating toward the smallest admissible
+variance.
+
+For the implemented version we use an inverse-gamma variance prior,
+\begin{equation}
+    p(g) \propto g^{-(a_0+1)}\exp(-b_0/g),
+\end{equation}
+although the objective below separates the prior contribution so that another
+one-dimensional prior on $g$ can be substituted.
+
+\section{Taylor Delta Objective}
+
+Let $\mu$ denote the variational posterior mean for $X$, and define
+\begin{equation}
+    B(\mu) = \left(\mu^\top \mu + \epsilon I\right)^{-1/2},
+    \qquad
+    D_i = \mathrm{diag}\!\left(\mathbf{1}\{(i,j)\in\Omega\}\right)_{j=1}^n .
+\end{equation}
+At fixed $(\mu,g)$ the row precision induced by the Taylor-delta approximation
+is
+\begin{equation}
+    A_i(\mu,g)
+        = \frac{1}{g}D_i
+        + \frac{\lambda}{\sqrt{g}}B(\mu).
+\end{equation}
+Dropping constants independent of $(\mu,g)$, the collapsed minimization
+objective is
+\begin{align}
+    \mathcal{J}(\mu,g)
+        &=
+        \frac{1}{2g}
+        \sum_{(i,j)\in\Omega}(y_{ij}-\mu_{ij})^2
+        + \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu,g)| \notag\\
+        &\quad
+        + \frac{\lambda}{\sqrt{g}}\|\mu\|_*
+        + \left(\frac{|\Omega|}{2} + \frac{mn}{2} + a_0 + 1\right)\log g
+        + \frac{b_0}{g}.
+        \label{eq:homoskedastic-objective}
+\end{align}
+The first $\log g$ term comes from the Gaussian likelihood, the second from the
+normalizing constant of the scaled nuclear-norm prior, and the final two terms
+from the inverse-gamma prior on $g$.
+
+\section{Optimization}
+
+The implementation optimizes $\mu$ and $g$ by alternating monotone steps.  For a
+fixed variance $g$, split \eqref{eq:homoskedastic-objective} into a smooth part
+$h_g(\mu)$ and the nonsmooth nuclear-norm term
+$(\lambda/\sqrt{g})\|\mu\|_*$.  A proximal-gradient step is
+\begin{align}
+    Z^{(t)} &= \mu^{(t)} - s_t\nabla h_g(\mu^{(t)}), \\
+    \mu^{(t+1)}
+        &= \operatorname{SVT}_{s_t\lambda/\sqrt{g}}\!\left(Z^{(t)}\right),
+\end{align}
+where $\operatorname{SVT}_\tau$ soft-thresholds the singular values by $\tau$.
+The step size $s_t$ is selected by backtracking until
+$\mathcal{J}(\mu^{(t+1)},g)\leq\mathcal{J}(\mu^{(t)},g)$.
+
+After the mean update, the scalar variance parameter is updated on the
+unconstrained scale $\ell=\log g$:
+\begin{equation}
+    \ell^{(t+1)}
+        = \ell^{(t)} - r_t
+        \frac{\partial}{\partial \ell}
+        \mathcal{J}\!\left(\mu^{(t+1)}, e^{\ell^{(t)}}\right),
+\end{equation}
+again with backtracking to enforce monotonic decrease of
+$\mathcal{J}(\mu,e^\ell)$.  Optimizing $\log g$ makes positivity automatic and
+keeps the variance update as a one-dimensional correction to the matrix
+proximal step.
+
+\section{Recovered Posterior Covariance}
+
+At the final iterate, the row covariance approximation is recovered using the
+same Taylor precision:
+\begin{equation}
+    \Sigma_i =
+    \left[
+        \frac{1}{\hat g}D_i
+        + \frac{\lambda}{\sqrt{\hat g}}B(\hat\mu)
+    \right]^{-1}.
+\end{equation}
+The returned effective penalty is
+\begin{equation}
+    \lambda_{\mathrm{eff}} = \frac{\lambda}{\sqrt{\hat g}},
+\end{equation}
+so downstream scoring code can reuse the same covariance and prior-variance
+interfaces as the known-variance Taylor approximation.
+
+\end{document}

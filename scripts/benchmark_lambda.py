@@ -29,6 +29,7 @@ from matlap import (
     matlap_grid_batched,
     matlap_grid_lowrank,
     matlap_grid_lowrank_isotropic,
+    mcmc_proximal_mala,
     proximal_gradient,
     sample_nnd,
     taylor_gradient,
@@ -55,6 +56,26 @@ N_SEEDS     = int(os.environ.get("MATLAP_BENCH_N_SEEDS", "5"))
 MAX_ITER    = int(os.environ.get("MATLAP_BENCH_MAX_ITER", "80"))
 TAYLOR_ITER = int(os.environ.get("MATLAP_BENCH_TAYLOR_ITER", str(MAX_ITER)))
 PROX_INIT_ITER = int(os.environ.get("MATLAP_BENCH_PROX_INIT_ITER", "120"))
+PROX_CV_WARMSTART = os.environ.get("MATLAP_BENCH_PROX_CV_WARMSTART", "0") == "1"
+PROX_FIXED_ITER = os.environ.get("MATLAP_BENCH_PROX_FIXED_ITER", "1") == "1"
+PROX_SVD_RANK = int(os.environ.get("MATLAP_BENCH_PROX_SVD_RANK", "0"))
+PROX_SVD_N_ITER = int(os.environ.get("MATLAP_BENCH_PROX_SVD_N_ITER", "2"))
+PROX_SVD_OVERSAMPLE = int(os.environ.get("MATLAP_BENCH_PROX_SVD_OVERSAMPLE", "10"))
+MCMC_WARMUP = int(os.environ.get("MATLAP_BENCH_MCMC_WARMUP", "300"))
+MCMC_SAMPLES = int(os.environ.get("MATLAP_BENCH_MCMC_SAMPLES", "2000"))
+MCMC_PROPOSAL_SVD_RANK = int(os.environ.get("MATLAP_BENCH_MCMC_PROPOSAL_SVD_RANK", "90"))
+MCMC_PROPOSAL_SVD_N_ITER = int(os.environ.get("MATLAP_BENCH_MCMC_PROPOSAL_SVD_N_ITER", "1"))
+MCMC_PROPOSAL_SVD_OVERSAMPLE = int(os.environ.get("MATLAP_BENCH_MCMC_PROPOSAL_SVD_OVERSAMPLE", "5"))
+MCMC_INIT_ITER = int(os.environ.get("MATLAP_BENCH_MCMC_INIT_ITER", "60"))
+MCMC_RM_STEP = float(os.environ.get("MATLAP_BENCH_MCMC_RM_STEP", "0.5"))
+MCMC_STEP_SIZE_INIT_ENV = os.environ.get("MATLAP_BENCH_MCMC_STEP_SIZE_INIT")
+MCMC_STEP_SIZE_INIT = (
+    None if MCMC_STEP_SIZE_INIT_ENV in {None, ""} else float(MCMC_STEP_SIZE_INIT_ENV)
+)
+MCMC_LAMBDA_LOG_STEP_ENV = os.environ.get("MATLAP_BENCH_MCMC_LAMBDA_LOG_STEP")
+MCMC_LAMBDA_LOG_STEP = (
+    None if MCMC_LAMBDA_LOG_STEP_ENV in {None, ""} else float(MCMC_LAMBDA_LOG_STEP_ENV)
+)
 METHOD_FILTER = {
     s.strip() for s in os.environ.get("MATLAP_BENCH_METHODS", "").split(",") if s.strip()
 }
@@ -118,6 +139,7 @@ def _make_methods():
         ("prox_taylor_elbo",       "prox_taylor_grid", {"score_fn": "elbo"}),
         ("prox_taylor_loo",        "prox_taylor_grid", {"score_fn": "loo"}),
         ("prox_taylor_renyi",      "prox_taylor_grid", {"score_fn": "renyi"}),
+        ("mcmc_mala_lambda",       "mcmc_mala_lambda", {}),
     ]
     if METHOD_FILTER:
         methods = [m for m in methods if m[0] in METHOD_FILTER or m[1] in METHOD_FILTER]
@@ -196,10 +218,61 @@ def run_proximal_cv(Y, S):
     """Entry-wise CV comparator for nuclear-norm proximal gradient."""
     from matlap.proximal import proximal_cv
 
+    svd_rank = None if PROX_SVD_RANK <= 0 else min(PROX_SVD_RANK, min(Y.shape))
     best_lam, res = proximal_cv(
-        Y, S, jnp.array(LAM_GRID_LR), n_folds=PROX_CV_FOLDS, max_iter=PROX_INIT_ITER, tol=1e-6
+        Y, S, jnp.array(LAM_GRID_LR), n_folds=PROX_CV_FOLDS,
+        max_iter=PROX_INIT_ITER, tol=1e-6, warm_start=PROX_CV_WARMSTART,
+        fixed_iter=PROX_FIXED_ITER, svd_rank=svd_rank,
+        svd_n_iter=PROX_SVD_N_ITER, svd_oversample=PROX_SVD_OVERSAMPLE,
     )
     return best_lam, res
+
+
+def run_mcmc_mala_lambda(Y, S, *, seed: int):
+    """MALA comparator with lambda sampled by the GSM Gibbs/MH update."""
+    proposal_rank = MCMC_PROPOSAL_SVD_RANK
+    if proposal_rank <= 0:
+        proposal_rank_arg = None
+    else:
+        # Keep the low-rank proposal path approximate.  If rank+oversample
+        # reaches min(m,n), mcmc.py intentionally falls back to exact SVD;
+        # exact-SVD MALA can be brittle here and should only be requested with
+        # MATLAP_BENCH_MCMC_PROPOSAL_SVD_RANK=0.
+        max_approx_rank = min(Y.shape) - MCMC_PROPOSAL_SVD_OVERSAMPLE - 1
+        proposal_rank_arg = min(proposal_rank, max_approx_rank)
+        if proposal_rank_arg <= 0:
+            proposal_rank_arg = None
+
+    obs_mask = jnp.isfinite(S)
+    X0 = jnp.where(obs_mask, Y, 0.0)
+    nuc_X0 = jnp.linalg.svd(X0, compute_uv=False).sum()
+    lambda_init = float((Y.shape[0] * Y.shape[1]) / jnp.maximum(nuc_X0, 1e-10))
+    x_init = None
+    if MCMC_INIT_ITER > 0:
+        svd_rank = None if PROX_SVD_RANK <= 0 else min(PROX_SVD_RANK, min(Y.shape))
+        init = proximal_gradient(
+            Y, S, lambda_init, max_iter=MCMC_INIT_ITER, tol=1e-5,
+            fixed_iter=PROX_FIXED_ITER, svd_rank=svd_rank,
+            svd_n_iter=PROX_SVD_N_ITER, svd_oversample=PROX_SVD_OVERSAMPLE,
+        )
+        x_init = init.X
+
+    return mcmc_proximal_mala(
+        Y,
+        S,
+        lambda_val=lambda_init,
+        x_init=x_init,
+        sample_lambda=True,
+        n_warmup=MCMC_WARMUP,
+        n_samples=MCMC_SAMPLES,
+        step_size_init=MCMC_STEP_SIZE_INIT,
+        rm_step=MCMC_RM_STEP,
+        proposal_svd_rank=proposal_rank_arg,
+        proposal_svd_n_iter=MCMC_PROPOSAL_SVD_N_ITER,
+        proposal_svd_oversample=MCMC_PROPOSAL_SVD_OVERSAMPLE,
+        lambda_log_step=MCMC_LAMBDA_LOG_STEP,
+        key=jax.random.PRNGKey(seed + 10_000),
+    )
 
 
 # ── Per-seed runner ────────────────────────────────────────────────────────────
@@ -216,10 +289,13 @@ def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
     results: dict[str, dict] = {}
 
     # baseline: noisy observation (no denoising)
-    results["noisy_Y"] = {"rmse": rmse(Y), "lam": float("nan"), "t": 0.0}
+    results["noisy_Y"] = {
+        "rmse": rmse(Y), "lam": float("nan"), "t": 0.0, "accept": float("nan")
+    }
 
     for name, kind, kw in _make_methods():
         t0 = time.time()
+        accept = float("nan")
         try:
             if kind == "batched":
                 res = matlap_batched(Y, S, max_iter=MAX_ITER)
@@ -246,12 +322,22 @@ def run_one_seed(seed: int, m: int, n: int, lam_true: float) -> dict[str, dict]:
             elif kind == "proximal_cv":
                 lam, res = run_proximal_cv(Y, S)
                 mu = res.X
+            elif kind == "mcmc_mala_lambda":
+                res = run_mcmc_mala_lambda(Y, S, seed=seed)
+                mu = res.mu
+                lam = float(res.lambda_bar)
+                accept = float(res.accept_rate)
             _block_until_ready(mu)
             elapsed = time.time() - t0
-            results[name] = {"rmse": rmse(mu), "lam": lam, "t": elapsed}
+            results[name] = {
+                "rmse": rmse(mu), "lam": lam, "t": elapsed, "accept": accept
+            }
         except Exception as e:
-            results[name] = {"rmse": float("nan"), "lam": float("nan"), "t": time.time() - t0,
-                             "error": str(e)}
+            results[name] = {
+                "rmse": float("nan"), "lam": float("nan"),
+                "t": time.time() - t0, "accept": float("nan"),
+                "error": str(e),
+            }
     return results
 
 
@@ -263,10 +349,11 @@ def run_condition(cond: dict) -> dict[str, dict[str, list]]:
         res = run_one_seed(seed, m, n, lam_true)
         for method, d in res.items():
             if method not in accum:
-                accum[method] = {"rmse": [], "lam": [], "t": []}
+                accum[method] = {"rmse": [], "lam": [], "t": [], "accept": []}
             accum[method]["rmse"].append(d["rmse"])
             accum[method]["lam"].append(d["lam"])
             accum[method]["t"].append(d["t"])
+            accum[method]["accept"].append(d.get("accept", float("nan")))
     return accum
 
 
@@ -308,6 +395,7 @@ def _aggregate_rows(sweep_name: str, conditions: list[dict], all_accum: list[dic
             rmse_std = _nanstd_or_nan(d["rmse"])
             lam_med = _nanmedian_or_nan(d["lam"])
             t_med = _nanmedian_or_nan(d["t"])
+            accept_mean = _nanmean_or_nan(d.get("accept", []))
             log_ratio = (
                 float(np.log(lam_med / cond["lam_true"]))
                 if lam_med > 0 and np.isfinite(lam_med)
@@ -325,11 +413,30 @@ def _aggregate_rows(sweep_name: str, conditions: list[dict], all_accum: list[dic
                 "lambda_median": lam_med,
                 "log_lambda_ratio": log_ratio,
                 "time_median_s": t_med,
+                "accept_mean": accept_mean,
                 "n_seeds": N_SEEDS,
                 "max_iter": MAX_ITER,
                 "taylor_iter": TAYLOR_ITER,
                 "prox_init_iter": PROX_INIT_ITER,
+                "prox_cv_warmstart": PROX_CV_WARMSTART,
+                "prox_fixed_iter": PROX_FIXED_ITER,
+                "prox_svd_rank": PROX_SVD_RANK,
+                "prox_svd_n_iter": PROX_SVD_N_ITER,
+                "prox_svd_oversample": PROX_SVD_OVERSAMPLE,
                 "rank": RANK,
+                "mcmc_warmup": MCMC_WARMUP,
+                "mcmc_samples": MCMC_SAMPLES,
+                "mcmc_proposal_svd_rank": MCMC_PROPOSAL_SVD_RANK,
+                "mcmc_proposal_svd_n_iter": MCMC_PROPOSAL_SVD_N_ITER,
+                "mcmc_proposal_svd_oversample": MCMC_PROPOSAL_SVD_OVERSAMPLE,
+                "mcmc_init_iter": MCMC_INIT_ITER,
+                "mcmc_rm_step": MCMC_RM_STEP,
+                "mcmc_step_size_init": (
+                    float("nan") if MCMC_STEP_SIZE_INIT is None else MCMC_STEP_SIZE_INIT
+                ),
+                "mcmc_lambda_log_step": (
+                    float("nan") if MCMC_LAMBDA_LOG_STEP is None else MCMC_LAMBDA_LOG_STEP
+                ),
                 "gpu_device": str(GPU_DEVICE),
             })
     return rows
@@ -372,7 +479,21 @@ def build_markdown_report(rows: list[dict]) -> str:
         f"- MAX_ITER: `{MAX_ITER}`",
         f"- TAYLOR_ITER: `{TAYLOR_ITER}`",
         f"- PROX_INIT_ITER: `{PROX_INIT_ITER}`",
+        f"- PROX_CV_WARMSTART: `{PROX_CV_WARMSTART}`",
+        f"- PROX_FIXED_ITER: `{PROX_FIXED_ITER}`",
+        f"- PROX_SVD_RANK: `{PROX_SVD_RANK}`",
+        f"- PROX_SVD_N_ITER: `{PROX_SVD_N_ITER}`",
+        f"- PROX_SVD_OVERSAMPLE: `{PROX_SVD_OVERSAMPLE}`",
         f"- RANK: `{RANK}`",
+        f"- MCMC_WARMUP: `{MCMC_WARMUP}`",
+        f"- MCMC_SAMPLES: `{MCMC_SAMPLES}`",
+        f"- MCMC_PROPOSAL_SVD_RANK: `{MCMC_PROPOSAL_SVD_RANK}`",
+        f"- MCMC_PROPOSAL_SVD_N_ITER: `{MCMC_PROPOSAL_SVD_N_ITER}`",
+        f"- MCMC_PROPOSAL_SVD_OVERSAMPLE: `{MCMC_PROPOSAL_SVD_OVERSAMPLE}`",
+        f"- MCMC_INIT_ITER: `{MCMC_INIT_ITER}`",
+        f"- MCMC_RM_STEP: `{MCMC_RM_STEP}`",
+        f"- MCMC_STEP_SIZE_INIT: `{MCMC_STEP_SIZE_INIT}`",
+        f"- MCMC_LAMBDA_LOG_STEP: `{MCMC_LAMBDA_LOG_STEP}`",
         f"- SIGMA_NOISE: `{SIGMA_NOISE}`",
         f"- LAM_GRID_BATCHED: `{LAM_GRID_BATCHED}`",
         f"- LAM_GRID_LR: `{LAM_GRID_LR}`",
@@ -404,8 +525,13 @@ def write_outputs(rows: list[dict]) -> tuple[Path, Path]:
     fieldnames = [
         "sweep", "condition", "m", "n", "lambda_true", "method",
         "rmse_mean", "rmse_std", "lambda_median", "log_lambda_ratio",
-        "time_median_s", "n_seeds", "max_iter", "taylor_iter",
-        "prox_init_iter", "rank", "gpu_device",
+        "time_median_s", "accept_mean", "n_seeds", "max_iter", "taylor_iter",
+        "prox_init_iter", "prox_cv_warmstart", "prox_fixed_iter",
+        "prox_svd_rank", "prox_svd_n_iter", "prox_svd_oversample",
+        "rank", "mcmc_warmup", "mcmc_samples",
+        "mcmc_proposal_svd_rank", "mcmc_proposal_svd_n_iter",
+        "mcmc_proposal_svd_oversample", "mcmc_init_iter", "mcmc_rm_step",
+        "mcmc_step_size_init", "mcmc_lambda_log_step", "gpu_device",
     ]
     with csv_path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -435,9 +561,13 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
         ("iso",     ["iso_elbo",    "iso_loo",     "iso_renyi"]),
         ("taylor",  ["taylor_elbo", "taylor_loo", "taylor_renyi",
                       "taylor_prox_elbo", "taylor_prox_loo", "taylor_prox_renyi"]),
+        ("mcmc",    ["mcmc_mala_lambda"]),
     ]
 
-    hdr = f"  {'Method':22s}  {'RMSE mean±std':>18s}  {'λ median':>10s}  {'log(λ/λt)':>10s}  {'time med':>10s}"
+    hdr = (
+        f"  {'Method':22s}  {'RMSE mean±std':>18s}  {'λ median':>10s}  "
+        f"{'log(λ/λt)':>10s}  {'time med':>10s}  {'accept':>8s}"
+    )
     print(hdr)
     print("  " + "-" * (len(hdr) - 2))
 
@@ -454,7 +584,13 @@ def print_condition(cond: dict, accum: dict[str, dict[str, list]]):
             log_r    = np.log(lam_med / lam_true) if (lam_med > 0 and np.isfinite(lam_med)) else float("nan")
             log_str  = f"{log_r:+.2f}" if np.isfinite(log_r) else "  N/A"
             t_med = _nanmedian_or_nan(d["t"])
-            print(f"  {method:22s}  {rmse_m:.4f} ± {rmse_s:.4f}   {lam_med:>8.4f}     {log_str}   {t_med:>8.2f}s")
+            acc_mean = _nanmean_or_nan(d.get("accept", []))
+            acc_str = f"{acc_mean:.3f}" if np.isfinite(acc_mean) else "N/A"
+            print(
+                f"  {method:22s}  {rmse_m:.4f} ± {rmse_s:.4f}   "
+                f"{lam_med:>8.4f}     {log_str}   {t_med:>8.2f}s  "
+                f"{acc_str:>8s}"
+            )
 
 
 # ── Summary table across conditions ───────────────────────────────────────────
@@ -517,7 +653,17 @@ if __name__ == "__main__":
     print("Lambda estimation benchmark (NND data)")
     print(f"  GPU_DEVICE={GPU_DEVICE}")
     print(f"  N_SEEDS={N_SEEDS}, MAX_ITER={MAX_ITER}, TAYLOR_ITER={TAYLOR_ITER}, "
-          f"PROX_INIT_ITER={PROX_INIT_ITER}, RANK={RANK}, σ_noise={SIGMA_NOISE}")
+          f"PROX_INIT_ITER={PROX_INIT_ITER}, PROX_CV_WARMSTART={PROX_CV_WARMSTART}, "
+          f"PROX_FIXED_ITER={PROX_FIXED_ITER}, PROX_SVD_RANK={PROX_SVD_RANK}, "
+          f"PROX_SVD_N_ITER={PROX_SVD_N_ITER}, PROX_SVD_OVERSAMPLE={PROX_SVD_OVERSAMPLE}, "
+          f"RANK={RANK}, σ_noise={SIGMA_NOISE}")
+    print(f"  MCMC_WARMUP={MCMC_WARMUP}, MCMC_SAMPLES={MCMC_SAMPLES}, "
+          f"MCMC_PROPOSAL_SVD_RANK={MCMC_PROPOSAL_SVD_RANK}, "
+          f"MCMC_PROPOSAL_SVD_N_ITER={MCMC_PROPOSAL_SVD_N_ITER}, "
+          f"MCMC_PROPOSAL_SVD_OVERSAMPLE={MCMC_PROPOSAL_SVD_OVERSAMPLE}, "
+          f"MCMC_INIT_ITER={MCMC_INIT_ITER}, MCMC_RM_STEP={MCMC_RM_STEP}, "
+          f"MCMC_STEP_SIZE_INIT={MCMC_STEP_SIZE_INIT}, "
+          f"MCMC_LAMBDA_LOG_STEP={MCMC_LAMBDA_LOG_STEP}")
     if METHOD_FILTER:
         print(f"  METHOD_FILTER={sorted(METHOD_FILTER)}")
     if CONDITION_LIMIT:

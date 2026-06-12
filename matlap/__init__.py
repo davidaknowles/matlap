@@ -15,7 +15,15 @@ from .core import (
     matlap_adaptive_batched,
 )
 from .proximal import ProximalResult, proximal_cv, proximal_gradient
-from .taylor import TaylorResult, taylor_cv, taylor_gradient
+from .prox_noise import (
+    ProximalNoiseGridResult, ProximalNoiseResult,
+    proximal_noise_eb, proximal_noise_lambda_grid,
+    taylor_diag_variance_at_prox,
+)
+from .taylor import (
+    TaylorHomoskedasticResult, TaylorResult, taylor_cv, taylor_gradient,
+    taylor_proximal_homoskedastic_unknown_noise,
+)
 from .vi import VIResult, fit_vi
 from .cv import cv_lambda, cv_score_single, make_cv_scorer
 from .scoring import (
@@ -58,9 +66,16 @@ __all__ = [
     "proximal_gradient",
     "proximal_cv",
     "ProximalResult",
+    "proximal_noise_eb",
+    "proximal_noise_lambda_grid",
+    "taylor_diag_variance_at_prox",
+    "ProximalNoiseResult",
+    "ProximalNoiseGridResult",
     # Taylor-delta proximal gradient
     "taylor_gradient",
+    "taylor_proximal_homoskedastic_unknown_noise",
     "taylor_cv",
+    "TaylorHomoskedasticResult",
     "TaylorResult",
     # Numpyro SVI
     "fit_vi",

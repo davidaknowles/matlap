@@ -15,3 +15,16 @@ paper/main.log
 paper/main.out
 paper/main.toc
 docs/build
+
+# LaTeX build intermediates
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc

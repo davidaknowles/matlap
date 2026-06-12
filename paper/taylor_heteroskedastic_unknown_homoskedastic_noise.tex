@@ -1,0 +1,325 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{geometry}
+\geometry{margin=1.15in}
+
+\title{Proximal NND Fitting with Known Heteroskedastic Errors and Unknown Homoskedastic Noise}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Model}
+
+Let $\Omega \subseteq \{1,\ldots,m\}\times\{1,\ldots,n\}$ denote the observed
+entries.  Suppose each observed entry has a known heteroskedastic standard error
+$s_{ij}$, but that these known errors may miss an additional homoskedastic
+variance component $g=\gamma^2$.  The likelihood is
+\begin{equation}
+    Y_{ij}\mid X_{ij}, g
+        \sim \mathcal{N}\!\left(X_{ij},\, s_{ij}^2 + g\right),
+        \qquad (i,j)\in\Omega .
+\end{equation}
+Missing entries are handled by omitting them from the likelihood.
+
+We use a nuclear-norm distribution prior on $X$.  For fitting, it is most stable
+to parameterize the grid directly in terms of the effective nuclear-norm rate
+\[
+    \eta = \lambda_{\mathrm{eff}},
+\]
+rather than a base rate $\lambda$ coupled to $g$.  Thus
+\begin{equation}
+    X\mid \eta
+        \sim \mathrm{NND}(\eta),
+        \qquad
+    p(X\mid \eta)
+        \propto
+        \eta^{mn}
+        \exp\!\left\{
+            -\eta\|X\|_*
+        \right\}.
+\end{equation}
+If a base homoskedastic parameterization is desired for reporting, it can be
+recovered after fitting as
+\begin{equation}
+    \lambda = \eta\sqrt{g}.
+\end{equation}
+Under the effective-rate parameterization, the NND normalizer contributes
+$-mn\log\eta$ to the negative log posterior but does not add an
+$(mn/2)\log g$ term.  This substantially reduces the feedback between the
+regularization path and the variance update.
+
+For $g$ we use an optional inverse-gamma prior,
+\begin{equation}
+    p(g) \propto g^{-(a_0+1)}\exp(-b_0/g),
+\end{equation}
+but the fitting strategy below only requires a one-dimensional prior penalty in
+$g$.
+
+\section{Taylor Approximation for the Variance Update}
+
+Let $\mu$ denote the current matrix estimate.  Define the row-wise effective
+variances
+\begin{equation}
+    v_{ij}(g) = s_{ij}^2 + g,
+    \qquad
+    p_{ij}(g) =
+    \begin{cases}
+        1/v_{ij}(g), & (i,j)\in\Omega,\\
+        0, & (i,j)\notin\Omega,
+    \end{cases}
+\end{equation}
+and the nuclear-norm curvature proxy
+\begin{equation}
+    B(\mu)
+        =
+        \left(\mu^\top \mu + \epsilon I\right)^{-1/2}.
+\end{equation}
+For fixed $(\mu,g,\eta)$, the Taylor row precision is
+\begin{equation}
+    A_i(\mu,g,\eta)
+        =
+        \mathrm{diag}\{p_{ij}(g)\}_{j=1}^n
+        + \eta B(\mu).
+\end{equation}
+The Taylor approximation therefore defines a full row covariance
+\begin{equation}
+    \Sigma_i(\mu,g,\eta)
+        =
+        A_i(\mu,g,\eta)^{-1}.
+\end{equation}
+This covariance is dense in general because $B(\mu)$ is dense.  For entrywise
+scores and lightweight diagnostics we usually retain only the marginal
+variances,
+\begin{equation}
+    \mathrm{diag}(\Sigma_i)
+        =
+        \mathrm{diag}\!\left(A_i(\mu,g,\eta)^{-1}\right).
+\end{equation}
+This diagonal extraction is a storage and scoring approximation, not an
+assumption that the row covariance itself is diagonal.
+
+Holding $\mu$ fixed, the collapsed Taylor objective for updating $g$ is,
+up to constants independent of $g$,
+\begin{align}
+    \mathcal{J}_g(g\mid \mu,\eta)
+        &=
+        \frac{1}{2}
+        \sum_{(i,j)\in\Omega}
+        \left[
+            \log\{s_{ij}^2+g\}
+            +
+            \frac{(y_{ij}-\mu_{ij})^2}{s_{ij}^2+g}
+        \right]
+        + \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu,g,\eta)|
+        \notag\\
+        &\quad
+        + \eta\|\mu\|_*
+        + (a_0+1)\log g
+        + \frac{b_0}{g}.
+        \label{eq:hetero-homo-g-objective}
+\end{align}
+The first line is the heteroskedastic Gaussian likelihood plus the Taylor
+log-determinant correction.  The second line is the fixed-rate NND prior and
+the optional inverse-gamma prior on $g$.  The $\eta\|\mu\|_*$ and
+$-mn\log\eta$ NND-normalizer terms are constant with respect to $g$, but they
+are retained when scoring a grid of $\eta$ values.
+
+
+\subsection{Stochastic Hutchinson--CG Update for $g$}
+
+The exact update of $g$ is still expensive because each evaluation of
+\eqref{eq:hetero-homo-g-objective} or its derivative requires the term
+\begin{equation}
+    \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu,g,\eta)|.
+\end{equation}
+Naively this costs one Cholesky factorization of an $n\times n$ matrix for each
+row.  Since $g$ is scalar, a practical alternative is to update $\ell=\log g$
+using a stochastic gradient.  The likelihood and variance-prior
+parts have closed-form derivatives.  Only the log-determinant derivative is
+estimated stochastically.
+
+For a fixed row $i$,
+\begin{equation}
+    \frac{\partial}{\partial \ell}
+    \log |A_i|
+        =
+        \mathrm{tr}\!\left[
+            A_i^{-1}
+            \frac{\partial A_i}{\partial \ell}
+        \right],
+        \qquad \ell=\log g .
+\end{equation}
+Using Hutchinson probes $z_{ir}$ with
+$\mathbb{E}(z_{ir}z_{ir}^{\top})=I$, this trace can be estimated by
+\begin{equation}
+    \mathrm{tr}\!\left[
+        A_i^{-1}
+        \frac{\partial A_i}{\partial \ell}
+    \right]
+    \approx
+    \frac{1}{R}\sum_{r=1}^R
+    z_{ir}^{\top}
+    A_i^{-1}
+    \frac{\partial A_i}{\partial \ell}
+    z_{ir}.
+\end{equation}
+For the effective-rate parameterization,
+\begin{align}
+    \frac{\partial p_{ij}}{\partial \ell}
+        &=
+        -\frac{g}{(s_{ij}^2+g)^2},
+        \qquad (i,j)\in\Omega, \\
+    \frac{\partial}{\partial \ell}
+    \eta
+        &=
+        0.
+\end{align}
+Therefore
+\begin{equation}
+    \frac{\partial A_i}{\partial \ell}
+        =
+        \mathrm{diag}\!\left\{
+            -\frac{g}{(s_{ij}^2+g)^2}
+            \mathbf{1}\{(i,j)\in\Omega\}
+        \right\}_{j=1}^n .
+\end{equation}
+
+Each Hutchinson term only requires solving a linear system
+\begin{equation}
+    A_i x_{ir}
+        =
+        \frac{\partial A_i}{\partial \ell}z_{ir}.
+\end{equation}
+These solves are performed with conjugate gradients using matrix-vector
+products
+\begin{equation}
+    x \mapsto
+    \mathrm{diag}\{p_{ij}(g)\}_{j=1}^n x
+    +
+    \eta B(\mu)x.
+\end{equation}
+The row/probe solves are independent and can be vectorized over both $i$ and
+$r$.  In implementation we keep the Hutchinson probes fixed during the fit and
+warm start each CG solve from the previous solution for the same row/probe.
+Fixed probes reduce stochastic jitter in the one-dimensional trajectory for
+$g$, while warm starts exploit the fact that successive $g$ values usually
+change slowly.
+
+The resulting stochastic update is
+\begin{equation}
+    \ell^{(t+1)}
+        =
+        \min\left\{
+            \ell_{\max},
+            \max\left[
+                \ell_{\min},
+                \ell^{(t)}
+                -
+                \rho_t \widehat{\nabla}_{\ell}
+    \mathcal{J}_g(e^{\ell^{(t)}}\mid \mu,\eta)
+            \right]
+        \right\},
+\end{equation}
+so the log-variance stays in the configured interval
+$[\ell_{\min},\ell_{\max}]$.  The gradient may also be clipped for stability.
+This update is no longer a monotone backtracking step because the
+log-determinant gradient is stochastic, but in benchmarks a small fixed
+learning rate with a handful of probes closely tracked the exact Cholesky
+update while substantially reducing wall-clock time.
+
+
+\section{Efficient Proximal Fit for the Matrix}
+
+The full Taylor objective would include the log-determinant term in the update
+for $\mu$, which is costly.  For efficiency, we instead update $\mu$ using the
+weighted nuclear-norm proximal problem
+\begin{equation}
+    \hat\mu(g,\eta)
+        =
+        \arg\min_X
+        \left\{
+            \frac{1}{2}
+            \sum_{(i,j)\in\Omega}
+            \frac{(y_{ij}-X_{ij})^2}{s_{ij}^2+g}
+            +
+            \eta\|X\|_*
+        \right\}.
+        \label{eq:hetero-homo-proximal-x}
+\end{equation}
+This subproblem is solved by FISTA or proximal gradient with singular-value
+thresholding.  The Taylor approximation is then used only to update $g$ and to
+score candidate $\eta$ values.  This is substantially cheaper than including
+the Taylor log-determinant in every gradient step for $X$.
+
+The alternating fixed-$\eta$ fitting strategy is:
+\begin{enumerate}
+    \item Initialize $g>0$.
+    \item With $g$ fixed, solve \eqref{eq:hetero-homo-proximal-x} for $\mu$.
+    \item With $\mu$ fixed, update $\ell=\log g$ by a one-dimensional
+          backtracking step on \eqref{eq:hetero-homo-g-objective}.
+    \item Repeat until $g$ and $\mu$ stabilize, or until a fixed outer-iteration
+          budget is reached.
+\end{enumerate}
+The effective penalty returned by the fit is
+\begin{equation}
+    \hat\lambda_{\mathrm{eff}}
+        =
+        \eta,
+\end{equation}
+which is the quantity directly comparable to a known-variance proximal
+nuclear-norm penalty.
+
+\section{Selecting $\eta=\lambda_{\mathrm{eff}}$}
+
+In practice, $\eta$ should be selected by a grid or other outer search.  For
+each candidate $\eta_k$, fit $(\hat\mu_k,\hat g_k)$ using the fixed-$\eta$
+alternating scheme above.  Candidate fits can then be scored by one of the
+following criteria.
+
+\paragraph{Entrywise cross-validation.}
+Hold out a subset of observed entries and choose the $\eta_k$ with best
+predictive error or predictive likelihood on the held-out entries.
+
+\paragraph{Taylor collapsed objective.}
+Choose the candidate with the smallest final approximate objective, including
+the fixed-rate NND normalizer and the Taylor log-determinant correction.
+
+\paragraph{Analytical LOO.}
+Use the marginal variances $\mathrm{diag}(\hat\Sigma_i)$ extracted from the full
+row covariances and evaluate the Gaussian leave-one-entry predictive density
+with effective variances $s_{ij}^2+\hat g_k$.
+
+The Taylor and LOO scores are model-internal criteria, while cross-validation
+is an external predictive criterion.  The internal criteria are much cheaper
+than nested CV when a fitted grid is already available, but their performance
+should be checked against CV in regimes of interest.
+
+\section{Warning on Joint Estimation of $g$ and a Base $\lambda$}
+
+Joint conditional-mode updates for $(g,\lambda)$ are not recommended for this
+approximation.  Under the scaled prior, the conditional mode for the base
+parameter $\lambda$ has the schematic form
+\begin{equation}
+    \hat\lambda
+        \approx
+        \frac{mn + a_\lambda - 1}
+             {\|\mu\|_*/\sqrt{g} + b_\lambda}.
+\end{equation}
+Thus increasing $g$ can increase the base $\lambda$, while a larger base
+$\lambda$ can in turn affect the next $g$ update through both
+$\lambda/\sqrt{g}$ and the prior normalizer.  Empirically, this feedback can
+make $\lambda$ and $g$ chase each other and run to boundary values.
+
+For this reason, the recommended workflow is to hold the effective penalty
+$\eta$ fixed within each fit, estimate $g$ conditional on that $\eta$, and
+select $\eta$ using a grid scored by CV, Taylor ELBO/objective, or LOO.  A base
+rate $\lambda=\eta\sqrt{\hat g}$ can be reported afterward if desired.  Joint
+base-lambda--variance updates should be treated only as a diagnostic or
+experimental option.
+
+\end{document}

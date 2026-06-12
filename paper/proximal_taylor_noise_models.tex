@@ -1,0 +1,611 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{microtype}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\geometry{a4paper, margin=1.2in}
+\usepackage[backend=biber,style=numeric,sorting=none,natbib=true]{biblatex}
+\addbibresource{references.bib}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{bm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=green!50!black,
+    urlcolor=blue!60!black
+}
+
+\title{Proximal--Taylor Fitting for Nuclear-Norm Matrix Models with Structured Noise}
+\author{David A Knowles}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from recommender systems to single cell genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization, independent component analysis, and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices. Non-convexity has practical consequences: different random initializations or minor data perturbations can result in qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution (up to sign flips) via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no principled mechanism for selecting the rank of the solution.
+
+Convex relaxations offer a principled escape from local minima. The nuclear norm, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing the data matrix \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. A practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme (i.e. how to choose heldout matrix elements).
+
+We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman--Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
+
+\section{Nuclear-Norm Distribution Prior}
+
+For $X\in\mathbb{R}^{m\times n}$, let
+\begin{equation}
+    \|X\|_*
+    =
+    \sum_{k=1}^{\min(m,n)} \sigma_k(X)
+    =
+    \operatorname{tr}\!\left\{(X^\top X)^{1/2}\right\},
+\end{equation}
+where $\sigma_k(X)$ are the singular values.  The nuclear-norm distribution
+(NND) with rate parameter $\lambda>0$ is
+\begin{equation}
+    p(X\mid\lambda)
+    =
+    \frac{1}{Z(\lambda)}
+    \exp\{-\lambda\|X\|_*\}.
+    \label{eq:nnd-density}
+\end{equation}
+It is the matrix analogue of the Laplace prior used for lasso sparsity:
+large $\lambda$ concentrates the prior near low-nuclear-norm matrices, and
+because the nuclear norm is the convex envelope of rank on the spectral-norm
+unit ball, this favors low-rank structure without introducing a factorization.
+
+The NND is a proper distribution.  If $d=mn$ and $C_{m,n}$ denotes the volume of
+the unit nuclear-norm ball, then
+\begin{equation}
+    Z(\lambda)
+    =
+    \int \exp\{-\lambda\|X\|_*\}\,dX
+    =
+    \frac{d!\,C_{m,n}}{\lambda^d}.
+    \label{eq:nnd-normalizer}
+\end{equation}
+Thus
+\begin{equation}
+    \log p(X\mid\lambda)
+    =
+    \mathrm{const}
+    +
+    mn\log\lambda
+    -
+    \lambda\|X\|_*.
+    \label{eq:nnd-log-density}
+\end{equation}
+This normalizing constant is what turns the regularization strength into an
+estimable empirical-Bayes parameter.  The distribution and its singular-value
+construction are characterized in \citet{Segert2025-rk}.  With a Gamma prior
+$p(\lambda)\propto\lambda^{a_0-1}\exp(-b_0\lambda)$, the $\lambda$ terms in the
+log posterior include $(mn+a_0-1)\log\lambda-b_0\lambda$ in addition to the
+expected nuclear-norm penalty.
+
+When the likelihood contains an unknown homoskedastic variance $g=\gamma^2$,
+there are two useful parameterizations.  The base-rate parameterization uses
+\begin{equation}
+    X\mid g,\lambda
+    \sim
+    \mathrm{NND}\!\left(\frac{\lambda}{\sqrt{g}}\right).
+    \label{eq:scaled-nnd}
+\end{equation}
+Then
+\begin{equation}
+    \log p(X\mid g,\lambda)
+    =
+    \mathrm{const}
+    +
+    mn\log\!\left(\frac{\lambda}{\sqrt{g}}\right)
+    -
+    \frac{\lambda}{\sqrt{g}}\|X\|_*.
+    \label{eq:scaled-nnd-log-density}
+\end{equation}
+The effective proximal penalty is $\lambda/\sqrt{g}$, while the normalizer
+contributes $(mn/2)\log g$ to the negative log density.  This term is essential
+when estimating $g$: it keeps the variance scale and the matrix prior scale tied
+together rather than allowing the fitted matrix to absorb noise without paying
+the correct prior-normalization cost.
+
+For fitting, however, it is often cleaner to grid directly over the effective
+rate
+\begin{equation}
+    \eta = \lambda_{\mathrm{eff}},
+    \qquad
+    X\mid\eta\sim\mathrm{NND}(\eta).
+\end{equation}
+Then the NND normalizer contributes $-mn\log\eta$ to the negative log posterior
+but does not introduce an additional $g$ term.  The base rate can be recovered
+after fitting as $\lambda=\eta\sqrt{g}$ if that parameterization is desired for
+reporting.
+
+\section{CAVI and the Proximal--Taylor Alternative}
+
+The CAVI construction is a natural Bayesian route for the NND.  It introduces an auxiliary positive definite matrix $Q$ using
+\begin{equation}
+    \|X\|_*
+    =
+    \min_{Q\succ 0}
+    \frac{1}{2}\operatorname{tr}(XQ^{-1}X^\top)
+    +
+    \frac{1}{2}\operatorname{tr}(Q),
+\end{equation}
+which makes the row-wise posterior Gaussian conditional on $(Q,\lambda)$.  Each coordinate update has a well-defined optimum: update the row posterior, update $Q$ from the posterior second moment, and optionally update $\lambda$ from its conditional empirical-Bayes mode.
+
+This is useful, but it is not a convex optimization problem in all variables jointly.  The posterior over $X$ at fixed $(Q,\lambda)$ is log-concave, and the nuclear-norm penalized least-squares problem is convex in $X$, but the full variational objective over $(q(X),Q,\lambda)$ is non-convex.  Low-rank CAVI variants add another restriction through an initialized subspace, which can make the result sensitive to the rank and initialization when signal lies outside that subspace.
+
+For scalable fitting we therefore separate two jobs:
+\begin{enumerate}
+    \item Estimate the matrix mean by a convex proximal nuclear-norm problem.
+    \item Use a Taylor approximation around that fitted matrix to estimate posterior variances, score $\lambda_{\mathrm{eff}}$, and update any scalar unknown noise parameter.
+\end{enumerate}
+This keeps the expensive Taylor log-determinant out of the matrix update.  The matrix step is solved by singular-value thresholding, while the Taylor correction is used only where posterior uncertainty matters.
+
+\section{Common Proximal Matrix Step}
+
+Let $\Omega$ denote observed entries.  For a known effective variance
+$v_{ij}>0$, define the weighted proximal estimator
+\begin{equation}
+    \hat X(\lambda_{\mathrm{eff}})
+    =
+    \arg\min_X
+    \left\{
+        \frac{1}{2}
+        \sum_{(i,j)\in\Omega}
+        \frac{(Y_{ij}-X_{ij})^2}{v_{ij}}
+        +
+        \lambda_{\mathrm{eff}}\|X\|_*
+    \right\}.
+    \label{eq:common-prox}
+\end{equation}
+This problem is convex for fixed weights and fixed
+$\lambda_{\mathrm{eff}}$.  It is solved by proximal gradient or FISTA:
+\begin{align}
+    Z^{(t)}
+        &=
+        X^{(t)} - \eta_t \nabla
+        \left[
+            \frac{1}{2}
+            \sum_{(i,j)\in\Omega}
+            \frac{(Y_{ij}-X_{ij})^2}{v_{ij}}
+        \right]_{X=X^{(t)}},\\
+    X^{(t+1)}
+        &=
+        \operatorname{SVT}_{\eta_t\lambda_{\mathrm{eff}}}
+        \!\left(Z^{(t)}\right),
+\end{align}
+where $\operatorname{SVT}_{\tau}$ subtracts $\tau$ from each singular value and truncates at zero.  Along a grid of candidate $\lambda$ values the path is warm-started from high to low regularization, following the same principle used by lasso and \texttt{glmnet}.
+
+\section{Where the Taylor Approximation Comes From}
+
+The exact variational objective would require the expectation
+$\mathbb{E}_q\|X\|_*$ under an approximate posterior for the latent matrix.  We
+use a row-factorized Gaussian approximation
+\begin{equation}
+    q(X)
+    =
+    \prod_{i=1}^m
+    \mathcal{N}(x_i\mid \mu_i,\Sigma_i),
+\end{equation}
+where $x_i$ is row $i$ of $X$.  For fixed effective variances $v_{ij}$ and
+effective NND rate $\lambda_{\mathrm{eff}}$, the relevant part of the ELBO is
+\begin{align}
+    \mathcal{L}(\mu,\Sigma)
+    &=
+    -\frac{1}{2}
+    \sum_{i=1}^m
+    \left[
+        (y_i-\mu_i)^\top P_i (y_i-\mu_i)
+        +
+        \operatorname{tr}(P_i\Sigma_i)
+    \right]
+    +
+    \frac{1}{2}\sum_{i=1}^m \log|\Sigma_i| \notag\\
+    &\quad
+    -
+    \lambda_{\mathrm{eff}}\mathbb{E}_q\|X\|_*
+    +
+    \log Z(\lambda_{\mathrm{eff}})^{-1}
+    +
+    \mathrm{const},
+    \label{eq:pre-taylor-elbo}
+\end{align}
+where
+\begin{equation}
+    P_i
+    =
+    \operatorname{diag}
+    \left\{
+        \frac{1}{v_{ij}}:(i,j)\in\Omega
+    \right\}
+\end{equation}
+and missing entries have precision zero.
+
+The difficulty is $\mathbb{E}_q\|X\|_*$.  Write
+$X=\mu+E$ with $\mathbb{E}_q(E)=0$ and
+$\mathbb{E}_q(E^\top E)=\sum_i\Sigma_i$.  Using the trace identity
+$\|X\|_*=\operatorname{tr}\{(X^\top X)^{1/2}\}$, define
+\begin{equation}
+    f(A)=\operatorname{tr}(A^{1/2}),
+    \qquad
+    A=X^\top X.
+\end{equation}
+Then
+\begin{equation}
+    X^\top X
+    =
+    \mu^\top\mu
+    +
+    \mu^\top E
+    +
+    E^\top\mu
+    +
+    E^\top E.
+\end{equation}
+Expanding $f(X^\top X)$ around $A_0=\mu^\top\mu$ and taking expectations, the
+linear terms in $\mu^\top E+E^\top\mu$ vanish.  Keeping the dominant covariance
+term gives the matrix-delta approximation
+\begin{equation}
+    \mathbb{E}_q\|X\|_*
+    \approx
+    \|\mu\|_*
+    +
+    \frac{1}{2}
+    \operatorname{tr}
+    \left[
+        (\mu^\top\mu+\epsilon I)^{-1/2}
+        \sum_{i=1}^m \Sigma_i
+    \right].
+    \label{eq:taylor-expected-nuc}
+\end{equation}
+The small ridge $\epsilon I$ stabilizes the inverse square root when $\mu$ is
+rank deficient.
+
+Substituting \eqref{eq:taylor-expected-nuc} into
+\eqref{eq:pre-taylor-elbo}, and defining
+\begin{equation}
+    B(\mu)
+    =
+    (\mu^\top\mu+\epsilon I)^{-1/2},
+\end{equation}
+the terms involving a single row covariance become
+\begin{equation}
+    \mathcal{L}_i(\Sigma_i)
+    =
+    \frac{1}{2}\log|\Sigma_i|
+    -
+    \frac{1}{2}
+    \operatorname{tr}
+    \left[
+        \{P_i+\lambda_{\mathrm{eff}}B(\mu)\}\Sigma_i
+    \right]
+    +
+    \mathrm{const}.
+\end{equation}
+Taking a matrix derivative and setting it to zero gives
+\begin{equation}
+    \Sigma_i^{-1}
+    =
+    P_i+\lambda_{\mathrm{eff}}B(\mu).
+\end{equation}
+Thus the Taylor row precision and covariance are
+\begin{align}
+    A_i(\mu)
+        &=
+        P_i+\lambda_{\mathrm{eff}}B(\mu), \label{eq:taylor-row-precision}\\
+    \Sigma_i(\mu)
+        &=
+        A_i(\mu)^{-1}.
+\end{align}
+The covariance is dense in general; retaining only $\operatorname{diag}(\Sigma_i)$
+is a storage and scoring approximation, not a diagonal-covariance assumption.
+
+Because $\Sigma_i$ has a closed-form optimum given $\mu$, it can be substituted
+back into the Taylor ELBO.  The trace term collapses to a constant
+$-\frac{1}{2}\operatorname{tr}(I_n)$ per row, leaving the collapsed minimization
+score
+\begin{align}
+    \mathcal{J}_{\mathrm{Taylor}}(\mu)
+    &=
+    \frac{1}{2}
+    \sum_{(i,j)\in\Omega}
+    \frac{(Y_{ij}-\mu_{ij})^2}{v_{ij}}
+    +
+    \lambda_{\mathrm{eff}}\|\mu\|_*
+    +
+    \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu)| \notag\\
+    &\quad
+    -
+    mn\log\lambda_{\mathrm{eff}}
+    +
+    \text{noise-normalization and noise-prior terms}.
+    \label{eq:taylor-score}
+\end{align}
+Here we used $\log Z(\lambda_{\mathrm{eff}})=-mn\log\lambda_{\mathrm{eff}}+
+\mathrm{const}$, so $-\log Z(\lambda_{\mathrm{eff}})$ contributes
+$mn\log\lambda_{\mathrm{eff}}$ to the ELBO and
+$-mn\log\lambda_{\mathrm{eff}}$ to the minimization score.
+
+In the full Taylor method, $\mu$ itself would be updated using
+\eqref{eq:taylor-score}.  In the scalable proximal--Taylor strategy, we instead
+use the convex proximal solution $\hat X$ from \eqref{eq:common-prox} and
+evaluate \eqref{eq:taylor-row-precision}--\eqref{eq:taylor-score} at
+$\mu=\hat X$.  This preserves a convex and efficient matrix update while still
+using a posterior-uncertainty correction for scoring $\lambda$ and updating
+scalar noise parameters.
+
+The same covariance gives an analytical leave-one-entry-out (LOO) score.  If
+$r_{ij}=\Sigma_i[j,j]/v_{ij}$, then for observed entries
+\begin{equation}
+    \log p^{\mathrm{LOO}}(Y_{ij})
+    =
+    -\frac{(Y_{ij}-\hat X_{ij})^2}{2v_{ij}(1-r_{ij})}
+    -\frac{1}{2}\log(2\pi v_{ij})
+    +\frac{1}{2}\log(1-r_{ij}).
+\end{equation}
+The LOO score is the sum of these terms over $\Omega$.
+
+\section{Noise Models}
+
+\subsection{Homoskedastic Noise}
+
+In the homoskedastic model,
+\begin{equation}
+    Y_{ij}\mid X_{ij},g
+    \sim
+    \mathcal{N}(X_{ij},g),
+    \qquad (i,j)\in\Omega,
+\end{equation}
+where $g=\gamma^2$ is either known or estimated.  If $g$ is known, then
+$v_{ij}=g$ for all observed entries and
+\begin{equation}
+    \lambda_{\mathrm{eff}}=\frac{\lambda}{\sqrt{g}}
+\end{equation}
+under the scaled NND prior
+\begin{equation}
+    X\mid g,\lambda
+    \sim
+    \mathrm{NND}\!\left(\frac{\lambda}{\sqrt{g}}\right).
+\end{equation}
+The scaling is important because the NND density contributes
+\begin{equation}
+    mn\log\!\left(\frac{\lambda}{\sqrt{g}}\right)
+    -
+    \frac{\lambda}{\sqrt{g}}\|X\|_*.
+\end{equation}
+Thus the negative log density includes both
+$(\lambda/\sqrt{g})\|X\|_*$ and $(mn/2)\log g$.
+
+When $g$ is learned, we recommend gridding over
+$\eta=\lambda_{\mathrm{eff}}$ directly.  The matrix update uses
+\eqref{eq:common-prox} with $v_{ij}=g$ and
+$\lambda_{\mathrm{eff}}=\eta$.  Holding $\hat X$ fixed, update
+$\ell=\log g$ by minimizing the one-dimensional Taylor objective
+\begin{align}
+    \mathcal{J}_{g}(g\mid \hat X,\eta)
+    &=
+    \frac{1}{2g}
+    \sum_{(i,j)\in\Omega}(Y_{ij}-\hat X_{ij})^2
+    +
+    \frac{1}{2}\sum_i \log |A_i(g)|
+    +
+    \eta\|\hat X\|_* \notag\\
+    &\quad
+    +
+    \left(
+        \frac{|\Omega|}{2}
+        +
+        a_0+1
+    \right)\log g
+    +
+    \frac{b_0}{g},
+\end{align}
+where $p(g)\propto g^{-(a_0+1)}\exp(-b_0/g)$ if an inverse-gamma prior is used.
+
+\subsection{Known Heteroskedastic Noise}
+
+In the known heteroskedastic model, every observed entry has a known standard
+error $s_{ij}$:
+\begin{equation}
+    Y_{ij}\mid X_{ij}
+    \sim
+    \mathcal{N}(X_{ij},s_{ij}^2),
+    \qquad (i,j)\in\Omega.
+\end{equation}
+Here $v_{ij}=s_{ij}^2$ and the proximal estimator is
+\begin{equation}
+    \hat X(\lambda)
+    =
+    \arg\min_X
+    \left\{
+        \frac{1}{2}
+        \sum_{(i,j)\in\Omega}
+        \frac{(Y_{ij}-X_{ij})^2}{s_{ij}^2}
+        +
+        \lambda\|X\|_*
+    \right\}.
+\end{equation}
+The Taylor row precision is
+\begin{equation}
+    A_i
+    =
+    \operatorname{diag}\{s_{ij}^{-2}:(i,j)\in\Omega\}
+    +
+    \lambda B(\hat X).
+\end{equation}
+This gives $\operatorname{diag}(\Sigma_i)$ for LOO and the log-determinant term
+for Taylor ELBO scoring.  No scalar noise update is required.
+
+\subsection{Known Heteroskedastic Noise plus Unknown Homoskedastic Noise}
+
+The combined model allows known entrywise standard errors and an additional
+global variance component:
+\begin{equation}
+    Y_{ij}\mid X_{ij},g
+    \sim
+    \mathcal{N}(X_{ij},s_{ij}^2+g),
+    \qquad (i,j)\in\Omega.
+\end{equation}
+The recommended fitting parameterization uses
+\begin{equation}
+    v_{ij}(g)=s_{ij}^2+g,
+    \qquad
+    \lambda_{\mathrm{eff}}=\eta,
+\end{equation}
+so
+\begin{equation}
+    \hat X(g,\eta)
+    =
+    \arg\min_X
+    \left\{
+        \frac{1}{2}
+        \sum_{(i,j)\in\Omega}
+        \frac{(Y_{ij}-X_{ij})^2}{s_{ij}^2+g}
+        +
+        \eta\|X\|_*
+    \right\}.
+    \label{eq:combo-prox}
+\end{equation}
+Holding $\hat X$ fixed, the Taylor row precision is
+\begin{equation}
+    A_i(g,\eta)
+    =
+    \operatorname{diag}
+    \left\{
+        \frac{1}{s_{ij}^2+g}:(i,j)\in\Omega
+    \right\}
+    +
+    \eta B(\hat X),
+\end{equation}
+and the one-dimensional objective for $g$ is
+\begin{align}
+    \mathcal{J}_g(g\mid \hat X,\eta)
+    &=
+    \frac{1}{2}
+    \sum_{(i,j)\in\Omega}
+    \left[
+        \log(s_{ij}^2+g)
+        +
+        \frac{(Y_{ij}-\hat X_{ij})^2}{s_{ij}^2+g}
+    \right]
+    +
+    \frac{1}{2}\sum_i\log|A_i(g,\eta)| \notag\\
+    &\quad
+    +
+    \eta\|\hat X\|_*
+    +
+    (a_0+1)\log g
+    +
+    \frac{b_0}{g}.
+    \label{eq:combo-g-objective}
+\end{align}
+The fixed-$\eta$ fit alternates between \eqref{eq:combo-prox} and a
+one-dimensional update of $\ell=\log g$.
+
+\section{Hutchinson--CG Approximation for Noise Updates}
+
+The bottleneck in the unknown-noise models is the log-determinant term
+$\sum_i\log|A_i(g,\eta)|$.  Exact evaluation costs one dense Cholesky factorization
+per row.  For scalar noise updates we only need the derivative with respect to
+$\ell=\log g$:
+\begin{equation}
+    \frac{\partial}{\partial \ell}
+    \log |A_i|
+    =
+    \operatorname{tr}
+    \left(
+        A_i^{-1}
+        \frac{\partial A_i}{\partial \ell}
+    \right).
+\end{equation}
+With fixed Hutchinson probes $z_{ir}$ satisfying
+$\mathbb{E}(z_{ir}z_{ir}^\top)=I$, estimate
+\begin{equation}
+    \operatorname{tr}
+    \left(
+        A_i^{-1}
+        \frac{\partial A_i}{\partial \ell}
+    \right)
+    \approx
+    \frac{1}{R}
+    \sum_{r=1}^R
+    z_{ir}^\top
+    A_i^{-1}
+    \frac{\partial A_i}{\partial \ell}
+    z_{ir}.
+\end{equation}
+Each term requires solving
+\begin{equation}
+    A_i x_{ir}
+    =
+    \frac{\partial A_i}{\partial \ell}z_{ir},
+\end{equation}
+which can be done by conjugate gradients using only matrix-vector products
+\begin{equation}
+    x
+    \mapsto
+    \operatorname{diag}\{1/v_{ij}(g)\}x
+    +
+    \eta B(\hat X)x.
+\end{equation}
+The solves are independent across rows and probes and can be vectorized.  The
+implementation keeps the same probes fixed across outer iterations and warm
+starts each CG solve from the previous solution for the same row/probe, reducing
+stochastic jitter in the scalar trajectory for $g$.
+
+The resulting update is
+\begin{equation}
+    \ell^{(t+1)}
+    =
+    \min\left\{
+        \ell_{\max},
+        \max\left[
+            \ell_{\min},
+            \ell^{(t)}
+            -
+            \rho_t
+            \widehat{\nabla}_{\ell}
+            \mathcal{J}_{g}(e^{\ell^{(t)}}\mid \hat X,\eta)
+        \right]
+    \right\}.
+\end{equation}
+The gradient may be clipped for stability.  This update is stochastic rather
+than monotone, but it avoids repeated exact log-determinant evaluations.
+
+\section{Selecting \texorpdfstring{$\eta=\lambda_{\mathrm{eff}}$}{eta = lambda_eff}}
+
+The recommended workflow is a fixed effective-penalty grid rather than joint
+conditional mode updates for a base $(\lambda,g)$.  For each candidate
+$\eta_k$:
+\begin{enumerate}
+    \item Fit $\hat X_k$ by the proximal matrix update, warm-starting along the
+          grid from high to low $\eta$.
+    \item If a scalar noise component is present, alternate proximal $X$ updates
+          with exact or Hutchinson--CG updates for $g_k$.
+    \item Recover the Taylor diagonal variances
+          $\operatorname{diag}(\hat\Sigma_{i,k})$ and, when needed, the
+          Taylor log-determinant score.
+    \item Score each candidate by Taylor ELBO/objective or analytical LOO.
+\end{enumerate}
+
+Entrywise CV remains a useful external comparator, but it optimizes prediction
+of noisy held-out entries.  In regimes where the goal is recovery of the latent
+matrix $X$, CV can prefer excessive shrinkage because a lower-variance estimate
+can predict noisy held-out entries better.  Taylor ELBO and Taylor LOO instead
+use the fitted model's posterior uncertainty and can be closer to the
+oracle-$X$ choice of $\eta$.
+
+\paragraph{Caution on joint base-\texorpdfstring{$\lambda$}{lambda} and noise estimation.}
+Joint conditional-mode updates of a base $\lambda$ and $g$ are unstable under
+the scaled prior.  The base parameter and the variance can chase each other
+through $\lambda/\sqrt{g}$ and the NND normalizer.  The safer procedure is to
+hold $\eta=\lambda_{\mathrm{eff}}$ fixed within each fit, estimate any scalar
+noise parameter conditional on that $\eta$, and choose $\eta$ by grid scoring.
+
+\end{document}

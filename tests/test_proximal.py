@@ -87,6 +87,144 @@ def test_proximal_gradient_zero_lambda_recovers_obs():
     assert residual < 0.1, f"Max residual={residual:.4f}"
 
 
+def test_proximal_gradient_accepts_warm_start():
+    """Warm-started proximal solves should preserve shape and finite values."""
+    Y, S, _ = _low_rank_data()
+    high_lam = proximal_gradient(Y, S, 5.0, max_iter=20)
+    warm = proximal_gradient(Y, S, 1.0, max_iter=20, init_X=high_lam.X)
+    assert warm.X.shape == Y.shape
+    assert jnp.all(jnp.isfinite(warm.X))
+
+
+def test_proximal_gradient_randomized_svd_path():
+    """Randomized SVT should run and return a reusable right basis."""
+    Y, S, _ = _low_rank_data()
+    r = proximal_gradient(
+        Y, S, 1.0, max_iter=10, svd_rank=5, svd_n_iter=1, svd_oversample=2
+    )
+    assert r.X.shape == Y.shape
+    assert r.svd_basis is not None
+    assert r.svd_basis.shape[0] == Y.shape[1]
+    assert jnp.all(jnp.isfinite(r.X))
+
+
+def test_proximal_gradient_randomized_svd_warmstart_basis():
+    """Randomized SVT should accept a basis from a previous solve."""
+    Y, S, _ = _low_rank_data()
+    r1 = proximal_gradient(
+        Y, S, 3.0, max_iter=8, svd_rank=5, svd_n_iter=1, svd_oversample=2
+    )
+    r2 = proximal_gradient(
+        Y,
+        S,
+        1.0,
+        max_iter=8,
+        init_X=r1.X,
+        svd_rank=5,
+        svd_n_iter=1,
+        svd_oversample=2,
+        init_svd_basis=r1.svd_basis,
+    )
+    assert r2.svd_basis is not None
+    assert r2.svd_basis.shape[0] == Y.shape[1]
+    assert jnp.all(jnp.isfinite(r2.X))
+
+
+def test_proximal_gradient_randomized_svd_fixed_iter():
+    """The scanned fixed-iteration path should support randomized SVT."""
+    Y, S, _ = _low_rank_data()
+    r = proximal_gradient(
+        Y,
+        S,
+        1.0,
+        max_iter=6,
+        fixed_iter=True,
+        svd_rank=5,
+        svd_n_iter=1,
+        svd_oversample=2,
+    )
+    assert r.n_iter == 6
+    assert r.svd_basis is not None
+    assert jnp.all(jnp.isfinite(r.X))
+
+
+def test_proximal_gradient_adaptive_svd_rank_grows():
+    """Adaptive rSVD should increase rank when all captured SVs survive."""
+    Y, S, _ = _low_rank_data()
+    r = proximal_gradient(
+        Y,
+        S,
+        0.01,
+        max_iter=4,
+        svd_rank=2,
+        svd_rank_adaptive=True,
+        svd_rank_min=2,
+        svd_rank_max=8,
+        svd_rank_step=2,
+        svd_n_iter=1,
+        svd_oversample=2,
+    )
+    assert r.svd_rank_trace
+    assert max(r.svd_rank_trace) > 2
+    assert r.svd_rank is not None and r.svd_rank <= 8
+
+
+def test_proximal_gradient_adaptive_svd_rank_shrinks():
+    """Adaptive rSVD should decrease rank when many captured SVs are removed."""
+    Y, S, _ = _low_rank_data()
+    r = proximal_gradient(
+        Y,
+        S,
+        100.0,
+        max_iter=4,
+        svd_rank=10,
+        svd_rank_adaptive=True,
+        svd_rank_min=2,
+        svd_rank_max=10,
+        svd_rank_step=2,
+        svd_rank_shrink_fraction=0.5,
+        svd_n_iter=1,
+        svd_oversample=2,
+    )
+    assert r.svd_rank_trace
+    assert min(r.svd_rank_trace) < 10
+    assert r.svd_rank is not None and r.svd_rank >= 2
+
+
+def test_proximal_gradient_adaptive_svd_rejects_fixed_iter():
+    Y, S, _ = _low_rank_data()
+    with pytest.raises(ValueError, match="fixed_iter"):
+        proximal_gradient(
+            Y,
+            S,
+            1.0,
+            fixed_iter=True,
+            svd_rank=5,
+            svd_rank_adaptive=True,
+        )
+
+
+def test_proximal_gradient_monotone_fista_nonincreasing_objective():
+    """Monotone FISTA should reject objective-increasing accelerated steps."""
+    Y, S, _ = _low_rank_data()
+    r = proximal_gradient(
+        Y,
+        S,
+        1.0,
+        max_iter=50,
+        solver="monotone_fista",
+        obj_tol=1e-8,
+    )
+    diffs = np.diff(np.asarray(r.loss_trace))
+    assert np.all(diffs <= 1e-4)
+
+
+def test_proximal_gradient_rejects_unknown_solver():
+    Y, S, _ = _low_rank_data()
+    with pytest.raises(ValueError, match="solver"):
+        proximal_gradient(Y, S, 1.0, solver="not-a-solver")
+
+
 # ---------------------------------------------------------------------------
 # cv_lambda tests
 # ---------------------------------------------------------------------------

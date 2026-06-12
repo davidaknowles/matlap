@@ -5,7 +5,13 @@ import jax.numpy as jnp
 import pytest
 
 from matlap.scoring import make_elbo_scorer, make_renyi_scorer
-from matlap.taylor import TaylorResult, taylor_cv, taylor_gradient
+from matlap.taylor import (
+    TaylorHomoskedasticResult,
+    TaylorResult,
+    taylor_cv,
+    taylor_gradient,
+    taylor_proximal_homoskedastic_unknown_noise,
+)
 
 
 def _low_rank_data(m=12, n=8, rank=2, noise=0.3, seed=0):
@@ -115,3 +121,65 @@ def test_taylor_requires_valid_renyi_alpha():
     Y, S, _ = _low_rank_data()
     with pytest.raises(ValueError, match="renyi_alpha"):
         taylor_gradient(Y, S, 1.0, renyi_alpha=1.0)
+
+
+def test_homoskedastic_unknown_noise_returns_positive_gamma():
+    Y, _, _ = _low_rank_data(m=10, n=6)
+    r = taylor_proximal_homoskedastic_unknown_noise(
+        Y, 1.0, max_iter=20, recover_sigma=False,
+    )
+    assert isinstance(r, TaylorHomoskedasticResult)
+    assert r.mu.shape == Y.shape
+    assert r.sigma is None
+    assert r.sigma_diag is not None
+    assert r.sigma_diag.shape == Y.shape
+    assert r.gamma2 > 0.0
+    assert r.lambda_eff > 0.0
+    assert jnp.all(jnp.isfinite(r.mu))
+    assert jnp.all(jnp.isfinite(r.sigma_diag))
+
+
+def test_homoskedastic_unknown_noise_handles_missing_data():
+    Y, _, _ = _low_rank_data(m=10, n=6)
+    mask = jnp.ones_like(Y, dtype=bool)
+    mask = mask.at[0, :].set(False)
+    mask = mask.at[:, 0].set(False)
+    r = taylor_proximal_homoskedastic_unknown_noise(
+        Y, 1.0, observed_mask=mask, max_iter=20,
+    )
+    assert r.sigma is not None
+    assert r.sigma.shape == (Y.shape[0], Y.shape[1], Y.shape[1])
+    assert r.gamma2 > 0.0
+    assert jnp.all(jnp.isfinite(r.mu))
+    assert jnp.all(jnp.isfinite(r.sigma))
+
+
+def test_homoskedastic_unknown_noise_hutchinson_gamma_update_runs():
+    Y, _, _ = _low_rank_data(m=10, n=6)
+    r = taylor_proximal_homoskedastic_unknown_noise(
+        Y,
+        1.0,
+        max_iter=8,
+        gamma_update="hutchinson",
+        hutchinson_probes=2,
+        hutchinson_cg_maxiter=10,
+        hutchinson_lr=1e-3,
+        gamma_steps=2,
+        recover_sigma=False,
+    )
+    assert r.gamma_update == "hutchinson"
+    assert r.sigma is None
+    assert r.sigma_diag is not None
+    assert r.gamma2 > 0.0
+    assert r.lambda_eff > 0.0
+    assert jnp.all(jnp.isfinite(r.mu))
+    assert jnp.all(jnp.isfinite(r.sigma_diag))
+
+
+def test_homoskedastic_unknown_noise_reduces_loss():
+    Y, _, _ = _low_rank_data(m=10, n=6)
+    r = taylor_proximal_homoskedastic_unknown_noise(
+        Y, 1.0, max_iter=30, tol=1e-8, recover_sigma=False,
+    )
+    assert len(r.loss_trace) >= 2
+    assert r.loss_trace[-1] <= r.loss_trace[0]

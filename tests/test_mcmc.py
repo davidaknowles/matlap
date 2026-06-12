@@ -84,6 +84,80 @@ def test_gibbs_no_nan():
     assert np.isfinite(r.lambda_bar), "Gibbs lambda_bar is NaN/Inf"
 
 
+def test_mala_lowrank_proposal_no_nan():
+    Y, S, _ = _make_data(m=16, n=10, rank=2)
+    r = mcmc_proximal_mala(
+        Y, S, lambda_val=1.0, n_warmup=8, n_samples=12,
+        proposal_svd_rank=3, proposal_svd_n_iter=1, proposal_svd_oversample=1,
+        key=jax.random.PRNGKey(31),
+    )
+    assert np.all(np.isfinite(np.array(r.mu))), "low-rank MALA mu contains NaN/Inf"
+    assert 0.0 <= r.accept_rate <= 1.0
+
+
+def test_gibbs_lowrank_proposal_no_nan():
+    Y, S, _ = _make_data(m=16, n=10, rank=2)
+    r = mcmc_gsm_gibbs(
+        Y, S, n_warmup=8, n_samples=12,
+        proposal_svd_rank=3, proposal_svd_n_iter=1, proposal_svd_oversample=1,
+        key=jax.random.PRNGKey(32),
+    )
+    assert np.all(np.isfinite(np.array(r.mu))), "low-rank Gibbs mu contains NaN/Inf"
+    assert np.isfinite(r.lambda_bar)
+
+
+def test_mala_can_sample_lambda():
+    Y, S, _ = _make_data(m=16, n=10, rank=2)
+    r = mcmc_proximal_mala(
+        Y, S, lambda_val=1.0, sample_lambda=True, n_warmup=8, n_samples=12,
+        proposal_svd_rank=3, proposal_svd_n_iter=1, proposal_svd_oversample=1,
+        key=jax.random.PRNGKey(33),
+    )
+    assert np.all(np.isfinite(np.array(r.mu))), "lambda-sampling MALA mu contains NaN/Inf"
+    assert np.isfinite(r.lambda_bar)
+    assert r.lambda_bar > 0.0
+
+
+def test_mala_return_trace_shapes():
+    Y, S, _ = _make_data(m=12, n=8, rank=2)
+    r = mcmc_proximal_mala(
+        Y, S, lambda_val=1.0, n_warmup=7, n_samples=11,
+        return_trace=True, key=jax.random.PRNGKey(34),
+    )
+    assert r.lambda_trace.shape == (11,)
+    assert r.accept_trace.shape == (11,)
+    assert r.nuclear_trace.shape == (11,)
+    assert r.logpost_trace.shape == (11,)
+    assert r.step_size_trace.shape == (11,)
+    assert r.warmup_lambda_trace.shape == (7,)
+    assert r.warmup_accept_trace.shape == (7,)
+    assert jnp.all(jnp.isfinite(r.lambda_trace))
+    assert jnp.all(jnp.isfinite(r.nuclear_trace))
+    assert jnp.all(jnp.isfinite(r.logpost_trace))
+
+
+def test_lambda_sampling_mala_return_trace_shapes():
+    Y, S, _ = _make_data(m=12, n=8, rank=2)
+    r = mcmc_proximal_mala(
+        Y, S, lambda_val=1.0, sample_lambda=True,
+        n_warmup=7, n_samples=11, return_trace=True,
+        proposal_svd_rank=3, proposal_svd_oversample=1,
+        key=jax.random.PRNGKey(35),
+    )
+    assert r.lambda_trace.shape == (11,)
+    assert r.lambda_accept_trace.shape == (11,)
+    assert r.warmup_lambda_trace.shape == (7,)
+    assert r.warmup_lambda_accept_trace.shape == (7,)
+    assert jnp.all(jnp.isfinite(r.lambda_trace))
+    assert jnp.all(jnp.isfinite(r.lambda_accept_trace))
+
+
+def test_lowrank_proposal_requires_positive_rank():
+    Y, S, _ = _make_data(m=12, n=8)
+    with pytest.raises(ValueError, match="proposal_svd_rank"):
+        mcmc_proximal_mala(Y, S, proposal_svd_rank=0)
+
+
 # ---------------------------------------------------------------------------
 # MALA: different random keys give different results
 # ---------------------------------------------------------------------------
