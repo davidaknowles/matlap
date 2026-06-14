@@ -1,0 +1,8 @@
+anndata
+h5py
+scanpy
+scikit-learn
+seaborn
+umap-learn
+nbformat
+ipykernel

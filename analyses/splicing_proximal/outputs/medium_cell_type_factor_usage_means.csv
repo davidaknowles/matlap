@@ -1,0 +1,2774 @@
+embedding,cell_type,factor,mean_z_usage,n_cells
+atlas SP,Cortical excitatory neuron,F1,1.6930071115493774,30868
+atlas SP,Cortical excitatory neuron,F2,1.2078651189804077,30868
+atlas SP,Cortical excitatory neuron,F3,0.3164084553718567,30868
+atlas SP,Cortical excitatory neuron,F4,-0.12033181637525558,30868
+atlas SP,Cortical excitatory neuron,F5,-0.010496795177459717,30868
+atlas SP,Cortical excitatory neuron,F6,-0.7466474771499634,30868
+atlas SP,Cortical excitatory neuron,F7,-0.2276916652917862,30868
+atlas SP,Cortical excitatory neuron,F8,0.7218535542488098,30868
+atlas SP,Cortical excitatory neuron,F9,-0.27021557092666626,30868
+atlas SP,Cortical excitatory neuron,F10,-0.5203267931938171,30868
+atlas SP,Cortical excitatory neuron,F11,-0.16959410905838013,30868
+atlas SP,Cortical excitatory neuron,F12,-0.24258814752101898,30868
+atlas SP,Cortical excitatory neuron,F13,-0.7417210936546326,30868
+atlas SP,Cortical excitatory neuron,F14,0.6506167650222778,30868
+atlas SP,Cortical excitatory neuron,F15,-0.29144224524497986,30868
+atlas SP,Cortical excitatory neuron,F16,-0.14702047407627106,30868
+atlas SP,Cortical excitatory neuron,F17,-0.14146770536899567,30868
+atlas SP,Cortical excitatory neuron,F18,0.016759421676397324,30868
+atlas SP,Cortical excitatory neuron,F19,0.25170138478279114,30868
+atlas SP,Cortical excitatory neuron,F20,-0.09745121002197266,30868
+atlas SP,Inhibitory neuron,F1,-0.4272265136241913,17259
+atlas SP,Inhibitory neuron,F2,-0.1250561624765396,17259
+atlas SP,Inhibitory neuron,F3,2.269515037536621,17259
+atlas SP,Inhibitory neuron,F4,1.81918203830719,17259
+atlas SP,Inhibitory neuron,F5,1.7581169605255127,17259
+atlas SP,Inhibitory neuron,F6,-0.7431026101112366,17259
+atlas SP,Inhibitory neuron,F7,-0.22951896488666534,17259
+atlas SP,Inhibitory neuron,F8,-0.11319635063409805,17259
+atlas SP,Inhibitory neuron,F9,-0.2713935673236847,17259
+atlas SP,Inhibitory neuron,F10,-0.5090919733047485,17259
+atlas SP,Inhibitory neuron,F11,-0.1716751754283905,17259
+atlas SP,Inhibitory neuron,F12,-0.24559392035007477,17259
+atlas SP,Inhibitory neuron,F13,-0.7395977973937988,17259
+atlas SP,Inhibitory neuron,F14,0.03765254095196724,17259
+atlas SP,Inhibitory neuron,F15,-0.29347872734069824,17259
+atlas SP,Inhibitory neuron,F16,-0.14755280315876007,17259
+atlas SP,Inhibitory neuron,F17,-0.20347465574741364,17259
+atlas SP,Inhibitory neuron,F18,0.3171469569206238,17259
+atlas SP,Inhibitory neuron,F19,0.3597569465637207,17259
+atlas SP,Inhibitory neuron,F20,-0.10489129275083542,17259
+atlas SP,Microglia,F1,-0.5703407526016235,12042
+atlas SP,Microglia,F2,-0.42229095101356506,12042
+atlas SP,Microglia,F3,-0.6057814359664917,12042
+atlas SP,Microglia,F4,-0.306832879781723,12042
+atlas SP,Microglia,F5,-0.3401500880718231,12042
+atlas SP,Microglia,F6,1.9350804090499878,12042
+atlas SP,Microglia,F7,-0.19138392806053162,12042
+atlas SP,Microglia,F8,-0.42686575651168823,12042
+atlas SP,Microglia,F9,-0.08984430879354477,12042
+atlas SP,Microglia,F10,-0.40972208976745605,12042
+atlas SP,Microglia,F11,-0.14238661527633667,12042
+atlas SP,Microglia,F12,-0.16149570047855377,12042
+atlas SP,Microglia,F13,-0.46706223487854004,12042
+atlas SP,Microglia,F14,-0.29162052273750305,12042
+atlas SP,Microglia,F15,-0.21324382722377777,12042
+atlas SP,Microglia,F16,-0.0477776899933815,12042
+atlas SP,Microglia,F17,-0.034636445343494415,12042
+atlas SP,Microglia,F18,-0.17848558723926544,12042
+atlas SP,Microglia,F19,-0.3183150291442871,12042
+atlas SP,Microglia,F20,-0.0649024024605751,12042
+atlas SP,B cell,F1,-0.5691308975219727,8620
+atlas SP,B cell,F2,-0.4192298352718353,8620
+atlas SP,B cell,F3,-0.6060283184051514,8620
+atlas SP,B cell,F4,-0.3053412437438965,8620
+atlas SP,B cell,F5,-0.33687055110931396,8620
+atlas SP,B cell,F6,-0.1662241369485855,8620
+atlas SP,B cell,F7,-0.16322194039821625,8620
+atlas SP,B cell,F8,-0.42153069376945496,8620
+atlas SP,B cell,F9,0.2455333024263382,8620
+atlas SP,B cell,F10,-0.4499415457248688,8620
+atlas SP,B cell,F11,-0.11869138479232788,8620
+atlas SP,B cell,F12,-0.0680336058139801,8620
+atlas SP,B cell,F13,1.4820970296859741,8620
+atlas SP,B cell,F14,-0.2658320963382721,8620
+atlas SP,B cell,F15,-0.10576094686985016,8620
+atlas SP,B cell,F16,0.23928967118263245,8620
+atlas SP,B cell,F17,0.22316788136959076,8620
+atlas SP,B cell,F18,-0.03649846091866493,8620
+atlas SP,B cell,F19,-0.20366838574409485,8620
+atlas SP,B cell,F20,-0.020901795476675034,8620
+atlas SP,Skin epithelial cell,F1,-0.5732434391975403,7347
+atlas SP,Skin epithelial cell,F2,-0.42609527707099915,7347
+atlas SP,Skin epithelial cell,F3,-0.6132727265357971,7347
+atlas SP,Skin epithelial cell,F4,-0.3117617666721344,7347
+atlas SP,Skin epithelial cell,F5,-0.3436030447483063,7347
+atlas SP,Skin epithelial cell,F6,-0.5227415561676025,7347
+atlas SP,Skin epithelial cell,F7,2.7824134826660156,7347
+atlas SP,Skin epithelial cell,F8,-0.459863543510437,7347
+atlas SP,Skin epithelial cell,F9,-0.19835735857486725,7347
+atlas SP,Skin epithelial cell,F10,0.49673134088516235,7347
+atlas SP,Skin epithelial cell,F11,-0.14183184504508972,7347
+atlas SP,Skin epithelial cell,F12,-0.06661960482597351,7347
+atlas SP,Skin epithelial cell,F13,1.2185094356536865,7347
+atlas SP,Skin epithelial cell,F14,-0.30076998472213745,7347
+atlas SP,Skin epithelial cell,F15,-0.18255771696567535,7347
+atlas SP,Skin epithelial cell,F16,-0.09088270366191864,7347
+atlas SP,Skin epithelial cell,F17,-0.11878073960542679,7347
+atlas SP,Skin epithelial cell,F18,-0.2571580410003662,7347
+atlas SP,Skin epithelial cell,F19,-0.255248099565506,7347
+atlas SP,Skin epithelial cell,F20,0.917071521282196,7347
+atlas SP,Endothelial cell,F1,-0.5683114528656006,7044
+atlas SP,Endothelial cell,F2,-0.41776973009109497,7044
+atlas SP,Endothelial cell,F3,-0.6022638082504272,7044
+atlas SP,Endothelial cell,F4,-0.2990877628326416,7044
+atlas SP,Endothelial cell,F5,-0.32639142870903015,7044
+atlas SP,Endothelial cell,F6,1.5960350036621094,7044
+atlas SP,Endothelial cell,F7,-0.16364802420139313,7044
+atlas SP,Endothelial cell,F8,-0.4132574796676636,7044
+atlas SP,Endothelial cell,F9,-0.13952948153018951,7044
+atlas SP,Endothelial cell,F10,0.3375408351421356,7044
+atlas SP,Endothelial cell,F11,-0.12102983891963959,7044
+atlas SP,Endothelial cell,F12,-0.09620122611522675,7044
+atlas SP,Endothelial cell,F13,-0.5916500091552734,7044
+atlas SP,Endothelial cell,F14,-0.2711206376552582,7044
+atlas SP,Endothelial cell,F15,0.3574165105819702,7044
+atlas SP,Endothelial cell,F16,0.014869955368340015,7044
+atlas SP,Endothelial cell,F17,0.12522931396961212,7044
+atlas SP,Endothelial cell,F18,-0.054776810109615326,7044
+atlas SP,Endothelial cell,F19,-0.12783901393413544,7044
+atlas SP,Endothelial cell,F20,-0.006893543992191553,7044
+atlas SP,Mesenchymal stem cell,F1,-0.5709651112556458,4755
+atlas SP,Mesenchymal stem cell,F2,-0.415461003780365,4755
+atlas SP,Mesenchymal stem cell,F3,-0.6095060110092163,4755
+atlas SP,Mesenchymal stem cell,F4,-0.3083789348602295,4755
+atlas SP,Mesenchymal stem cell,F5,-0.34353339672088623,4755
+atlas SP,Mesenchymal stem cell,F6,0.8064906001091003,4755
+atlas SP,Mesenchymal stem cell,F7,-0.16016699373722076,4755
+atlas SP,Mesenchymal stem cell,F8,-0.44305679202079773,4755
+atlas SP,Mesenchymal stem cell,F9,-0.20041967928409576,4755
+atlas SP,Mesenchymal stem cell,F10,1.737210988998413,4755
+atlas SP,Mesenchymal stem cell,F11,-0.15546397864818573,4755
+atlas SP,Mesenchymal stem cell,F12,-0.13321316242218018,4755
+atlas SP,Mesenchymal stem cell,F13,-0.6117828488349915,4755
+atlas SP,Mesenchymal stem cell,F14,-0.29459303617477417,4755
+atlas SP,Mesenchymal stem cell,F15,2.0264718532562256,4755
+atlas SP,Mesenchymal stem cell,F16,-0.07555511593818665,4755
+atlas SP,Mesenchymal stem cell,F17,0.03938553109765053,4755
+atlas SP,Mesenchymal stem cell,F18,-0.1112886518239975,4755
+atlas SP,Mesenchymal stem cell,F19,-0.18411721289157867,4755
+atlas SP,Mesenchymal stem cell,F20,-0.06485980749130249,4755
+atlas SP,Fibroblast,F1,-0.5710054636001587,4600
+atlas SP,Fibroblast,F2,-0.41457706689834595,4600
+atlas SP,Fibroblast,F3,-0.6083546280860901,4600
+atlas SP,Fibroblast,F4,-0.3057396411895752,4600
+atlas SP,Fibroblast,F5,-0.33928149938583374,4600
+atlas SP,Fibroblast,F6,0.9694631099700928,4600
+atlas SP,Fibroblast,F7,-0.1798281967639923,4600
+atlas SP,Fibroblast,F8,-0.42962417006492615,4600
+atlas SP,Fibroblast,F9,-0.20088431239128113,4600
+atlas SP,Fibroblast,F10,1.5130703449249268,4600
+atlas SP,Fibroblast,F11,-0.15380121767520905,4600
+atlas SP,Fibroblast,F12,-0.16874344646930695,4600
+atlas SP,Fibroblast,F13,-0.6222243309020996,4600
+atlas SP,Fibroblast,F14,-0.30348095297813416,4600
+atlas SP,Fibroblast,F15,0.7867496013641357,4600
+atlas SP,Fibroblast,F16,-0.08468792587518692,4600
+atlas SP,Fibroblast,F17,-0.09237155318260193,4600
+atlas SP,Fibroblast,F18,-0.14349117875099182,4600
+atlas SP,Fibroblast,F19,-0.2416074573993683,4600
+atlas SP,Fibroblast,F20,-0.05826614424586296,4600
+atlas SP,Hippocampal neuron,F1,0.8705160021781921,4476
+atlas SP,Hippocampal neuron,F2,0.09497202932834625,4476
+atlas SP,Hippocampal neuron,F3,0.6778407692909241,4476
+atlas SP,Hippocampal neuron,F4,-0.18507085740566254,4476
+atlas SP,Hippocampal neuron,F5,-0.11582716554403305,4476
+atlas SP,Hippocampal neuron,F6,-0.7361162304878235,4476
+atlas SP,Hippocampal neuron,F7,-0.2229825109243393,4476
+atlas SP,Hippocampal neuron,F8,3.0190117359161377,4476
+atlas SP,Hippocampal neuron,F9,-0.2601855397224426,4476
+atlas SP,Hippocampal neuron,F10,-0.5075957179069519,4476
+atlas SP,Hippocampal neuron,F11,-0.16555345058441162,4476
+atlas SP,Hippocampal neuron,F12,-0.23448054492473602,4476
+atlas SP,Hippocampal neuron,F13,-0.7363051772117615,4476
+atlas SP,Hippocampal neuron,F14,0.5773579478263855,4476
+atlas SP,Hippocampal neuron,F15,-0.27209576964378357,4476
+atlas SP,Hippocampal neuron,F16,-0.14332324266433716,4476
+atlas SP,Hippocampal neuron,F17,-0.1628631204366684,4476
+atlas SP,Hippocampal neuron,F18,-0.141841858625412,4476
+atlas SP,Hippocampal neuron,F19,-0.055353861302137375,4476
+atlas SP,Hippocampal neuron,F20,-0.09538543969392776,4476
+atlas SP,T cell,F1,-0.5699875354766846,3571
+atlas SP,T cell,F2,-0.42322203516960144,3571
+atlas SP,T cell,F3,-0.6079089045524597,3571
+atlas SP,T cell,F4,-0.30909350514411926,3571
+atlas SP,T cell,F5,-0.3390691578388214,3571
+atlas SP,T cell,F6,-0.27222010493278503,3571
+atlas SP,T cell,F7,-0.16267569363117218,3571
+atlas SP,T cell,F8,-0.42054450511932373,3571
+atlas SP,T cell,F9,0.2876693606376648,3571
+atlas SP,T cell,F10,-0.46518474817276,3571
+atlas SP,T cell,F11,-0.1336793452501297,3571
+atlas SP,T cell,F12,-0.06652578711509705,3571
+atlas SP,T cell,F13,1.588934302330017,3571
+atlas SP,T cell,F14,-0.27108877897262573,3571
+atlas SP,T cell,F15,-0.0511331669986248,3571
+atlas SP,T cell,F16,0.32181602716445923,3571
+atlas SP,T cell,F17,0.12935586273670197,3571
+atlas SP,T cell,F18,-0.05657583475112915,3571
+atlas SP,T cell,F19,-0.23127463459968567,3571
+atlas SP,T cell,F20,-0.03853767737746239,3571
+atlas SP,Intestinal epithelial cell,F1,-0.5639790296554565,3016
+atlas SP,Intestinal epithelial cell,F2,-0.39381805062294006,3016
+atlas SP,Intestinal epithelial cell,F3,-0.5978778004646301,3016
+atlas SP,Intestinal epithelial cell,F4,-0.2925982177257538,3016
+atlas SP,Intestinal epithelial cell,F5,-0.3255090117454529,3016
+atlas SP,Intestinal epithelial cell,F6,-0.5683158040046692,3016
+atlas SP,Intestinal epithelial cell,F7,-0.12560006976127625,3016
+atlas SP,Intestinal epithelial cell,F8,-0.42481568455696106,3016
+atlas SP,Intestinal epithelial cell,F9,-0.12364785373210907,3016
+atlas SP,Intestinal epithelial cell,F10,-0.4170825183391571,3016
+atlas SP,Intestinal epithelial cell,F11,3.4299793243408203,3016
+atlas SP,Intestinal epithelial cell,F12,0.9515909552574158,3016
+atlas SP,Intestinal epithelial cell,F13,1.6307207345962524,3016
+atlas SP,Intestinal epithelial cell,F14,-0.21569311618804932,3016
+atlas SP,Intestinal epithelial cell,F15,-0.1573820412158966,3016
+atlas SP,Intestinal epithelial cell,F16,0.31863951683044434,3016
+atlas SP,Intestinal epithelial cell,F17,0.1819574534893036,3016
+atlas SP,Intestinal epithelial cell,F18,0.036619193851947784,3016
+atlas SP,Intestinal epithelial cell,F19,-0.06760993599891663,3016
+atlas SP,Intestinal epithelial cell,F20,0.029966870322823524,3016
+atlas SP,T cell precursor,F1,-0.5712460279464722,3002
+atlas SP,T cell precursor,F2,-0.42318350076675415,3002
+atlas SP,T cell precursor,F3,-0.6108288168907166,3002
+atlas SP,T cell precursor,F4,-0.310747355222702,3002
+atlas SP,T cell precursor,F5,-0.34480491280555725,3002
+atlas SP,T cell precursor,F6,-0.16868548095226288,3002
+atlas SP,T cell precursor,F7,-0.17402979731559753,3002
+atlas SP,T cell precursor,F8,-0.44471365213394165,3002
+atlas SP,T cell precursor,F9,0.3107955753803253,3002
+atlas SP,T cell precursor,F10,-0.46244174242019653,3002
+atlas SP,T cell precursor,F11,-0.13951940834522247,3002
+atlas SP,T cell precursor,F12,-0.06157977133989334,3002
+atlas SP,T cell precursor,F13,1.51978600025177,3002
+atlas SP,T cell precursor,F14,-0.2819104790687561,3002
+atlas SP,T cell precursor,F15,-0.10513333231210709,3002
+atlas SP,T cell precursor,F16,0.08691515028476715,3002
+atlas SP,T cell precursor,F17,0.04771194979548454,3002
+atlas SP,T cell precursor,F18,-0.14242611825466156,3002
+atlas SP,T cell precursor,F19,-0.3061276376247406,3002
+atlas SP,T cell precursor,F20,-0.05597667023539543,3002
+atlas SP,Granulocyte,F1,-0.5642863512039185,2860
+atlas SP,Granulocyte,F2,-0.3954435884952545,2860
+atlas SP,Granulocyte,F3,-0.5995723009109497,2860
+atlas SP,Granulocyte,F4,-0.29804661870002747,2860
+atlas SP,Granulocyte,F5,-0.3244742155075073,2860
+atlas SP,Granulocyte,F6,0.18860070407390594,2860
+atlas SP,Granulocyte,F7,-0.17240503430366516,2860
+atlas SP,Granulocyte,F8,-0.374931663274765,2860
+atlas SP,Granulocyte,F9,0.09359770268201828,2860
+atlas SP,Granulocyte,F10,-0.46226927638053894,2860
+atlas SP,Granulocyte,F11,-0.08756931871175766,2860
+atlas SP,Granulocyte,F12,-0.05759390443563461,2860
+atlas SP,Granulocyte,F13,1.087709665298462,2860
+atlas SP,Granulocyte,F14,-0.252736359834671,2860
+atlas SP,Granulocyte,F15,-0.09897968918085098,2860
+atlas SP,Granulocyte,F16,0.8699716329574585,2860
+atlas SP,Granulocyte,F17,0.4914907217025757,2860
+atlas SP,Granulocyte,F18,0.09863769263029099,2860
+atlas SP,Granulocyte,F19,-0.17757053673267365,2860
+atlas SP,Granulocyte,F20,-0.023743504658341408,2860
+atlas SP,Hematopoietic stem cell,F1,-0.5723140239715576,2748
+atlas SP,Hematopoietic stem cell,F2,-0.41123321652412415,2748
+atlas SP,Hematopoietic stem cell,F3,-0.6116183996200562,2748
+atlas SP,Hematopoietic stem cell,F4,-0.3105334937572479,2748
+atlas SP,Hematopoietic stem cell,F5,-0.3407261073589325,2748
+atlas SP,Hematopoietic stem cell,F6,-0.06088554486632347,2748
+atlas SP,Hematopoietic stem cell,F7,-0.1863556057214737,2748
+atlas SP,Hematopoietic stem cell,F8,-0.4335232079029083,2748
+atlas SP,Hematopoietic stem cell,F9,4.599668502807617,2748
+atlas SP,Hematopoietic stem cell,F10,-0.10923831164836884,2748
+atlas SP,Hematopoietic stem cell,F11,-0.16393133997917175,2748
+atlas SP,Hematopoietic stem cell,F12,0.09523192048072815,2748
+atlas SP,Hematopoietic stem cell,F13,1.137052297592163,2748
+atlas SP,Hematopoietic stem cell,F14,-0.31082683801651,2748
+atlas SP,Hematopoietic stem cell,F15,-0.12025544792413712,2748
+atlas SP,Hematopoietic stem cell,F16,-0.027119416743516922,2748
+atlas SP,Hematopoietic stem cell,F17,-0.1718941032886505,2748
+atlas SP,Hematopoietic stem cell,F18,-0.23752927780151367,2748
+atlas SP,Hematopoietic stem cell,F19,-0.22913846373558044,2748
+atlas SP,Hematopoietic stem cell,F20,-0.09215736389160156,2748
+atlas SP,Other immune cell,F1,-0.5622837543487549,2562
+atlas SP,Other immune cell,F2,-0.3893713653087616,2562
+atlas SP,Other immune cell,F3,-0.5928968191146851,2562
+atlas SP,Other immune cell,F4,-0.29039114713668823,2562
+atlas SP,Other immune cell,F5,-0.32155871391296387,2562
+atlas SP,Other immune cell,F6,0.3054996728897095,2562
+atlas SP,Other immune cell,F7,-0.11854960769414902,2562
+atlas SP,Other immune cell,F8,-0.32612037658691406,2562
+atlas SP,Other immune cell,F9,0.4717441499233246,2562
+atlas SP,Other immune cell,F10,-0.25050514936447144,2562
+atlas SP,Other immune cell,F11,-0.0777331218123436,2562
+atlas SP,Other immune cell,F12,0.1963474452495575,2562
+atlas SP,Other immune cell,F13,0.8442665934562683,2562
+atlas SP,Other immune cell,F14,-0.2444208860397339,2562
+atlas SP,Other immune cell,F15,0.16481880843639374,2562
+atlas SP,Other immune cell,F16,0.44184353947639465,2562
+atlas SP,Other immune cell,F17,0.8916376829147339,2562
+atlas SP,Other immune cell,F18,0.1907004565000534,2562
+atlas SP,Other immune cell,F19,-0.03581914305686951,2562
+atlas SP,Other immune cell,F20,0.008457649499177933,2562
+atlas SP,Skeletal muscle cell,F1,-0.5664743781089783,2460
+atlas SP,Skeletal muscle cell,F2,-0.4147859215736389,2460
+atlas SP,Skeletal muscle cell,F3,-0.5927298069000244,2460
+atlas SP,Skeletal muscle cell,F4,-0.2915932834148407,2460
+atlas SP,Skeletal muscle cell,F5,-0.33021271228790283,2460
+atlas SP,Skeletal muscle cell,F6,0.5136998891830444,2460
+atlas SP,Skeletal muscle cell,F7,-0.06739885360002518,2460
+atlas SP,Skeletal muscle cell,F8,-0.4201386272907257,2460
+atlas SP,Skeletal muscle cell,F9,-0.04395390301942825,2460
+atlas SP,Skeletal muscle cell,F10,2.0556554794311523,2460
+atlas SP,Skeletal muscle cell,F11,-0.13296593725681305,2460
+atlas SP,Skeletal muscle cell,F12,-0.07315406203269958,2460
+atlas SP,Skeletal muscle cell,F13,-0.5318149328231812,2460
+atlas SP,Skeletal muscle cell,F14,-0.2518883943557739,2460
+atlas SP,Skeletal muscle cell,F15,0.14495709538459778,2460
+atlas SP,Skeletal muscle cell,F16,0.0005499571561813354,2460
+atlas SP,Skeletal muscle cell,F17,0.053618911653757095,2460
+atlas SP,Skeletal muscle cell,F18,0.04896160215139389,2460
+atlas SP,Skeletal muscle cell,F19,-0.15535864233970642,2460
+atlas SP,Skeletal muscle cell,F20,0.0744459256529808,2460
+atlas SP,Macrophage,F1,-0.5659874081611633,2129
+atlas SP,Macrophage,F2,-0.4053567945957184,2129
+atlas SP,Macrophage,F3,-0.6004504561424255,2129
+atlas SP,Macrophage,F4,-0.29748693108558655,2129
+atlas SP,Macrophage,F5,-0.3286764919757843,2129
+atlas SP,Macrophage,F6,0.29511502385139465,2129
+atlas SP,Macrophage,F7,-0.12664367258548737,2129
+atlas SP,Macrophage,F8,-0.38295212388038635,2129
+atlas SP,Macrophage,F9,0.4635145664215088,2129
+atlas SP,Macrophage,F10,-0.3521130084991455,2129
+atlas SP,Macrophage,F11,-0.007407006341964006,2129
+atlas SP,Macrophage,F12,0.07499200105667114,2129
+atlas SP,Macrophage,F13,0.9499064087867737,2129
+atlas SP,Macrophage,F14,-0.2590835392475128,2129
+atlas SP,Macrophage,F15,-0.019525036215782166,2129
+atlas SP,Macrophage,F16,0.31060221791267395,2129
+atlas SP,Macrophage,F17,0.4662115275859833,2129
+atlas SP,Macrophage,F18,0.025306232273578644,2129
+atlas SP,Macrophage,F19,-0.10421033203601837,2129
+atlas SP,Macrophage,F20,0.06201069429516792,2129
+atlas SP,Smooth muscle cell,F1,-0.5721354484558105,2034
+atlas SP,Smooth muscle cell,F2,-0.42354121804237366,2034
+atlas SP,Smooth muscle cell,F3,-0.6097608208656311,2034
+atlas SP,Smooth muscle cell,F4,-0.3078451454639435,2034
+atlas SP,Smooth muscle cell,F5,-0.33732450008392334,2034
+atlas SP,Smooth muscle cell,F6,1.6461104154586792,2034
+atlas SP,Smooth muscle cell,F7,-0.18432103097438812,2034
+atlas SP,Smooth muscle cell,F8,-0.4364064037799835,2034
+atlas SP,Smooth muscle cell,F9,-0.14814311265945435,2034
+atlas SP,Smooth muscle cell,F10,0.3912912905216217,2034
+atlas SP,Smooth muscle cell,F11,-0.14348244667053223,2034
+atlas SP,Smooth muscle cell,F12,-0.1537676453590393,2034
+atlas SP,Smooth muscle cell,F13,-0.6341962814331055,2034
+atlas SP,Smooth muscle cell,F14,-0.3011847138404846,2034
+atlas SP,Smooth muscle cell,F15,0.3972474932670593,2034
+atlas SP,Smooth muscle cell,F16,-0.0791115090250969,2034
+atlas SP,Smooth muscle cell,F17,-0.08321010321378708,2034
+atlas SP,Smooth muscle cell,F18,-0.17583835124969482,2034
+atlas SP,Smooth muscle cell,F19,-0.2473655790090561,2034
+atlas SP,Smooth muscle cell,F20,-0.06956939399242401,2034
+atlas SP,Pancreatic endocrine cell,F1,-0.543681800365448,1444
+atlas SP,Pancreatic endocrine cell,F2,-0.3028501570224762,1444
+atlas SP,Pancreatic endocrine cell,F3,-0.4961901605129242,1444
+atlas SP,Pancreatic endocrine cell,F4,-0.251083642244339,1444
+atlas SP,Pancreatic endocrine cell,F5,-0.27873098850250244,1444
+atlas SP,Pancreatic endocrine cell,F6,-0.507411777973175,1444
+atlas SP,Pancreatic endocrine cell,F7,-0.1933959573507309,1444
+atlas SP,Pancreatic endocrine cell,F8,-0.25775694847106934,1444
+atlas SP,Pancreatic endocrine cell,F9,-0.014724927954375744,1444
+atlas SP,Pancreatic endocrine cell,F10,1.089772343635559,1444
+atlas SP,Pancreatic endocrine cell,F11,-0.07347294688224792,1444
+atlas SP,Pancreatic endocrine cell,F12,0.7857165336608887,1444
+atlas SP,Pancreatic endocrine cell,F13,0.8076131343841553,1444
+atlas SP,Pancreatic endocrine cell,F14,-0.2377685010433197,1444
+atlas SP,Pancreatic endocrine cell,F15,0.25731974840164185,1444
+atlas SP,Pancreatic endocrine cell,F16,-0.016482984647154808,1444
+atlas SP,Pancreatic endocrine cell,F17,-0.10690327733755112,1444
+atlas SP,Pancreatic endocrine cell,F18,0.2577455937862396,1444
+atlas SP,Pancreatic endocrine cell,F19,0.041136108338832855,1444
+atlas SP,Pancreatic endocrine cell,F20,-0.065060555934906,1444
+atlas SP,Oligodendrocyte,F1,-0.566513180732727,1360
+atlas SP,Oligodendrocyte,F2,-0.41118496656417847,1360
+atlas SP,Oligodendrocyte,F3,-0.5117895007133484,1360
+atlas SP,Oligodendrocyte,F4,-0.284029096364975,1360
+atlas SP,Oligodendrocyte,F5,-0.3182303309440613,1360
+atlas SP,Oligodendrocyte,F6,-0.6093471050262451,1360
+atlas SP,Oligodendrocyte,F7,-0.23280441761016846,1360
+atlas SP,Oligodendrocyte,F8,-0.015430320985615253,1360
+atlas SP,Oligodendrocyte,F9,-0.2737536132335663,1360
+atlas SP,Oligodendrocyte,F10,4.17474365234375,1360
+atlas SP,Oligodendrocyte,F11,-0.16902384161949158,1360
+atlas SP,Oligodendrocyte,F12,-0.24350281059741974,1360
+atlas SP,Oligodendrocyte,F13,-0.7312920093536377,1360
+atlas SP,Oligodendrocyte,F14,-0.23543596267700195,1360
+atlas SP,Oligodendrocyte,F15,-0.336122989654541,1360
+atlas SP,Oligodendrocyte,F16,-0.14438320696353912,1360
+atlas SP,Oligodendrocyte,F17,-0.20834684371948242,1360
+atlas SP,Oligodendrocyte,F18,-0.19940142333507538,1360
+atlas SP,Oligodendrocyte,F19,-0.21172519028186798,1360
+atlas SP,Oligodendrocyte,F20,-0.10727407038211823,1360
+atlas SP,Specialized intestinal cell,F1,-0.5677982568740845,1342
+atlas SP,Specialized intestinal cell,F2,-0.4052138924598694,1342
+atlas SP,Specialized intestinal cell,F3,-0.5991244316101074,1342
+atlas SP,Specialized intestinal cell,F4,-0.30295073986053467,1342
+atlas SP,Specialized intestinal cell,F5,-0.33284375071525574,1342
+atlas SP,Specialized intestinal cell,F6,-0.5958530306816101,1342
+atlas SP,Specialized intestinal cell,F7,-0.16094659268856049,1342
+atlas SP,Specialized intestinal cell,F8,-0.4403466284275055,1342
+atlas SP,Specialized intestinal cell,F9,-0.19908657670021057,1342
+atlas SP,Specialized intestinal cell,F10,-0.35953226685523987,1342
+atlas SP,Specialized intestinal cell,F11,3.924468517303467,1342
+atlas SP,Specialized intestinal cell,F12,2.2185616493225098,1342
+atlas SP,Specialized intestinal cell,F13,1.6041910648345947,1342
+atlas SP,Specialized intestinal cell,F14,-0.2546531558036804,1342
+atlas SP,Specialized intestinal cell,F15,-0.20196853578090668,1342
+atlas SP,Specialized intestinal cell,F16,0.22261951863765717,1342
+atlas SP,Specialized intestinal cell,F17,0.1658492386341095,1342
+atlas SP,Specialized intestinal cell,F18,-0.08265773206949234,1342
+atlas SP,Specialized intestinal cell,F19,-0.12200374901294708,1342
+atlas SP,Specialized intestinal cell,F20,-0.020772762596607208,1342
+atlas SP,Monocyte,F1,-0.5694970488548279,1281
+atlas SP,Monocyte,F2,-0.415513813495636,1281
+atlas SP,Monocyte,F3,-0.6071375012397766,1281
+atlas SP,Monocyte,F4,-0.3050895035266876,1281
+atlas SP,Monocyte,F5,-0.3348674774169922,1281
+atlas SP,Monocyte,F6,0.8823940753936768,1281
+atlas SP,Monocyte,F7,-0.1620798110961914,1281
+atlas SP,Monocyte,F8,-0.33386310935020447,1281
+atlas SP,Monocyte,F9,0.2851504981517792,1281
+atlas SP,Monocyte,F10,-0.3541223704814911,1281
+atlas SP,Monocyte,F11,-0.1311310976743698,1281
+atlas SP,Monocyte,F12,0.06964866071939468,1281
+atlas SP,Monocyte,F13,0.43617767095565796,1281
+atlas SP,Monocyte,F14,-0.2848990559577942,1281
+atlas SP,Monocyte,F15,0.01751110702753067,1281
+atlas SP,Monocyte,F16,0.034615349024534225,1281
+atlas SP,Monocyte,F17,0.44146203994750977,1281
+atlas SP,Monocyte,F18,0.05840316414833069,1281
+atlas SP,Monocyte,F19,-0.07847276329994202,1281
+atlas SP,Monocyte,F20,-0.04649552330374718,1281
+atlas SP,Immune progenitor,F1,-0.5715014934539795,1204
+atlas SP,Immune progenitor,F2,-0.4144825339317322,1204
+atlas SP,Immune progenitor,F3,-0.6110437512397766,1204
+atlas SP,Immune progenitor,F4,-0.3131401240825653,1204
+atlas SP,Immune progenitor,F5,-0.3422870337963104,1204
+atlas SP,Immune progenitor,F6,0.0020914319902658463,1204
+atlas SP,Immune progenitor,F7,-0.16244162619113922,1204
+atlas SP,Immune progenitor,F8,-0.4018532335758209,1204
+atlas SP,Immune progenitor,F9,1.761709213256836,1204
+atlas SP,Immune progenitor,F10,-0.4324604570865631,1204
+atlas SP,Immune progenitor,F11,-0.13134810328483582,1204
+atlas SP,Immune progenitor,F12,0.17912529408931732,1204
+atlas SP,Immune progenitor,F13,1.2877215147018433,1204
+atlas SP,Immune progenitor,F14,-0.2906990647315979,1204
+atlas SP,Immune progenitor,F15,-0.12112292647361755,1204
+atlas SP,Immune progenitor,F16,0.13604441285133362,1204
+atlas SP,Immune progenitor,F17,0.27596578001976013,1204
+atlas SP,Immune progenitor,F18,-0.033129818737506866,1204
+atlas SP,Immune progenitor,F19,-0.19743919372558594,1204
+atlas SP,Immune progenitor,F20,-0.0566406324505806,1204
+atlas SP,Basal epithelial cell,F1,-0.5743256211280823,1148
+atlas SP,Basal epithelial cell,F2,-0.3934415578842163,1148
+atlas SP,Basal epithelial cell,F3,-0.6166414022445679,1148
+atlas SP,Basal epithelial cell,F4,-0.3057936728000641,1148
+atlas SP,Basal epithelial cell,F5,-0.33396366238594055,1148
+atlas SP,Basal epithelial cell,F6,-0.4492926001548767,1148
+atlas SP,Basal epithelial cell,F7,1.5881233215332031,1148
+atlas SP,Basal epithelial cell,F8,-0.4546840488910675,1148
+atlas SP,Basal epithelial cell,F9,0.13682995736598969,1148
+atlas SP,Basal epithelial cell,F10,2.446601152420044,1148
+atlas SP,Basal epithelial cell,F11,-0.1619827300310135,1148
+atlas SP,Basal epithelial cell,F12,0.14390291273593903,1148
+atlas SP,Basal epithelial cell,F13,0.1296420842409134,1148
+atlas SP,Basal epithelial cell,F14,-0.3235228955745697,1148
+atlas SP,Basal epithelial cell,F15,1.0136665105819702,1148
+atlas SP,Basal epithelial cell,F16,-0.1392596811056137,1148
+atlas SP,Basal epithelial cell,F17,-0.1393691748380661,1148
+atlas SP,Basal epithelial cell,F18,-0.15920285880565643,1148
+atlas SP,Basal epithelial cell,F19,-0.005552432965487242,1148
+atlas SP,Basal epithelial cell,F20,0.001469483831897378,1148
+atlas SP,Urogenital epithelial cell,F1,-0.5710484981536865,1008
+atlas SP,Urogenital epithelial cell,F2,-0.3724431097507477,1008
+atlas SP,Urogenital epithelial cell,F3,-0.6129955649375916,1008
+atlas SP,Urogenital epithelial cell,F4,-0.300580233335495,1008
+atlas SP,Urogenital epithelial cell,F5,-0.331998348236084,1008
+atlas SP,Urogenital epithelial cell,F6,-0.6389723420143127,1008
+atlas SP,Urogenital epithelial cell,F7,1.856722116470337,1008
+atlas SP,Urogenital epithelial cell,F8,-0.4248950183391571,1008
+atlas SP,Urogenital epithelial cell,F9,-0.14662687480449677,1008
+atlas SP,Urogenital epithelial cell,F10,1.0093361139297485,1008
+atlas SP,Urogenital epithelial cell,F11,0.04491405189037323,1008
+atlas SP,Urogenital epithelial cell,F12,2.3307676315307617,1008
+atlas SP,Urogenital epithelial cell,F13,1.0319219827651978,1008
+atlas SP,Urogenital epithelial cell,F14,-0.3154447674751282,1008
+atlas SP,Urogenital epithelial cell,F15,-0.09381851553916931,1008
+atlas SP,Urogenital epithelial cell,F16,-0.11460141837596893,1008
+atlas SP,Urogenital epithelial cell,F17,0.06507907062768936,1008
+atlas SP,Urogenital epithelial cell,F18,0.06693549454212189,1008
+atlas SP,Urogenital epithelial cell,F19,0.6404035687446594,1008
+atlas SP,Urogenital epithelial cell,F20,0.06359972804784775,1008
+atlas SP,Epithelial stem cell,F1,-0.575391948223114,938
+atlas SP,Epithelial stem cell,F2,-0.4199294149875641,938
+atlas SP,Epithelial stem cell,F3,-0.6168243288993835,938
+atlas SP,Epithelial stem cell,F4,-0.3170322775840759,938
+atlas SP,Epithelial stem cell,F5,-0.34582310914993286,938
+atlas SP,Epithelial stem cell,F6,-0.6870996356010437,938
+atlas SP,Epithelial stem cell,F7,-0.06940416991710663,938
+atlas SP,Epithelial stem cell,F8,-0.46056780219078064,938
+atlas SP,Epithelial stem cell,F9,-0.16450084745883942,938
+atlas SP,Epithelial stem cell,F10,-0.30852121114730835,938
+atlas SP,Epithelial stem cell,F11,1.7067681550979614,938
+atlas SP,Epithelial stem cell,F12,6.311216831207275,938
+atlas SP,Epithelial stem cell,F13,1.7658265829086304,938
+atlas SP,Epithelial stem cell,F14,-0.32482630014419556,938
+atlas SP,Epithelial stem cell,F15,-0.28250643610954285,938
+atlas SP,Epithelial stem cell,F16,-0.11654341220855713,938
+atlas SP,Epithelial stem cell,F17,-0.1791444569826126,938
+atlas SP,Epithelial stem cell,F18,-0.26179516315460205,938
+atlas SP,Epithelial stem cell,F19,-0.20236767828464508,938
+atlas SP,Epithelial stem cell,F20,-0.1020762100815773,938
+atlas SP,Car3+ astrocyte,F1,1.6708985567092896,895
+atlas SP,Car3+ astrocyte,F2,0.9688599705696106,895
+atlas SP,Car3+ astrocyte,F3,0.16766159236431122,895
+atlas SP,Car3+ astrocyte,F4,-0.1404516100883484,895
+atlas SP,Car3+ astrocyte,F5,0.04394290968775749,895
+atlas SP,Car3+ astrocyte,F6,-0.7443422079086304,895
+atlas SP,Car3+ astrocyte,F7,-0.22406797111034393,895
+atlas SP,Car3+ astrocyte,F8,1.6201268434524536,895
+atlas SP,Car3+ astrocyte,F9,-0.26320964097976685,895
+atlas SP,Car3+ astrocyte,F10,-0.5115953683853149,895
+atlas SP,Car3+ astrocyte,F11,-0.16073063015937805,895
+atlas SP,Car3+ astrocyte,F12,-0.23318779468536377,895
+atlas SP,Car3+ astrocyte,F13,-0.7405381202697754,895
+atlas SP,Car3+ astrocyte,F14,0.16780105233192444,895
+atlas SP,Car3+ astrocyte,F15,-0.2710164785385132,895
+atlas SP,Car3+ astrocyte,F16,-0.14419184625148773,895
+atlas SP,Car3+ astrocyte,F17,-0.1269441694021225,895
+atlas SP,Car3+ astrocyte,F18,0.41258537769317627,895
+atlas SP,Car3+ astrocyte,F19,0.6230190992355347,895
+atlas SP,Car3+ astrocyte,F20,-0.0932256430387497,895
+atlas SP,Kidney epithelial cell,F1,-0.5687333345413208,818
+atlas SP,Kidney epithelial cell,F2,-0.4060916304588318,818
+atlas SP,Kidney epithelial cell,F3,-0.6010846495628357,818
+atlas SP,Kidney epithelial cell,F4,-0.2995130121707916,818
+atlas SP,Kidney epithelial cell,F5,-0.3306526243686676,818
+atlas SP,Kidney epithelial cell,F6,0.16962608695030212,818
+atlas SP,Kidney epithelial cell,F7,-0.1910557597875595,818
+atlas SP,Kidney epithelial cell,F8,-0.4435237944126129,818
+atlas SP,Kidney epithelial cell,F9,-0.20533673465251923,818
+atlas SP,Kidney epithelial cell,F10,-0.2881874740123749,818
+atlas SP,Kidney epithelial cell,F11,0.03078310377895832,818
+atlas SP,Kidney epithelial cell,F12,-0.007816086523234844,818
+atlas SP,Kidney epithelial cell,F13,1.105761170387268,818
+atlas SP,Kidney epithelial cell,F14,-0.2832089960575104,818
+atlas SP,Kidney epithelial cell,F15,-0.175828218460083,818
+atlas SP,Kidney epithelial cell,F16,-0.04997285082936287,818
+atlas SP,Kidney epithelial cell,F17,0.03588688001036644,818
+atlas SP,Kidney epithelial cell,F18,-0.10366765409708023,818
+atlas SP,Kidney epithelial cell,F19,-0.23126134276390076,818
+atlas SP,Kidney epithelial cell,F20,-0.04053201153874397,818
+atlas SP,Hepatocyte,F1,-0.5691724419593811,723
+atlas SP,Hepatocyte,F2,-0.39195868372917175,723
+atlas SP,Hepatocyte,F3,-0.6081928014755249,723
+atlas SP,Hepatocyte,F4,-0.29789599776268005,723
+atlas SP,Hepatocyte,F5,-0.3279150724411011,723
+atlas SP,Hepatocyte,F6,0.16195279359817505,723
+atlas SP,Hepatocyte,F7,-0.1893261969089508,723
+atlas SP,Hepatocyte,F8,-0.35387086868286133,723
+atlas SP,Hepatocyte,F9,-0.19129382073879242,723
+atlas SP,Hepatocyte,F10,-0.3862026035785675,723
+atlas SP,Hepatocyte,F11,-0.015599599108099937,723
+atlas SP,Hepatocyte,F12,0.5848588347434998,723
+atlas SP,Hepatocyte,F13,1.147341012954712,723
+atlas SP,Hepatocyte,F14,-0.285971462726593,723
+atlas SP,Hepatocyte,F15,-0.14796209335327148,723
+atlas SP,Hepatocyte,F16,-0.10045405477285385,723
+atlas SP,Hepatocyte,F17,-0.0009352703928016126,723
+atlas SP,Hepatocyte,F18,0.06160837784409523,723
+atlas SP,Hepatocyte,F19,0.06147627905011177,723
+atlas SP,Hepatocyte,F20,-0.059220314025878906,723
+atlas SP,Nk cell,F1,-0.5713798403739929,718
+atlas SP,Nk cell,F2,-0.4242345988750458,718
+atlas SP,Nk cell,F3,-0.6103218793869019,718
+atlas SP,Nk cell,F4,-0.31313377618789673,718
+atlas SP,Nk cell,F5,-0.34123337268829346,718
+atlas SP,Nk cell,F6,-0.23889794945716858,718
+atlas SP,Nk cell,F7,-0.1869022250175476,718
+atlas SP,Nk cell,F8,-0.42673754692077637,718
+atlas SP,Nk cell,F9,0.4990590214729309,718
+atlas SP,Nk cell,F10,-0.47549664974212646,718
+atlas SP,Nk cell,F11,-0.13609877228736877,718
+atlas SP,Nk cell,F12,-0.07891178131103516,718
+atlas SP,Nk cell,F13,1.572361707687378,718
+atlas SP,Nk cell,F14,-0.27908816933631897,718
+atlas SP,Nk cell,F15,-0.06505872309207916,718
+atlas SP,Nk cell,F16,0.2525336444377899,718
+atlas SP,Nk cell,F17,0.10232514142990112,718
+atlas SP,Nk cell,F18,-0.13830870389938354,718
+atlas SP,Nk cell,F19,-0.2816524803638458,718
+atlas SP,Nk cell,F20,-0.060596756637096405,718
+atlas SP,Other neuron,F1,-0.2641133964061737,602
+atlas SP,Other neuron,F2,-0.3813665509223938,602
+atlas SP,Other neuron,F3,1.1633851528167725,602
+atlas SP,Other neuron,F4,-0.2504320740699768,602
+atlas SP,Other neuron,F5,-0.2728404700756073,602
+atlas SP,Other neuron,F6,-0.2756640315055847,602
+atlas SP,Other neuron,F7,-0.14760822057724,602
+atlas SP,Other neuron,F8,-0.0750153660774231,602
+atlas SP,Other neuron,F9,-0.13998264074325562,602
+atlas SP,Other neuron,F10,0.2651885449886322,602
+atlas SP,Other neuron,F11,-0.10655293613672256,602
+atlas SP,Other neuron,F12,-0.03793320059776306,602
+atlas SP,Other neuron,F13,-0.6069597601890564,602
+atlas SP,Other neuron,F14,1.1218713521957397,602
+atlas SP,Other neuron,F15,0.14396624267101288,602
+atlas SP,Other neuron,F16,0.018399493768811226,602
+atlas SP,Other neuron,F17,0.03354816138744354,602
+atlas SP,Other neuron,F18,0.16580316424369812,602
+atlas SP,Other neuron,F19,-0.16134341061115265,602
+atlas SP,Other neuron,F20,0.024621425196528435,602
+atlas SP,Cardiac stromal cell,F1,-0.573097288608551,579
+atlas SP,Cardiac stromal cell,F2,-0.4248305559158325,579
+atlas SP,Cardiac stromal cell,F3,-0.6114166975021362,579
+atlas SP,Cardiac stromal cell,F4,-0.3037131726741791,579
+atlas SP,Cardiac stromal cell,F5,-0.3356347978115082,579
+atlas SP,Cardiac stromal cell,F6,1.4097391366958618,579
+atlas SP,Cardiac stromal cell,F7,-0.18212063610553741,579
+atlas SP,Cardiac stromal cell,F8,-0.4446321427822113,579
+atlas SP,Cardiac stromal cell,F9,-0.15823982656002045,579
+atlas SP,Cardiac stromal cell,F10,0.7552891969680786,579
+atlas SP,Cardiac stromal cell,F11,-0.15448634326457977,579
+atlas SP,Cardiac stromal cell,F12,-0.15565259754657745,579
+atlas SP,Cardiac stromal cell,F13,-0.6068411469459534,579
+atlas SP,Cardiac stromal cell,F14,-0.30768799781799316,579
+atlas SP,Cardiac stromal cell,F15,0.3722335994243622,579
+atlas SP,Cardiac stromal cell,F16,-0.10372918844223022,579
+atlas SP,Cardiac stromal cell,F17,-0.13592223823070526,579
+atlas SP,Cardiac stromal cell,F18,-0.12226836383342743,579
+atlas SP,Cardiac stromal cell,F19,-0.20374341309070587,579
+atlas SP,Cardiac stromal cell,F20,-0.04541472718119621,579
+atlas SP,Astrocyte,F1,-0.5520042777061462,571
+atlas SP,Astrocyte,F2,-0.38297492265701294,571
+atlas SP,Astrocyte,F3,-0.45564448833465576,571
+atlas SP,Astrocyte,F4,-0.27641913294792175,571
+atlas SP,Astrocyte,F5,-0.3159106969833374,571
+atlas SP,Astrocyte,F6,0.04737472906708717,571
+atlas SP,Astrocyte,F7,-0.20185384154319763,571
+atlas SP,Astrocyte,F8,-0.26611626148223877,571
+atlas SP,Astrocyte,F9,-0.22127394378185272,571
+atlas SP,Astrocyte,F10,2.8694980144500732,571
+atlas SP,Astrocyte,F11,-0.14407041668891907,571
+atlas SP,Astrocyte,F12,-0.13900281488895416,571
+atlas SP,Astrocyte,F13,-0.6751915812492371,571
+atlas SP,Astrocyte,F14,-0.07780282199382782,571
+atlas SP,Astrocyte,F15,-0.24376541376113892,571
+atlas SP,Astrocyte,F16,-0.11405178904533386,571
+atlas SP,Astrocyte,F17,-0.1432391256093979,571
+atlas SP,Astrocyte,F18,0.28070488572120667,571
+atlas SP,Astrocyte,F19,-0.03647130727767944,571
+atlas SP,Astrocyte,F20,-0.04995347559452057,571
+atlas SP,Stromal cell,F1,-0.5723202228546143,545
+atlas SP,Stromal cell,F2,-0.41160082817077637,545
+atlas SP,Stromal cell,F3,-0.6103084087371826,545
+atlas SP,Stromal cell,F4,-0.3084681034088135,545
+atlas SP,Stromal cell,F5,-0.3411285877227783,545
+atlas SP,Stromal cell,F6,0.7093807458877563,545
+atlas SP,Stromal cell,F7,-0.11827601492404938,545
+atlas SP,Stromal cell,F8,-0.4456669092178345,545
+atlas SP,Stromal cell,F9,-0.19221231341362,545
+atlas SP,Stromal cell,F10,1.937936782836914,545
+atlas SP,Stromal cell,F11,-0.16119852662086487,545
+atlas SP,Stromal cell,F12,-0.14282523095607758,545
+atlas SP,Stromal cell,F13,-0.6210407614707947,545
+atlas SP,Stromal cell,F14,-0.30157631635665894,545
+atlas SP,Stromal cell,F15,1.8525692224502563,545
+atlas SP,Stromal cell,F16,-0.118462935090065,545
+atlas SP,Stromal cell,F17,-0.06377346813678741,545
+atlas SP,Stromal cell,F18,-0.16826732456684113,545
+atlas SP,Stromal cell,F19,-0.20388759672641754,545
+atlas SP,Stromal cell,F20,-0.08717769384384155,545
+atlas SP,Bladder epithelial cell,F1,-0.5732796788215637,521
+atlas SP,Bladder epithelial cell,F2,-0.41630977392196655,521
+atlas SP,Bladder epithelial cell,F3,-0.613060474395752,521
+atlas SP,Bladder epithelial cell,F4,-0.3066195547580719,521
+atlas SP,Bladder epithelial cell,F5,-0.3387868106365204,521
+atlas SP,Bladder epithelial cell,F6,0.31096309423446655,521
+atlas SP,Bladder epithelial cell,F7,-0.08763348311185837,521
+atlas SP,Bladder epithelial cell,F8,-0.4479379653930664,521
+atlas SP,Bladder epithelial cell,F9,-0.20028157532215118,521
+atlas SP,Bladder epithelial cell,F10,2.401604413986206,521
+atlas SP,Bladder epithelial cell,F11,-0.15877185761928558,521
+atlas SP,Bladder epithelial cell,F12,-0.10810724645853043,521
+atlas SP,Bladder epithelial cell,F13,-0.5314314961433411,521
+atlas SP,Bladder epithelial cell,F14,-0.30220019817352295,521
+atlas SP,Bladder epithelial cell,F15,3.367703914642334,521
+atlas SP,Bladder epithelial cell,F16,-0.09819202125072479,521
+atlas SP,Bladder epithelial cell,F17,0.11043527722358704,521
+atlas SP,Bladder epithelial cell,F18,0.0015559443272650242,521
+atlas SP,Bladder epithelial cell,F19,-0.010615303181111813,521
+atlas SP,Bladder epithelial cell,F20,-0.055008359253406525,521
+atlas SP,Other epithelial cell,F1,-0.5456886887550354,499
+atlas SP,Other epithelial cell,F2,-0.3508555293083191,499
+atlas SP,Other epithelial cell,F3,-0.5568767786026001,499
+atlas SP,Other epithelial cell,F4,-0.2453654259443283,499
+atlas SP,Other epithelial cell,F5,-0.27288907766342163,499
+atlas SP,Other epithelial cell,F6,-0.03718346729874611,499
+atlas SP,Other epithelial cell,F7,-0.0038147459272295237,499
+atlas SP,Other epithelial cell,F8,-0.2697106599807739,499
+atlas SP,Other epithelial cell,F9,-0.0382111556828022,499
+atlas SP,Other epithelial cell,F10,0.4201028347015381,499
+atlas SP,Other epithelial cell,F11,0.5507000088691711,499
+atlas SP,Other epithelial cell,F12,0.29148367047309875,499
+atlas SP,Other epithelial cell,F13,0.6147924661636353,499
+atlas SP,Other epithelial cell,F14,-0.1582406908273697,499
+atlas SP,Other epithelial cell,F15,0.34436365962028503,499
+atlas SP,Other epithelial cell,F16,1.2240725755691528,499
+atlas SP,Other epithelial cell,F17,0.6512336730957031,499
+atlas SP,Other epithelial cell,F18,0.5452358722686768,499
+atlas SP,Other epithelial cell,F19,0.26239123940467834,499
+atlas SP,Other epithelial cell,F20,0.8962711095809937,499
+atlas SP,Pancreatic exocrine cell,F1,-0.5065544247627258,484
+atlas SP,Pancreatic exocrine cell,F2,-0.23501496016979218,484
+atlas SP,Pancreatic exocrine cell,F3,-0.4476233422756195,484
+atlas SP,Pancreatic exocrine cell,F4,-0.2006472796201706,484
+atlas SP,Pancreatic exocrine cell,F5,-0.22678740322589874,484
+atlas SP,Pancreatic exocrine cell,F6,-0.13536261022090912,484
+atlas SP,Pancreatic exocrine cell,F7,-0.030398553237318993,484
+atlas SP,Pancreatic exocrine cell,F8,-0.1918436586856842,484
+atlas SP,Pancreatic exocrine cell,F9,0.15541626513004303,484
+atlas SP,Pancreatic exocrine cell,F10,0.038491152226924896,484
+atlas SP,Pancreatic exocrine cell,F11,0.7674362063407898,484
+atlas SP,Pancreatic exocrine cell,F12,0.3216395676136017,484
+atlas SP,Pancreatic exocrine cell,F13,0.7552411556243896,484
+atlas SP,Pancreatic exocrine cell,F14,0.06440436840057373,484
+atlas SP,Pancreatic exocrine cell,F15,0.618531346321106,484
+atlas SP,Pancreatic exocrine cell,F16,0.9698763489723206,484
+atlas SP,Pancreatic exocrine cell,F17,1.5683048963546753,484
+atlas SP,Pancreatic exocrine cell,F18,1.2919011116027832,484
+atlas SP,Pancreatic exocrine cell,F19,0.671667218208313,484
+atlas SP,Pancreatic exocrine cell,F20,0.17022542655467987,484
+atlas SP,Cardiomyocyte,F1,-0.5411783456802368,436
+atlas SP,Cardiomyocyte,F2,-0.370940625667572,436
+atlas SP,Cardiomyocyte,F3,-0.5676647424697876,436
+atlas SP,Cardiomyocyte,F4,-0.26015013456344604,436
+atlas SP,Cardiomyocyte,F5,-0.2817809283733368,436
+atlas SP,Cardiomyocyte,F6,0.6107881665229797,436
+atlas SP,Cardiomyocyte,F7,-0.14829787611961365,436
+atlas SP,Cardiomyocyte,F8,1.3855868577957153,436
+atlas SP,Cardiomyocyte,F9,-0.07390003651380539,436
+atlas SP,Cardiomyocyte,F10,0.9985660314559937,436
+atlas SP,Cardiomyocyte,F11,-0.09677649289369583,436
+atlas SP,Cardiomyocyte,F12,0.039433419704437256,436
+atlas SP,Cardiomyocyte,F13,-0.4619932174682617,436
+atlas SP,Cardiomyocyte,F14,-0.2104816734790802,436
+atlas SP,Cardiomyocyte,F15,0.21950875222682953,436
+atlas SP,Cardiomyocyte,F16,0.2843518853187561,436
+atlas SP,Cardiomyocyte,F17,0.5019163489341736,436
+atlas SP,Cardiomyocyte,F18,0.2642246186733246,436
+atlas SP,Cardiomyocyte,F19,2.059420108795166,436
+atlas SP,Cardiomyocyte,F20,0.050596900284290314,436
+atlas SP,Mammary epithelial cell,F1,-0.5726727843284607,434
+atlas SP,Mammary epithelial cell,F2,-0.3930581212043762,434
+atlas SP,Mammary epithelial cell,F3,-0.6138731241226196,434
+atlas SP,Mammary epithelial cell,F4,-0.30505383014678955,434
+atlas SP,Mammary epithelial cell,F5,-0.336670845746994,434
+atlas SP,Mammary epithelial cell,F6,-0.594247043132782,434
+atlas SP,Mammary epithelial cell,F7,1.4933791160583496,434
+atlas SP,Mammary epithelial cell,F8,-0.43814265727996826,434
+atlas SP,Mammary epithelial cell,F9,0.060504794120788574,434
+atlas SP,Mammary epithelial cell,F10,1.0685557126998901,434
+atlas SP,Mammary epithelial cell,F11,-0.015603194013237953,434
+atlas SP,Mammary epithelial cell,F12,1.8846375942230225,434
+atlas SP,Mammary epithelial cell,F13,0.9924457669258118,434
+atlas SP,Mammary epithelial cell,F14,-0.3106376528739929,434
+atlas SP,Mammary epithelial cell,F15,0.04993141070008278,434
+atlas SP,Mammary epithelial cell,F16,-0.12164527177810669,434
+atlas SP,Mammary epithelial cell,F17,-0.10553433746099472,434
+atlas SP,Mammary epithelial cell,F18,-0.15694104135036469,434
+atlas SP,Mammary epithelial cell,F19,0.027349520474672318,434
+atlas SP,Mammary epithelial cell,F20,0.08189680427312851,434
+atlas SP,Dendritic cell,F1,-0.5704656839370728,368
+atlas SP,Dendritic cell,F2,-0.42078205943107605,368
+atlas SP,Dendritic cell,F3,-0.6095373630523682,368
+atlas SP,Dendritic cell,F4,-0.3108138144016266,368
+atlas SP,Dendritic cell,F5,-0.3413413465023041,368
+atlas SP,Dendritic cell,F6,0.20411503314971924,368
+atlas SP,Dendritic cell,F7,-0.14295722544193268,368
+atlas SP,Dendritic cell,F8,-0.4118785560131073,368
+atlas SP,Dendritic cell,F9,0.8888614773750305,368
+atlas SP,Dendritic cell,F10,-0.4526166021823883,368
+atlas SP,Dendritic cell,F11,-0.13358834385871887,368
+atlas SP,Dendritic cell,F12,0.21717242896556854,368
+atlas SP,Dendritic cell,F13,1.1360750198364258,368
+atlas SP,Dendritic cell,F14,-0.28059127926826477,368
+atlas SP,Dendritic cell,F15,-0.12598423659801483,368
+atlas SP,Dendritic cell,F16,0.021195445209741592,368
+atlas SP,Dendritic cell,F17,0.23678207397460938,368
+atlas SP,Dendritic cell,F18,-0.056426115334033966,368
+atlas SP,Dendritic cell,F19,-0.18310950696468353,368
+atlas SP,Dendritic cell,F20,-0.050849609076976776,368
+atlas SP,Pericyte,F1,-0.5658169984817505,341
+atlas SP,Pericyte,F2,-0.4080314636230469,341
+atlas SP,Pericyte,F3,-0.5992507338523865,341
+atlas SP,Pericyte,F4,-0.2900019586086273,341
+atlas SP,Pericyte,F5,-0.32163262367248535,341
+atlas SP,Pericyte,F6,1.1844961643218994,341
+atlas SP,Pericyte,F7,-0.16802749037742615,341
+atlas SP,Pericyte,F8,-0.3589113652706146,341
+atlas SP,Pericyte,F9,-0.17140981554985046,341
+atlas SP,Pericyte,F10,0.9163259863853455,341
+atlas SP,Pericyte,F11,-0.11152026057243347,341
+atlas SP,Pericyte,F12,-0.12854497134685516,341
+atlas SP,Pericyte,F13,-0.5537994503974915,341
+atlas SP,Pericyte,F14,-0.23495572805404663,341
+atlas SP,Pericyte,F15,1.5607470273971558,341
+atlas SP,Pericyte,F16,-0.09482578188180923,341
+atlas SP,Pericyte,F17,0.1422424018383026,341
+atlas SP,Pericyte,F18,0.19000327587127686,341
+atlas SP,Pericyte,F19,0.01016176026314497,341
+atlas SP,Pericyte,F20,-0.009405184537172318,341
+atlas SP,Respiratory epithelial cell,F1,-0.5355286598205566,320
+atlas SP,Respiratory epithelial cell,F2,-0.3391013741493225,320
+atlas SP,Respiratory epithelial cell,F3,-0.5460222959518433,320
+atlas SP,Respiratory epithelial cell,F4,-0.23809950053691864,320
+atlas SP,Respiratory epithelial cell,F5,-0.2716633975505829,320
+atlas SP,Respiratory epithelial cell,F6,0.12991350889205933,320
+atlas SP,Respiratory epithelial cell,F7,0.0916086807847023,320
+atlas SP,Respiratory epithelial cell,F8,-0.3226829171180725,320
+atlas SP,Respiratory epithelial cell,F9,-0.05434609204530716,320
+atlas SP,Respiratory epithelial cell,F10,0.303343266248703,320
+atlas SP,Respiratory epithelial cell,F11,0.37886160612106323,320
+atlas SP,Respiratory epithelial cell,F12,0.1533372700214386,320
+atlas SP,Respiratory epithelial cell,F13,0.5094962120056152,320
+atlas SP,Respiratory epithelial cell,F14,-0.06192239001393318,320
+atlas SP,Respiratory epithelial cell,F15,0.45291727781295776,320
+atlas SP,Respiratory epithelial cell,F16,1.0709998607635498,320
+atlas SP,Respiratory epithelial cell,F17,0.8482446670532227,320
+atlas SP,Respiratory epithelial cell,F18,0.43076595664024353,320
+atlas SP,Respiratory epithelial cell,F19,0.27314454317092896,320
+atlas SP,Respiratory epithelial cell,F20,1.2557437419891357,320
+atlas SP,Secretory cell,F1,-0.5732278227806091,309
+atlas SP,Secretory cell,F2,-0.41850942373275757,309
+atlas SP,Secretory cell,F3,-0.6132444739341736,309
+atlas SP,Secretory cell,F4,-0.31208792328834534,309
+atlas SP,Secretory cell,F5,-0.3418389856815338,309
+atlas SP,Secretory cell,F6,-0.5368233323097229,309
+atlas SP,Secretory cell,F7,-0.17270956933498383,309
+atlas SP,Secretory cell,F8,-0.45101889967918396,309
+atlas SP,Secretory cell,F9,-0.25605300068855286,309
+atlas SP,Secretory cell,F10,-0.1849113255739212,309
+atlas SP,Secretory cell,F11,3.4801294803619385,309
+atlas SP,Secretory cell,F12,4.377681732177734,309
+atlas SP,Secretory cell,F13,1.4927128553390503,309
+atlas SP,Secretory cell,F14,-0.31316936016082764,309
+atlas SP,Secretory cell,F15,-0.22086763381958008,309
+atlas SP,Secretory cell,F16,-0.08841270208358765,309
+atlas SP,Secretory cell,F17,-0.14653867483139038,309
+atlas SP,Secretory cell,F18,-0.26079457998275757,309
+atlas SP,Secretory cell,F19,-0.004811324644833803,309
+atlas SP,Secretory cell,F20,-0.07135526090860367,309
+atlas SP,Chondrocyte,F1,-0.5726043581962585,256
+atlas SP,Chondrocyte,F2,-0.41284245252609253,256
+atlas SP,Chondrocyte,F3,-0.6114468574523926,256
+atlas SP,Chondrocyte,F4,-0.29964113235473633,256
+atlas SP,Chondrocyte,F5,-0.33028537034988403,256
+atlas SP,Chondrocyte,F6,-0.00967804528772831,256
+atlas SP,Chondrocyte,F7,-0.022690748795866966,256
+atlas SP,Chondrocyte,F8,-0.41174691915512085,256
+atlas SP,Chondrocyte,F9,-0.15379665791988373,256
+atlas SP,Chondrocyte,F10,2.959498643875122,256
+atlas SP,Chondrocyte,F11,-0.1597350686788559,256
+atlas SP,Chondrocyte,F12,-0.0923074334859848,256
+atlas SP,Chondrocyte,F13,-0.5209723114967346,256
+atlas SP,Chondrocyte,F14,-0.3149831295013428,256
+atlas SP,Chondrocyte,F15,1.4347623586654663,256
+atlas SP,Chondrocyte,F16,-0.05337900295853615,256
+atlas SP,Chondrocyte,F17,-0.07682164758443832,256
+atlas SP,Chondrocyte,F18,-0.06966359913349152,256
+atlas SP,Chondrocyte,F19,-0.005720397457480431,256
+atlas SP,Chondrocyte,F20,-0.030501436442136765,256
+atlas SP,Specialized endothelial cell,F1,-0.5726494193077087,239
+atlas SP,Specialized endothelial cell,F2,-0.4262872040271759,239
+atlas SP,Specialized endothelial cell,F3,-0.6110523343086243,239
+atlas SP,Specialized endothelial cell,F4,-0.3137824833393097,239
+atlas SP,Specialized endothelial cell,F5,-0.3399226665496826,239
+atlas SP,Specialized endothelial cell,F6,1.6538670063018799,239
+atlas SP,Specialized endothelial cell,F7,-0.185342475771904,239
+atlas SP,Specialized endothelial cell,F8,-0.452236533164978,239
+atlas SP,Specialized endothelial cell,F9,-0.15555612742900848,239
+atlas SP,Specialized endothelial cell,F10,0.3445456922054291,239
+atlas SP,Specialized endothelial cell,F11,-0.14343784749507904,239
+atlas SP,Specialized endothelial cell,F12,-0.16734744608402252,239
+atlas SP,Specialized endothelial cell,F13,-0.6117926836013794,239
+atlas SP,Specialized endothelial cell,F14,-0.30106353759765625,239
+atlas SP,Specialized endothelial cell,F15,0.21869675815105438,239
+atlas SP,Specialized endothelial cell,F16,-0.02604006603360176,239
+atlas SP,Specialized endothelial cell,F17,-0.042247872799634933,239
+atlas SP,Specialized endothelial cell,F18,-0.15415053069591522,239
+atlas SP,Specialized endothelial cell,F19,-0.28716516494750977,239
+atlas SP,Specialized endothelial cell,F20,-0.07445693016052246,239
+atlas SP,Pancreatic ductal cell,F1,-0.570805013179779,226
+atlas SP,Pancreatic ductal cell,F2,-0.3855430483818054,226
+atlas SP,Pancreatic ductal cell,F3,-0.6055272221565247,226
+atlas SP,Pancreatic ductal cell,F4,-0.30070242285728455,226
+atlas SP,Pancreatic ductal cell,F5,-0.33544227480888367,226
+atlas SP,Pancreatic ductal cell,F6,-0.15361252427101135,226
+atlas SP,Pancreatic ductal cell,F7,-0.1755308359861374,226
+atlas SP,Pancreatic ductal cell,F8,-0.4336445927619934,226
+atlas SP,Pancreatic ductal cell,F9,-0.18285086750984192,226
+atlas SP,Pancreatic ductal cell,F10,0.3098115622997284,226
+atlas SP,Pancreatic ductal cell,F11,-0.0739307850599289,226
+atlas SP,Pancreatic ductal cell,F12,0.42158642411231995,226
+atlas SP,Pancreatic ductal cell,F13,1.0819129943847656,226
+atlas SP,Pancreatic ductal cell,F14,-0.2983601689338684,226
+atlas SP,Pancreatic ductal cell,F15,-0.09450647979974747,226
+atlas SP,Pancreatic ductal cell,F16,-0.07433488965034485,226
+atlas SP,Pancreatic ductal cell,F17,0.0037148650735616684,226
+atlas SP,Pancreatic ductal cell,F18,-0.05196300894021988,226
+atlas SP,Pancreatic ductal cell,F19,-0.1564532071352005,226
+atlas SP,Pancreatic ductal cell,F20,-0.06147285923361778,226
+atlas SP,Oligodendrocyte precursor,F1,-0.5567443370819092,204
+atlas SP,Oligodendrocyte precursor,F2,-0.41342130303382874,204
+atlas SP,Oligodendrocyte precursor,F3,-0.21224437654018402,204
+atlas SP,Oligodendrocyte precursor,F4,-0.25792771577835083,204
+atlas SP,Oligodendrocyte precursor,F5,-0.32989501953125,204
+atlas SP,Oligodendrocyte precursor,F6,-0.29754772782325745,204
+atlas SP,Oligodendrocyte precursor,F7,-0.22794564068317413,204
+atlas SP,Oligodendrocyte precursor,F8,-0.18896301090717316,204
+atlas SP,Oligodendrocyte precursor,F9,-0.26846739649772644,204
+atlas SP,Oligodendrocyte precursor,F10,3.182605028152466,204
+atlas SP,Oligodendrocyte precursor,F11,-0.1727685034275055,204
+atlas SP,Oligodendrocyte precursor,F12,-0.24217842519283295,204
+atlas SP,Oligodendrocyte precursor,F13,-0.7013204097747803,204
+atlas SP,Oligodendrocyte precursor,F14,-0.23798060417175293,204
+atlas SP,Oligodendrocyte precursor,F15,-0.305899053812027,204
+atlas SP,Oligodendrocyte precursor,F16,-0.14510184526443481,204
+atlas SP,Oligodendrocyte precursor,F17,-0.2179846465587616,204
+atlas SP,Oligodendrocyte precursor,F18,-0.22696928679943085,204
+atlas SP,Oligodendrocyte precursor,F19,-0.1666753739118576,204
+atlas SP,Oligodendrocyte precursor,F20,-0.1041688323020935,204
+atlas SP,Hematopoietic progenitor,F1,-0.5636672973632812,157
+atlas SP,Hematopoietic progenitor,F2,-0.39713215827941895,157
+atlas SP,Hematopoietic progenitor,F3,-0.5865421891212463,157
+atlas SP,Hematopoietic progenitor,F4,-0.29146355390548706,157
+atlas SP,Hematopoietic progenitor,F5,-0.32517775893211365,157
+atlas SP,Hematopoietic progenitor,F6,0.07583548128604889,157
+atlas SP,Hematopoietic progenitor,F7,-0.0835215300321579,157
+atlas SP,Hematopoietic progenitor,F8,-0.3678009808063507,157
+atlas SP,Hematopoietic progenitor,F9,0.9651709198951721,157
+atlas SP,Hematopoietic progenitor,F10,-0.3025348484516144,157
+atlas SP,Hematopoietic progenitor,F11,-0.08951672166585922,157
+atlas SP,Hematopoietic progenitor,F12,0.18062986433506012,157
+atlas SP,Hematopoietic progenitor,F13,1.0752018690109253,157
+atlas SP,Hematopoietic progenitor,F14,-0.26440078020095825,157
+atlas SP,Hematopoietic progenitor,F15,0.45453473925590515,157
+atlas SP,Hematopoietic progenitor,F16,0.6194328665733337,157
+atlas SP,Hematopoietic progenitor,F17,0.32219046354293823,157
+atlas SP,Hematopoietic progenitor,F18,0.2492184191942215,157
+atlas SP,Hematopoietic progenitor,F19,-0.06501755863428116,157
+atlas SP,Hematopoietic progenitor,F20,-0.016569793224334717,157
+atlas SP,Alveolar epithelial cell,F1,-0.5703117251396179,156
+atlas SP,Alveolar epithelial cell,F2,-0.39522695541381836,156
+atlas SP,Alveolar epithelial cell,F3,-0.6061283349990845,156
+atlas SP,Alveolar epithelial cell,F4,-0.2663387358188629,156
+atlas SP,Alveolar epithelial cell,F5,-0.3232741355895996,156
+atlas SP,Alveolar epithelial cell,F6,0.06825803220272064,156
+atlas SP,Alveolar epithelial cell,F7,0.13205097615718842,156
+atlas SP,Alveolar epithelial cell,F8,-0.42913001775741577,156
+atlas SP,Alveolar epithelial cell,F9,-0.07324513047933578,156
+atlas SP,Alveolar epithelial cell,F10,0.7038760781288147,156
+atlas SP,Alveolar epithelial cell,F11,-0.009502380155026913,156
+atlas SP,Alveolar epithelial cell,F12,0.2781997621059418,156
+atlas SP,Alveolar epithelial cell,F13,0.6227350234985352,156
+atlas SP,Alveolar epithelial cell,F14,-0.28416046500205994,156
+atlas SP,Alveolar epithelial cell,F15,-0.008781107142567635,156
+atlas SP,Alveolar epithelial cell,F16,-0.08862370997667313,156
+atlas SP,Alveolar epithelial cell,F17,0.04612615332007408,156
+atlas SP,Alveolar epithelial cell,F18,0.034903865307569504,156
+atlas SP,Alveolar epithelial cell,F19,0.038108907639980316,156
+atlas SP,Alveolar epithelial cell,F20,0.26004791259765625,156
+atlas SP,Kidney tubular cell,F1,-0.5574349761009216,140
+atlas SP,Kidney tubular cell,F2,-0.3776587247848511,140
+atlas SP,Kidney tubular cell,F3,-0.5875268578529358,140
+atlas SP,Kidney tubular cell,F4,-0.2779000401496887,140
+atlas SP,Kidney tubular cell,F5,-0.30616429448127747,140
+atlas SP,Kidney tubular cell,F6,0.163263738155365,140
+atlas SP,Kidney tubular cell,F7,-0.1423570066690445,140
+atlas SP,Kidney tubular cell,F8,-0.4087871015071869,140
+atlas SP,Kidney tubular cell,F9,0.06528684496879578,140
+atlas SP,Kidney tubular cell,F10,0.42656466364860535,140
+atlas SP,Kidney tubular cell,F11,0.08049284666776657,140
+atlas SP,Kidney tubular cell,F12,0.04528700187802315,140
+atlas SP,Kidney tubular cell,F13,0.6383628845214844,140
+atlas SP,Kidney tubular cell,F14,-0.24169981479644775,140
+atlas SP,Kidney tubular cell,F15,-0.13835082948207855,140
+atlas SP,Kidney tubular cell,F16,0.15066145360469818,140
+atlas SP,Kidney tubular cell,F17,0.062390029430389404,140
+atlas SP,Kidney tubular cell,F18,0.48143690824508667,140
+atlas SP,Kidney tubular cell,F19,0.025159304961562157,140
+atlas SP,Kidney tubular cell,F20,0.2943659722805023,140
+atlas SP,Neuroepithelial cell,F1,-0.5146771669387817,117
+atlas SP,Neuroepithelial cell,F2,-0.3334049582481384,117
+atlas SP,Neuroepithelial cell,F3,-0.46833717823028564,117
+atlas SP,Neuroepithelial cell,F4,-0.19444866478443146,117
+atlas SP,Neuroepithelial cell,F5,-0.2389254868030548,117
+atlas SP,Neuroepithelial cell,F6,0.15742799639701843,117
+atlas SP,Neuroepithelial cell,F7,-0.05997882038354874,117
+atlas SP,Neuroepithelial cell,F8,-0.15853866934776306,117
+atlas SP,Neuroepithelial cell,F9,-0.055803198367357254,117
+atlas SP,Neuroepithelial cell,F10,0.6567880511283875,117
+atlas SP,Neuroepithelial cell,F11,0.08128785341978073,117
+atlas SP,Neuroepithelial cell,F12,0.02852511778473854,117
+atlas SP,Neuroepithelial cell,F13,0.24699734151363373,117
+atlas SP,Neuroepithelial cell,F14,-0.00032895428012125194,117
+atlas SP,Neuroepithelial cell,F15,0.18411770462989807,117
+atlas SP,Neuroepithelial cell,F16,0.19800736010074615,117
+atlas SP,Neuroepithelial cell,F17,0.4851173758506775,117
+atlas SP,Neuroepithelial cell,F18,0.39329132437705994,117
+atlas SP,Neuroepithelial cell,F19,0.29972386360168457,117
+atlas SP,Neuroepithelial cell,F20,1.758467197418213,117
+atlas SP,Enteroendocrine cell,F1,-0.5176987648010254,108
+atlas SP,Enteroendocrine cell,F2,-0.27794861793518066,108
+atlas SP,Enteroendocrine cell,F3,-0.4985302686691284,108
+atlas SP,Enteroendocrine cell,F4,-0.20643222332000732,108
+atlas SP,Enteroendocrine cell,F5,-0.2513236701488495,108
+atlas SP,Enteroendocrine cell,F6,-0.2978929579257965,108
+atlas SP,Enteroendocrine cell,F7,0.028541631996631622,108
+atlas SP,Enteroendocrine cell,F8,-0.2813746929168701,108
+atlas SP,Enteroendocrine cell,F9,0.39617443084716797,108
+atlas SP,Enteroendocrine cell,F10,0.06729248911142349,108
+atlas SP,Enteroendocrine cell,F11,1.1288236379623413,108
+atlas SP,Enteroendocrine cell,F12,1.5273363590240479,108
+atlas SP,Enteroendocrine cell,F13,0.9885790348052979,108
+atlas SP,Enteroendocrine cell,F14,0.04747476801276207,108
+atlas SP,Enteroendocrine cell,F15,0.27235063910484314,108
+atlas SP,Enteroendocrine cell,F16,0.40627822279930115,108
+atlas SP,Enteroendocrine cell,F17,0.407185435295105,108
+atlas SP,Enteroendocrine cell,F18,0.5990570783615112,108
+atlas SP,Enteroendocrine cell,F19,0.7038617134094238,108
+atlas SP,Enteroendocrine cell,F20,0.15195588767528534,108
+atlas SP,Airway epithelial cell,F1,-0.5659821629524231,102
+atlas SP,Airway epithelial cell,F2,-0.3889675438404083,102
+atlas SP,Airway epithelial cell,F3,-0.6014291644096375,102
+atlas SP,Airway epithelial cell,F4,-0.29824280738830566,102
+atlas SP,Airway epithelial cell,F5,-0.3336905241012573,102
+atlas SP,Airway epithelial cell,F6,-0.33244767785072327,102
+atlas SP,Airway epithelial cell,F7,0.008669886738061905,102
+atlas SP,Airway epithelial cell,F8,-0.41928452253341675,102
+atlas SP,Airway epithelial cell,F9,-0.19691312313079834,102
+atlas SP,Airway epithelial cell,F10,0.543480396270752,102
+atlas SP,Airway epithelial cell,F11,-0.056404512375593185,102
+atlas SP,Airway epithelial cell,F12,0.2457185685634613,102
+atlas SP,Airway epithelial cell,F13,1.1032546758651733,102
+atlas SP,Airway epithelial cell,F14,-0.2858244776725769,102
+atlas SP,Airway epithelial cell,F15,-0.09949405491352081,102
+atlas SP,Airway epithelial cell,F16,-0.09283670037984848,102
+atlas SP,Airway epithelial cell,F17,0.011341906152665615,102
+atlas SP,Airway epithelial cell,F18,-0.009794148616492748,102
+atlas SP,Airway epithelial cell,F19,0.016976505517959595,102
+atlas SP,Airway epithelial cell,F20,0.005275956355035305,102
+atlas SP,Lymphatic endothelial cell,F1,-0.5728338956832886,91
+atlas SP,Lymphatic endothelial cell,F2,-0.41980069875717163,91
+atlas SP,Lymphatic endothelial cell,F3,-0.6114463210105896,91
+atlas SP,Lymphatic endothelial cell,F4,-0.30575528740882874,91
+atlas SP,Lymphatic endothelial cell,F5,-0.34103891253471375,91
+atlas SP,Lymphatic endothelial cell,F6,1.4575809240341187,91
+atlas SP,Lymphatic endothelial cell,F7,-0.1866626888513565,91
+atlas SP,Lymphatic endothelial cell,F8,-0.4539019763469696,91
+atlas SP,Lymphatic endothelial cell,F9,-0.18134261667728424,91
+atlas SP,Lymphatic endothelial cell,F10,0.5801841616630554,91
+atlas SP,Lymphatic endothelial cell,F11,-0.11463476717472076,91
+atlas SP,Lymphatic endothelial cell,F12,-0.14485080540180206,91
+atlas SP,Lymphatic endothelial cell,F13,-0.548685610294342,91
+atlas SP,Lymphatic endothelial cell,F14,-0.3079223036766052,91
+atlas SP,Lymphatic endothelial cell,F15,0.021246377378702164,91
+atlas SP,Lymphatic endothelial cell,F16,-0.0868416279554367,91
+atlas SP,Lymphatic endothelial cell,F17,-0.11735477298498154,91
+atlas SP,Lymphatic endothelial cell,F18,-0.18121427297592163,91
+atlas SP,Lymphatic endothelial cell,F19,-0.3348020315170288,91
+atlas SP,Lymphatic endothelial cell,F20,-0.06949587166309357,91
+atlas SP,Kidney glomerular cell,F1,-0.5486552715301514,77
+atlas SP,Kidney glomerular cell,F2,-0.34361532330513,77
+atlas SP,Kidney glomerular cell,F3,-0.5719315409660339,77
+atlas SP,Kidney glomerular cell,F4,-0.24447523057460785,77
+atlas SP,Kidney glomerular cell,F5,-0.2662501037120819,77
+atlas SP,Kidney glomerular cell,F6,0.8437278866767883,77
+atlas SP,Kidney glomerular cell,F7,-0.026586556807160378,77
+atlas SP,Kidney glomerular cell,F8,-0.3463763892650604,77
+atlas SP,Kidney glomerular cell,F9,0.11489832401275635,77
+atlas SP,Kidney glomerular cell,F10,0.5971124172210693,77
+atlas SP,Kidney glomerular cell,F11,0.08146852999925613,77
+atlas SP,Kidney glomerular cell,F12,0.1499856561422348,77
+atlas SP,Kidney glomerular cell,F13,-0.14988800883293152,77
+atlas SP,Kidney glomerular cell,F14,-0.19612203538417816,77
+atlas SP,Kidney glomerular cell,F15,0.6545417308807373,77
+atlas SP,Kidney glomerular cell,F16,0.13237932324409485,77
+atlas SP,Kidney glomerular cell,F17,0.36252763867378235,77
+atlas SP,Kidney glomerular cell,F18,0.39463329315185547,77
+atlas SP,Kidney glomerular cell,F19,0.003954106941819191,77
+atlas SP,Kidney glomerular cell,F20,0.1448853313922882,77
+atlas SP,Neural stem cell,F1,-0.5623832941055298,63
+atlas SP,Neural stem cell,F2,-0.3589545786380768,63
+atlas SP,Neural stem cell,F3,-0.18474867939949036,63
+atlas SP,Neural stem cell,F4,-0.21752530336380005,63
+atlas SP,Neural stem cell,F5,-0.32831233739852905,63
+atlas SP,Neural stem cell,F6,-0.4113836884498596,63
+atlas SP,Neural stem cell,F7,-0.1747143268585205,63
+atlas SP,Neural stem cell,F8,0.0036947201006114483,63
+atlas SP,Neural stem cell,F9,0.17920391261577606,63
+atlas SP,Neural stem cell,F10,2.821113348007202,63
+atlas SP,Neural stem cell,F11,-0.17756469547748566,63
+atlas SP,Neural stem cell,F12,0.037264373153448105,63
+atlas SP,Neural stem cell,F13,-0.47913438081741333,63
+atlas SP,Neural stem cell,F14,-0.2891730070114136,63
+atlas SP,Neural stem cell,F15,-0.07608868181705475,63
+atlas SP,Neural stem cell,F16,-0.1464894860982895,63
+atlas SP,Neural stem cell,F17,-0.1565479189157486,63
+atlas SP,Neural stem cell,F18,-0.02063433825969696,63
+atlas SP,Neural stem cell,F19,0.2058713585138321,63
+atlas SP,Neural stem cell,F20,-0.08458403497934341,63
+atlas SP,Other glial cell,F1,-0.5547428727149963,55
+atlas SP,Other glial cell,F2,-0.3652779757976532,55
+atlas SP,Other glial cell,F3,-0.5137202739715576,55
+atlas SP,Other glial cell,F4,-0.27124500274658203,55
+atlas SP,Other glial cell,F5,-0.3145013749599457,55
+atlas SP,Other glial cell,F6,0.19712118804454803,55
+atlas SP,Other glial cell,F7,-0.163813978433609,55
+atlas SP,Other glial cell,F8,-0.3216950595378876,55
+atlas SP,Other glial cell,F9,-0.178882896900177,55
+atlas SP,Other glial cell,F10,1.9601078033447266,55
+atlas SP,Other glial cell,F11,-0.09536699205636978,55
+atlas SP,Other glial cell,F12,0.0378996804356575,55
+atlas SP,Other glial cell,F13,-0.26139670610427856,55
+atlas SP,Other glial cell,F14,-0.2234693020582199,55
+atlas SP,Other glial cell,F15,-0.20752157270908356,55
+atlas SP,Other glial cell,F16,-0.06773408502340317,55
+atlas SP,Other glial cell,F17,-0.06153751537203789,55
+atlas SP,Other glial cell,F18,0.021326741203665733,55
+atlas SP,Other glial cell,F19,-0.11881864070892334,55
+atlas SP,Other glial cell,F20,-0.0217122919857502,55
+atlas SP,Pancreatic stellate cell,F1,-0.5737437605857849,40
+atlas SP,Pancreatic stellate cell,F2,-0.4005788266658783,40
+atlas SP,Pancreatic stellate cell,F3,-0.6116125583648682,40
+atlas SP,Pancreatic stellate cell,F4,-0.3111880421638489,40
+atlas SP,Pancreatic stellate cell,F5,-0.33732980489730835,40
+atlas SP,Pancreatic stellate cell,F6,0.8125975728034973,40
+atlas SP,Pancreatic stellate cell,F7,-0.21176791191101074,40
+atlas SP,Pancreatic stellate cell,F8,-0.42996692657470703,40
+atlas SP,Pancreatic stellate cell,F9,-0.0644722580909729,40
+atlas SP,Pancreatic stellate cell,F10,1.7506523132324219,40
+atlas SP,Pancreatic stellate cell,F11,-0.15707214176654816,40
+atlas SP,Pancreatic stellate cell,F12,-0.11898589134216309,40
+atlas SP,Pancreatic stellate cell,F13,-0.6027371883392334,40
+atlas SP,Pancreatic stellate cell,F14,-0.32119306921958923,40
+atlas SP,Pancreatic stellate cell,F15,1.0944416522979736,40
+atlas SP,Pancreatic stellate cell,F16,-0.1400250345468521,40
+atlas SP,Pancreatic stellate cell,F17,-0.15089747309684753,40
+atlas SP,Pancreatic stellate cell,F18,-0.06917151808738708,40
+atlas SP,Pancreatic stellate cell,F19,-0.15477542579174042,40
+atlas SP,Pancreatic stellate cell,F20,-0.10467688739299774,40
+atlas SP,Lung neuroendocrine cell,F1,-0.5587358474731445,3
+atlas SP,Lung neuroendocrine cell,F2,-0.4262341558933258,3
+atlas SP,Lung neuroendocrine cell,F3,-0.4234447777271271,3
+atlas SP,Lung neuroendocrine cell,F4,-0.3202682435512543,3
+atlas SP,Lung neuroendocrine cell,F5,-0.3145054876804352,3
+atlas SP,Lung neuroendocrine cell,F6,-0.43043527007102966,3
+atlas SP,Lung neuroendocrine cell,F7,-0.2330954223871231,3
+atlas SP,Lung neuroendocrine cell,F8,-0.43747615814208984,3
+atlas SP,Lung neuroendocrine cell,F9,-0.2554265856742859,3
+atlas SP,Lung neuroendocrine cell,F10,1.545487403869629,3
+atlas SP,Lung neuroendocrine cell,F11,-0.17737454175949097,3
+atlas SP,Lung neuroendocrine cell,F12,-0.25325825810432434,3
+atlas SP,Lung neuroendocrine cell,F13,0.5499833822250366,3
+atlas SP,Lung neuroendocrine cell,F14,-0.2919175326824188,3
+atlas SP,Lung neuroendocrine cell,F15,-0.28633424639701843,3
+atlas SP,Lung neuroendocrine cell,F16,-0.14329320192337036,3
+atlas SP,Lung neuroendocrine cell,F17,-0.23483778536319733,3
+atlas SP,Lung neuroendocrine cell,F18,-0.38379719853401184,3
+atlas SP,Lung neuroendocrine cell,F19,-0.48866841197013855,3
+atlas SP,Lung neuroendocrine cell,F20,-0.10869341343641281,3
+logit homo,Cortical excitatory neuron,F1,1.2998884916305542,30868
+logit homo,Cortical excitatory neuron,F2,-0.900980532169342,30868
+logit homo,Cortical excitatory neuron,F3,0.10688789933919907,30868
+logit homo,Cortical excitatory neuron,F4,-0.0682787075638771,30868
+logit homo,Cortical excitatory neuron,F5,0.16473299264907837,30868
+logit homo,Cortical excitatory neuron,F6,-0.20657245814800262,30868
+logit homo,Cortical excitatory neuron,F7,-0.06216218322515488,30868
+logit homo,Cortical excitatory neuron,F8,0.07665146887302399,30868
+logit homo,Cortical excitatory neuron,F9,0.19610436260700226,30868
+logit homo,Cortical excitatory neuron,F10,0.25261667370796204,30868
+logit homo,Cortical excitatory neuron,F11,-0.8729038238525391,30868
+logit homo,Cortical excitatory neuron,F12,-0.03432544693350792,30868
+logit homo,Cortical excitatory neuron,F13,-0.29910311102867126,30868
+logit homo,Inhibitory neuron,F1,1.1624034643173218,17259
+logit homo,Inhibitory neuron,F2,1.9223772287368774,17259
+logit homo,Inhibitory neuron,F3,-0.20550982654094696,17259
+logit homo,Inhibitory neuron,F4,-0.006225804798305035,17259
+logit homo,Inhibitory neuron,F5,-0.17941653728485107,17259
+logit homo,Inhibitory neuron,F6,0.031377822160720825,17259
+logit homo,Inhibitory neuron,F7,-0.23354190587997437,17259
+logit homo,Inhibitory neuron,F8,-0.26127108931541443,17259
+logit homo,Inhibitory neuron,F9,-0.3474806547164917,17259
+logit homo,Inhibitory neuron,F10,-0.53779137134552,17259
+logit homo,Inhibitory neuron,F11,-0.786300778388977,17259
+logit homo,Inhibitory neuron,F12,0.09799981862306595,17259
+logit homo,Inhibitory neuron,F13,0.5755898356437683,17259
+logit homo,Microglia,F1,-0.791608989238739,12042
+logit homo,Microglia,F2,0.6726505756378174,12042
+logit homo,Microglia,F3,0.042782071977853775,12042
+logit homo,Microglia,F4,-0.17772157490253448,12042
+logit homo,Microglia,F5,-0.3823258876800537,12042
+logit homo,Microglia,F6,0.07621495425701141,12042
+logit homo,Microglia,F7,-0.773591160774231,12042
+logit homo,Microglia,F8,0.3911534547805786,12042
+logit homo,Microglia,F9,-0.8496391177177429,12042
+logit homo,Microglia,F10,1.5325156450271606,12042
+logit homo,Microglia,F11,0.7856993675231934,12042
+logit homo,Microglia,F12,-1.0045595169067383,12042
+logit homo,Microglia,F13,-1.4446760416030884,12042
+logit homo,B cell,F1,-0.753233015537262,8620
+logit homo,B cell,F2,-0.14188288152217865,8620
+logit homo,B cell,F3,-0.14314262568950653,8620
+logit homo,B cell,F4,-0.1540716290473938,8620
+logit homo,B cell,F5,0.07446345686912537,8620
+logit homo,B cell,F6,-0.34388360381126404,8620
+logit homo,B cell,F7,0.7313719987869263,8620
+logit homo,B cell,F8,0.052082933485507965,8620
+logit homo,B cell,F9,0.4970877468585968,8620
+logit homo,B cell,F10,-1.1114022731781006,8620
+logit homo,B cell,F11,0.8765785098075867,8620
+logit homo,B cell,F12,-1.366329550743103,8620
+logit homo,B cell,F13,0.058249302208423615,8620
+logit homo,Skin epithelial cell,F1,-0.8800884485244751,7347
+logit homo,Skin epithelial cell,F2,-0.03353961929678917,7347
+logit homo,Skin epithelial cell,F3,-0.13307775557041168,7347
+logit homo,Skin epithelial cell,F4,0.3918536305427551,7347
+logit homo,Skin epithelial cell,F5,-0.5250142812728882,7347
+logit homo,Skin epithelial cell,F6,-0.4724503457546234,7347
+logit homo,Skin epithelial cell,F7,-0.8919584155082703,7347
+logit homo,Skin epithelial cell,F8,2.20432710647583,7347
+logit homo,Skin epithelial cell,F9,1.3133279085159302,7347
+logit homo,Skin epithelial cell,F10,0.012635327875614166,7347
+logit homo,Skin epithelial cell,F11,-0.0349261537194252,7347
+logit homo,Skin epithelial cell,F12,1.0586249828338623,7347
+logit homo,Skin epithelial cell,F13,0.9949802160263062,7347
+logit homo,Endothelial cell,F1,-0.716291606426239,7044
+logit homo,Endothelial cell,F2,-0.5156937837600708,7044
+logit homo,Endothelial cell,F3,0.4316999614238739,7044
+logit homo,Endothelial cell,F4,2.1702685356140137,7044
+logit homo,Endothelial cell,F5,1.0837996006011963,7044
+logit homo,Endothelial cell,F6,0.12348797917366028,7044
+logit homo,Endothelial cell,F7,-0.5091893672943115,7044
+logit homo,Endothelial cell,F8,-0.648090124130249,7044
+logit homo,Endothelial cell,F9,-1.1775202751159668,7044
+logit homo,Endothelial cell,F10,-0.6686254143714905,7044
+logit homo,Endothelial cell,F11,0.740877628326416,7044
+logit homo,Endothelial cell,F12,0.43077632784843445,7044
+logit homo,Endothelial cell,F13,0.07296164333820343,7044
+logit homo,Mesenchymal stem cell,F1,-0.8948089480400085,4755
+logit homo,Mesenchymal stem cell,F2,-0.727679431438446,4755
+logit homo,Mesenchymal stem cell,F3,-0.26977381110191345,4755
+logit homo,Mesenchymal stem cell,F4,-1.6652861833572388,4755
+logit homo,Mesenchymal stem cell,F5,-0.8759741187095642,4755
+logit homo,Mesenchymal stem cell,F6,-0.3377388119697571,4755
+logit homo,Mesenchymal stem cell,F7,0.1500954031944275,4755
+logit homo,Mesenchymal stem cell,F8,-0.9788155555725098,4755
+logit homo,Mesenchymal stem cell,F9,-1.179093837738037,4755
+logit homo,Mesenchymal stem cell,F10,-0.2658501863479614,4755
+logit homo,Mesenchymal stem cell,F11,-0.08899925649166107,4755
+logit homo,Mesenchymal stem cell,F12,1.567628264427185,4755
+logit homo,Mesenchymal stem cell,F13,0.16542047262191772,4755
+logit homo,Fibroblast,F1,-0.882011353969574,4600
+logit homo,Fibroblast,F2,-0.5840928554534912,4600
+logit homo,Fibroblast,F3,-0.12437935173511505,4600
+logit homo,Fibroblast,F4,-1.543250322341919,4600
+logit homo,Fibroblast,F5,-0.7396765947341919,4600
+logit homo,Fibroblast,F6,-0.3022434413433075,4600
+logit homo,Fibroblast,F7,0.5129828453063965,4600
+logit homo,Fibroblast,F8,-0.760047972202301,4600
+logit homo,Fibroblast,F9,-1.3930821418762207,4600
+logit homo,Fibroblast,F10,-0.266391396522522,4600
+logit homo,Fibroblast,F11,-0.018494002521038055,4600
+logit homo,Fibroblast,F12,1.5622813701629639,4600
+logit homo,Fibroblast,F13,0.09412388503551483,4600
+logit homo,Hippocampal neuron,F1,1.0305098295211792,4476
+logit homo,Hippocampal neuron,F2,-0.5838750004768372,4476
+logit homo,Hippocampal neuron,F3,-0.6257402300834656,4476
+logit homo,Hippocampal neuron,F4,-0.32388049364089966,4476
+logit homo,Hippocampal neuron,F5,0.902091383934021,4476
+logit homo,Hippocampal neuron,F6,1.5726003646850586,4476
+logit homo,Hippocampal neuron,F7,0.089373879134655,4476
+logit homo,Hippocampal neuron,F8,0.213202565908432,4476
+logit homo,Hippocampal neuron,F9,0.0939381942152977,4476
+logit homo,Hippocampal neuron,F10,0.24801145493984222,4476
+logit homo,Hippocampal neuron,F11,-0.5700053572654724,4476
+logit homo,Hippocampal neuron,F12,-0.03006470389664173,4476
+logit homo,Hippocampal neuron,F13,0.032380346208810806,4476
+logit homo,T cell,F1,-0.7785071730613708,3571
+logit homo,T cell,F2,-0.21418258547782898,3571
+logit homo,T cell,F3,-0.5290343165397644,3571
+logit homo,T cell,F4,-0.2341316044330597,3571
+logit homo,T cell,F5,0.022383006289601326,3571
+logit homo,T cell,F6,-0.12784913182258606,3571
+logit homo,T cell,F7,0.6866304278373718,3571
+logit homo,T cell,F8,0.02911660633981228,3571
+logit homo,T cell,F9,0.6680417656898499,3571
+logit homo,T cell,F10,-1.3869531154632568,3571
+logit homo,T cell,F11,0.7498080134391785,3571
+logit homo,T cell,F12,-1.267886757850647,3571
+logit homo,T cell,F13,0.13535483181476593,3571
+logit homo,Intestinal epithelial cell,F1,-0.5344380736351013,3016
+logit homo,Intestinal epithelial cell,F2,-0.16766305267810822,3016
+logit homo,Intestinal epithelial cell,F3,-0.7421832084655762,3016
+logit homo,Intestinal epithelial cell,F4,1.2591794729232788,3016
+logit homo,Intestinal epithelial cell,F5,-0.8211747407913208,3016
+logit homo,Intestinal epithelial cell,F6,-0.11095667630434036,3016
+logit homo,Intestinal epithelial cell,F7,0.7648003697395325,3016
+logit homo,Intestinal epithelial cell,F8,-1.3477455377578735,3016
+logit homo,Intestinal epithelial cell,F9,1.2580305337905884,3016
+logit homo,Intestinal epithelial cell,F10,1.3279438018798828,3016
+logit homo,Intestinal epithelial cell,F11,0.9701904654502869,3016
+logit homo,Intestinal epithelial cell,F12,-0.022015633061528206,3016
+logit homo,Intestinal epithelial cell,F13,1.1146539449691772,3016
+logit homo,T cell precursor,F1,-0.8292551636695862,3002
+logit homo,T cell precursor,F2,-0.02453460544347763,3002
+logit homo,T cell precursor,F3,0.103495754301548,3002
+logit homo,T cell precursor,F4,-0.5978779792785645,3002
+logit homo,T cell precursor,F5,0.5181680917739868,3002
+logit homo,T cell precursor,F6,-0.10439243912696838,3002
+logit homo,T cell precursor,F7,0.6577453017234802,3002
+logit homo,T cell precursor,F8,-0.06420488655567169,3002
+logit homo,T cell precursor,F9,0.874940812587738,3002
+logit homo,T cell precursor,F10,-1.4465452432632446,3002
+logit homo,T cell precursor,F11,0.5321059226989746,3002
+logit homo,T cell precursor,F12,-1.2309871912002563,3002
+logit homo,T cell precursor,F13,-0.05908511206507683,3002
+logit homo,Granulocyte,F1,-0.5065312385559082,2860
+logit homo,Granulocyte,F2,-0.1959829479455948,2860
+logit homo,Granulocyte,F3,-0.5679532885551453,2860
+logit homo,Granulocyte,F4,0.19020214676856995,2860
+logit homo,Granulocyte,F5,-0.35986247658729553,2860
+logit homo,Granulocyte,F6,0.31909942626953125,2860
+logit homo,Granulocyte,F7,-0.06629670411348343,2860
+logit homo,Granulocyte,F8,-0.577650785446167,2860
+logit homo,Granulocyte,F9,0.15400858223438263,2860
+logit homo,Granulocyte,F10,-0.6102029085159302,2860
+logit homo,Granulocyte,F11,1.4775692224502563,2860
+logit homo,Granulocyte,F12,-1.246985673904419,2860
+logit homo,Granulocyte,F13,-0.1978542059659958,2860
+logit homo,Hematopoietic stem cell,F1,-0.9110467433929443,2748
+logit homo,Hematopoietic stem cell,F2,0.7215805649757385,2748
+logit homo,Hematopoietic stem cell,F3,3.054539203643799,2748
+logit homo,Hematopoietic stem cell,F4,-1.4994145631790161,2748
+logit homo,Hematopoietic stem cell,F5,1.3062880039215088,2748
+logit homo,Hematopoietic stem cell,F6,0.852411150932312,2748
+logit homo,Hematopoietic stem cell,F7,0.06649579107761383,2748
+logit homo,Hematopoietic stem cell,F8,-0.7116683125495911,2748
+logit homo,Hematopoietic stem cell,F9,1.4857304096221924,2748
+logit homo,Hematopoietic stem cell,F10,-0.36837947368621826,2748
+logit homo,Hematopoietic stem cell,F11,-0.5164286494255066,2748
+logit homo,Hematopoietic stem cell,F12,0.046745914965867996,2748
+logit homo,Hematopoietic stem cell,F13,-0.3714739680290222,2748
+logit homo,Other immune cell,F1,-0.6802663803100586,2562
+logit homo,Other immune cell,F2,-0.08442952483892441,2562
+logit homo,Other immune cell,F3,-0.4923381209373474,2562
+logit homo,Other immune cell,F4,-0.1510642170906067,2562
+logit homo,Other immune cell,F5,-0.14832495152950287,2562
+logit homo,Other immune cell,F6,-0.10155939310789108,2562
+logit homo,Other immune cell,F7,-0.372616171836853,2562
+logit homo,Other immune cell,F8,-0.1166154220700264,2562
+logit homo,Other immune cell,F9,0.2568783462047577,2562
+logit homo,Other immune cell,F10,-0.12684427201747894,2562
+logit homo,Other immune cell,F11,0.9281847476959229,2562
+logit homo,Other immune cell,F12,-0.7922458648681641,2562
+logit homo,Other immune cell,F13,-0.3426794409751892,2562
+logit homo,Skeletal muscle cell,F1,-0.6909263730049133,2460
+logit homo,Skeletal muscle cell,F2,-0.4499823749065399,2460
+logit homo,Skeletal muscle cell,F3,0.849616527557373,2460
+logit homo,Skeletal muscle cell,F4,-0.3881337642669678,2460
+logit homo,Skeletal muscle cell,F5,-0.9514489769935608,2460
+logit homo,Skeletal muscle cell,F6,0.7192695736885071,2460
+logit homo,Skeletal muscle cell,F7,0.03804944083094597,2460
+logit homo,Skeletal muscle cell,F8,1.0991212129592896,2460
+logit homo,Skeletal muscle cell,F9,-0.9916022419929504,2460
+logit homo,Skeletal muscle cell,F10,-0.42331230640411377,2460
+logit homo,Skeletal muscle cell,F11,0.8358416557312012,2460
+logit homo,Skeletal muscle cell,F12,0.5244407057762146,2460
+logit homo,Skeletal muscle cell,F13,1.1384391784667969,2460
+logit homo,Macrophage,F1,-0.75875324010849,2129
+logit homo,Macrophage,F2,-0.010100857354700565,2129
+logit homo,Macrophage,F3,-0.2203076034784317,2129
+logit homo,Macrophage,F4,-0.22172297537326813,2129
+logit homo,Macrophage,F5,-0.1305946558713913,2129
+logit homo,Macrophage,F6,-0.19064126908779144,2129
+logit homo,Macrophage,F7,-0.1833459883928299,2129
+logit homo,Macrophage,F8,-0.019193461164832115,2129
+logit homo,Macrophage,F9,0.28486597537994385,2129
+logit homo,Macrophage,F10,-0.19647778570652008,2129
+logit homo,Macrophage,F11,0.7910141348838806,2129
+logit homo,Macrophage,F12,-0.9668095111846924,2129
+logit homo,Macrophage,F13,-0.17319126427173615,2129
+logit homo,Smooth muscle cell,F1,-0.8606544137001038,2034
+logit homo,Smooth muscle cell,F2,-0.39697152376174927,2034
+logit homo,Smooth muscle cell,F3,0.8690537810325623,2034
+logit homo,Smooth muscle cell,F4,2.240170955657959,2034
+logit homo,Smooth muscle cell,F5,1.596359133720398,2034
+logit homo,Smooth muscle cell,F6,-0.004535090643912554,2034
+logit homo,Smooth muscle cell,F7,-0.5680517554283142,2034
+logit homo,Smooth muscle cell,F8,-0.579090416431427,2034
+logit homo,Smooth muscle cell,F9,-1.3557181358337402,2034
+logit homo,Smooth muscle cell,F10,-0.6297630667686462,2034
+logit homo,Smooth muscle cell,F11,0.2814984917640686,2034
+logit homo,Smooth muscle cell,F12,0.7739447951316833,2034
+logit homo,Smooth muscle cell,F13,-0.15526840090751648,2034
+logit homo,Pancreatic endocrine cell,F1,-0.340124249458313,1444
+logit homo,Pancreatic endocrine cell,F2,0.4730384945869446,1444
+logit homo,Pancreatic endocrine cell,F3,-0.41663357615470886,1444
+logit homo,Pancreatic endocrine cell,F4,-0.06343495845794678,1444
+logit homo,Pancreatic endocrine cell,F5,-0.058341968804597855,1444
+logit homo,Pancreatic endocrine cell,F6,1.5981438159942627,1444
+logit homo,Pancreatic endocrine cell,F7,0.8249873518943787,1444
+logit homo,Pancreatic endocrine cell,F8,-0.40322554111480713,1444
+logit homo,Pancreatic endocrine cell,F9,0.43245163559913635,1444
+logit homo,Pancreatic endocrine cell,F10,0.7397705912590027,1444
+logit homo,Pancreatic endocrine cell,F11,0.03136112913489342,1444
+logit homo,Pancreatic endocrine cell,F12,0.8221965432167053,1444
+logit homo,Pancreatic endocrine cell,F13,0.4668324291706085,1444
+logit homo,Oligodendrocyte,F1,-0.29758358001708984,1360
+logit homo,Oligodendrocyte,F2,1.4947583675384521,1360
+logit homo,Oligodendrocyte,F3,1.0148818492889404,1360
+logit homo,Oligodendrocyte,F4,0.9128879308700562,1360
+logit homo,Oligodendrocyte,F5,1.5248587131500244,1360
+logit homo,Oligodendrocyte,F6,-0.9833135008811951,1360
+logit homo,Oligodendrocyte,F7,6.125010967254639,1360
+logit homo,Oligodendrocyte,F8,3.3682024478912354,1360
+logit homo,Oligodendrocyte,F9,-1.5598407983779907,1360
+logit homo,Oligodendrocyte,F10,1.7284908294677734,1360
+logit homo,Oligodendrocyte,F11,-0.2819754183292389,1360
+logit homo,Oligodendrocyte,F12,1.0341155529022217,1360
+logit homo,Oligodendrocyte,F13,-0.6892664432525635,1360
+logit homo,Specialized intestinal cell,F1,-0.7034674882888794,1342
+logit homo,Specialized intestinal cell,F2,0.11114875227212906,1342
+logit homo,Specialized intestinal cell,F3,-0.6492537260055542,1342
+logit homo,Specialized intestinal cell,F4,1.1176429986953735,1342
+logit homo,Specialized intestinal cell,F5,-0.6309128403663635,1342
+logit homo,Specialized intestinal cell,F6,0.05988036468625069,1342
+logit homo,Specialized intestinal cell,F7,0.7297251224517822,1342
+logit homo,Specialized intestinal cell,F8,-1.8349003791809082,1342
+logit homo,Specialized intestinal cell,F9,1.8372923135757446,1342
+logit homo,Specialized intestinal cell,F10,1.8664190769195557,1342
+logit homo,Specialized intestinal cell,F11,0.3162529766559601,1342
+logit homo,Specialized intestinal cell,F12,0.48304447531700134,1342
+logit homo,Specialized intestinal cell,F13,0.8749421238899231,1342
+logit homo,Monocyte,F1,-0.908471941947937,1281
+logit homo,Monocyte,F2,0.13821732997894287,1281
+logit homo,Monocyte,F3,-0.5067083835601807,1281
+logit homo,Monocyte,F4,-0.2939319610595703,1281
+logit homo,Monocyte,F5,0.09334532916545868,1281
+logit homo,Monocyte,F6,-0.29936447739601135,1281
+logit homo,Monocyte,F7,-0.6823604106903076,1281
+logit homo,Monocyte,F8,-0.10028589516878128,1281
+logit homo,Monocyte,F9,0.10524852573871613,1281
+logit homo,Monocyte,F10,0.20632429420948029,1281
+logit homo,Monocyte,F11,0.3833813965320587,1281
+logit homo,Monocyte,F12,-0.7969980239868164,1281
+logit homo,Monocyte,F13,-0.9047144651412964,1281
+logit homo,Immune progenitor,F1,-0.8981421589851379,1204
+logit homo,Immune progenitor,F2,0.10780356079339981,1204
+logit homo,Immune progenitor,F3,0.26837441325187683,1204
+logit homo,Immune progenitor,F4,-0.6272446513175964,1204
+logit homo,Immune progenitor,F5,0.5077720284461975,1204
+logit homo,Immune progenitor,F6,-0.19546173512935638,1204
+logit homo,Immune progenitor,F7,-0.220346137881279,1204
+logit homo,Immune progenitor,F8,-0.5107339024543762,1204
+logit homo,Immune progenitor,F9,1.005959153175354,1204
+logit homo,Immune progenitor,F10,-0.3247930407524109,1204
+logit homo,Immune progenitor,F11,0.25901293754577637,1204
+logit homo,Immune progenitor,F12,-0.918999433517456,1204
+logit homo,Immune progenitor,F13,-0.38043835759162903,1204
+logit homo,Basal epithelial cell,F1,-0.9347366094589233,1148
+logit homo,Basal epithelial cell,F2,-0.20075899362564087,1148
+logit homo,Basal epithelial cell,F3,0.18502293527126312,1148
+logit homo,Basal epithelial cell,F4,-0.463751882314682,1148
+logit homo,Basal epithelial cell,F5,0.064944326877594,1148
+logit homo,Basal epithelial cell,F6,0.6860308647155762,1148
+logit homo,Basal epithelial cell,F7,-1.9067744016647339,1148
+logit homo,Basal epithelial cell,F8,1.4348331689834595,1148
+logit homo,Basal epithelial cell,F9,0.7148110270500183,1148
+logit homo,Basal epithelial cell,F10,-0.6735658645629883,1148
+logit homo,Basal epithelial cell,F11,-0.4742518365383148,1148
+logit homo,Basal epithelial cell,F12,1.9774707555770874,1148
+logit homo,Basal epithelial cell,F13,0.35532960295677185,1148
+logit homo,Urogenital epithelial cell,F1,-0.8781447410583496,1008
+logit homo,Urogenital epithelial cell,F2,0.3136240541934967,1008
+logit homo,Urogenital epithelial cell,F3,0.039543312042951584,1008
+logit homo,Urogenital epithelial cell,F4,0.46707719564437866,1008
+logit homo,Urogenital epithelial cell,F5,-0.26534032821655273,1008
+logit homo,Urogenital epithelial cell,F6,0.6770423650741577,1008
+logit homo,Urogenital epithelial cell,F7,-1.268411636352539,1008
+logit homo,Urogenital epithelial cell,F8,0.8765318393707275,1008
+logit homo,Urogenital epithelial cell,F9,1.7150565385818481,1008
+logit homo,Urogenital epithelial cell,F10,0.8202459216117859,1008
+logit homo,Urogenital epithelial cell,F11,-0.5214409828186035,1008
+logit homo,Urogenital epithelial cell,F12,1.4864219427108765,1008
+logit homo,Urogenital epithelial cell,F13,0.41836780309677124,1008
+logit homo,Epithelial stem cell,F1,-0.9234148859977722,938
+logit homo,Epithelial stem cell,F2,0.6279510855674744,938
+logit homo,Epithelial stem cell,F3,-0.2488376349210739,938
+logit homo,Epithelial stem cell,F4,1.1064891815185547,938
+logit homo,Epithelial stem cell,F5,-0.2917889952659607,938
+logit homo,Epithelial stem cell,F6,-0.10775545984506607,938
+logit homo,Epithelial stem cell,F7,1.0298588275909424,938
+logit homo,Epithelial stem cell,F8,-2.3779001235961914,938
+logit homo,Epithelial stem cell,F9,3.0138306617736816,938
+logit homo,Epithelial stem cell,F10,2.1424341201782227,938
+logit homo,Epithelial stem cell,F11,-0.6897320747375488,938
+logit homo,Epithelial stem cell,F12,1.0376172065734863,938
+logit homo,Epithelial stem cell,F13,0.5547856688499451,938
+logit homo,Car3+ astrocyte,F1,1.1916906833648682,895
+logit homo,Car3+ astrocyte,F2,-0.8666495084762573,895
+logit homo,Car3+ astrocyte,F3,0.20636282861232758,895
+logit homo,Car3+ astrocyte,F4,-0.09790084511041641,895
+logit homo,Car3+ astrocyte,F5,0.16236203908920288,895
+logit homo,Car3+ astrocyte,F6,0.5198264122009277,895
+logit homo,Car3+ astrocyte,F7,0.11142197251319885,895
+logit homo,Car3+ astrocyte,F8,-0.034763582050800323,895
+logit homo,Car3+ astrocyte,F9,0.2095918506383896,895
+logit homo,Car3+ astrocyte,F10,0.2458171546459198,895
+logit homo,Car3+ astrocyte,F11,-0.7729791402816772,895
+logit homo,Car3+ astrocyte,F12,0.09868134558200836,895
+logit homo,Car3+ astrocyte,F13,-0.3493043780326843,895
+logit homo,Kidney epithelial cell,F1,-0.5086653232574463,818
+logit homo,Kidney epithelial cell,F2,0.024793850257992744,818
+logit homo,Kidney epithelial cell,F3,-0.24973662197589874,818
+logit homo,Kidney epithelial cell,F4,0.778740644454956,818
+logit homo,Kidney epithelial cell,F5,-0.9660134315490723,818
+logit homo,Kidney epithelial cell,F6,-0.06415648758411407,818
+logit homo,Kidney epithelial cell,F7,1.0961177349090576,818
+logit homo,Kidney epithelial cell,F8,-1.1259815692901611,818
+logit homo,Kidney epithelial cell,F9,0.12799808382987976,818
+logit homo,Kidney epithelial cell,F10,1.2625963687896729,818
+logit homo,Kidney epithelial cell,F11,1.0439153909683228,818
+logit homo,Kidney epithelial cell,F12,-0.09963880479335785,818
+logit homo,Kidney epithelial cell,F13,0.8167861700057983,818
+logit homo,Hepatocyte,F1,-0.3893466293811798,723
+logit homo,Hepatocyte,F2,-0.1917698085308075,723
+logit homo,Hepatocyte,F3,-0.15106384456157684,723
+logit homo,Hepatocyte,F4,0.3998134136199951,723
+logit homo,Hepatocyte,F5,-0.8890867233276367,723
+logit homo,Hepatocyte,F6,0.012279444374144077,723
+logit homo,Hepatocyte,F7,0.8410705327987671,723
+logit homo,Hepatocyte,F8,-1.3283576965332031,723
+logit homo,Hepatocyte,F9,0.20520783960819244,723
+logit homo,Hepatocyte,F10,0.8364583849906921,723
+logit homo,Hepatocyte,F11,1.2627613544464111,723
+logit homo,Hepatocyte,F12,-0.008116727694869041,723
+logit homo,Hepatocyte,F13,0.9408299922943115,723
+logit homo,Nk cell,F1,-0.8393296003341675,718
+logit homo,Nk cell,F2,-0.1377331018447876,718
+logit homo,Nk cell,F3,-0.5470575094223022,718
+logit homo,Nk cell,F4,-0.3488032817840576,718
+logit homo,Nk cell,F5,0.2202584147453308,718
+logit homo,Nk cell,F6,-0.19422000646591187,718
+logit homo,Nk cell,F7,0.5869951248168945,718
+logit homo,Nk cell,F8,-0.15790341794490814,718
+logit homo,Nk cell,F9,0.7404579520225525,718
+logit homo,Nk cell,F10,-1.2944412231445312,718
+logit homo,Nk cell,F11,0.5815432071685791,718
+logit homo,Nk cell,F12,-1.2447333335876465,718
+logit homo,Nk cell,F13,-0.07236853986978531,718
+logit homo,Other neuron,F1,0.36434993147850037,602
+logit homo,Other neuron,F2,0.013926655054092407,602
+logit homo,Other neuron,F3,-0.3216375708580017,602
+logit homo,Other neuron,F4,-0.08775734156370163,602
+logit homo,Other neuron,F5,0.35371989011764526,602
+logit homo,Other neuron,F6,0.35302215814590454,602
+logit homo,Other neuron,F7,0.49331244826316833,602
+logit homo,Other neuron,F8,0.46150267124176025,602
+logit homo,Other neuron,F9,-0.6395384669303894,602
+logit homo,Other neuron,F10,0.14439207315444946,602
+logit homo,Other neuron,F11,1.2590059041976929,602
+logit homo,Other neuron,F12,-0.24754278361797333,602
+logit homo,Other neuron,F13,0.9629566073417664,602
+logit homo,Cardiac stromal cell,F1,-0.8919069766998291,579
+logit homo,Cardiac stromal cell,F2,-0.35773685574531555,579
+logit homo,Cardiac stromal cell,F3,0.33248600363731384,579
+logit homo,Cardiac stromal cell,F4,0.5172199010848999,579
+logit homo,Cardiac stromal cell,F5,0.4136194586753845,579
+logit homo,Cardiac stromal cell,F6,0.06635431945323944,579
+logit homo,Cardiac stromal cell,F7,-0.31123149394989014,579
+logit homo,Cardiac stromal cell,F8,-0.4885365068912506,579
+logit homo,Cardiac stromal cell,F9,-1.2760767936706543,579
+logit homo,Cardiac stromal cell,F10,-0.5318167209625244,579
+logit homo,Cardiac stromal cell,F11,0.20762097835540771,579
+logit homo,Cardiac stromal cell,F12,1.0907189846038818,579
+logit homo,Cardiac stromal cell,F13,0.03605423867702484,579
+logit homo,Astrocyte,F1,-0.2695988714694977,571
+logit homo,Astrocyte,F2,0.6924175024032593,571
+logit homo,Astrocyte,F3,0.20692184567451477,571
+logit homo,Astrocyte,F4,0.10692408680915833,571
+logit homo,Astrocyte,F5,0.23923319578170776,571
+logit homo,Astrocyte,F6,0.20921684801578522,571
+logit homo,Astrocyte,F7,2.115159511566162,571
+logit homo,Astrocyte,F8,1.2294578552246094,571
+logit homo,Astrocyte,F9,-1.0517325401306152,571
+logit homo,Astrocyte,F10,1.0080862045288086,571
+logit homo,Astrocyte,F11,0.49669769406318665,571
+logit homo,Astrocyte,F12,0.9456197023391724,571
+logit homo,Astrocyte,F13,0.34672120213508606,571
+logit homo,Stromal cell,F1,-0.8871539831161499,545
+logit homo,Stromal cell,F2,-0.609505832195282,545
+logit homo,Stromal cell,F3,-0.602436900138855,545
+logit homo,Stromal cell,F4,-1.6660228967666626,545
+logit homo,Stromal cell,F5,-0.7807071805000305,545
+logit homo,Stromal cell,F6,-0.39025092124938965,545
+logit homo,Stromal cell,F7,0.20037101209163666,545
+logit homo,Stromal cell,F8,-0.9028545618057251,545
+logit homo,Stromal cell,F9,-1.164272427558899,545
+logit homo,Stromal cell,F10,-0.40898263454437256,545
+logit homo,Stromal cell,F11,-0.21751004457473755,545
+logit homo,Stromal cell,F12,1.7964216470718384,545
+logit homo,Stromal cell,F13,-0.14273138344287872,545
+logit homo,Bladder epithelial cell,F1,-0.933147132396698,521
+logit homo,Bladder epithelial cell,F2,-0.4395030438899994,521
+logit homo,Bladder epithelial cell,F3,-0.1568567305803299,521
+logit homo,Bladder epithelial cell,F4,-1.3062283992767334,521
+logit homo,Bladder epithelial cell,F5,-0.651767909526825,521
+logit homo,Bladder epithelial cell,F6,0.22987224161624908,521
+logit homo,Bladder epithelial cell,F7,-0.4011552631855011,521
+logit homo,Bladder epithelial cell,F8,-0.3692256212234497,521
+logit homo,Bladder epithelial cell,F9,-0.8946664929389954,521
+logit homo,Bladder epithelial cell,F10,-0.5392167568206787,521
+logit homo,Bladder epithelial cell,F11,-0.2476203590631485,521
+logit homo,Bladder epithelial cell,F12,1.9943255186080933,521
+logit homo,Bladder epithelial cell,F13,0.02173253707587719,521
+logit homo,Other epithelial cell,F1,-0.3577477037906647,499
+logit homo,Other epithelial cell,F2,-0.1804918497800827,499
+logit homo,Other epithelial cell,F3,0.00867535825818777,499
+logit homo,Other epithelial cell,F4,0.2966691851615906,499
+logit homo,Other epithelial cell,F5,-0.3896527886390686,499
+logit homo,Other epithelial cell,F6,0.12173160165548325,499
+logit homo,Other epithelial cell,F7,0.14460544288158417,499
+logit homo,Other epithelial cell,F8,0.09466548264026642,499
+logit homo,Other epithelial cell,F9,0.22515060007572174,499
+logit homo,Other epithelial cell,F10,0.044153183698654175,499
+logit homo,Other epithelial cell,F11,1.436536431312561,499
+logit homo,Other epithelial cell,F12,-0.0995958000421524,499
+logit homo,Other epithelial cell,F13,0.6154384613037109,499
+logit homo,Pancreatic exocrine cell,F1,0.012008613906800747,484
+logit homo,Pancreatic exocrine cell,F2,-0.10601422935724258,484
+logit homo,Pancreatic exocrine cell,F3,-0.17750704288482666,484
+logit homo,Pancreatic exocrine cell,F4,0.23470471799373627,484
+logit homo,Pancreatic exocrine cell,F5,-0.6007547974586487,484
+logit homo,Pancreatic exocrine cell,F6,0.10505915433168411,484
+logit homo,Pancreatic exocrine cell,F7,0.36438676714897156,484
+logit homo,Pancreatic exocrine cell,F8,-0.13214020431041718,484
+logit homo,Pancreatic exocrine cell,F9,0.10765957832336426,484
+logit homo,Pancreatic exocrine cell,F10,0.22816748917102814,484
+logit homo,Pancreatic exocrine cell,F11,2.234365224838257,484
+logit homo,Pancreatic exocrine cell,F12,-0.048965003341436386,484
+logit homo,Pancreatic exocrine cell,F13,0.3784942626953125,484
+logit homo,Cardiomyocyte,F1,-0.17622654139995575,436
+logit homo,Cardiomyocyte,F2,-0.11355810612440109,436
+logit homo,Cardiomyocyte,F3,0.6898703575134277,436
+logit homo,Cardiomyocyte,F4,0.5603470206260681,436
+logit homo,Cardiomyocyte,F5,0.37467479705810547,436
+logit homo,Cardiomyocyte,F6,-0.513192892074585,436
+logit homo,Cardiomyocyte,F7,1.2396193742752075,436
+logit homo,Cardiomyocyte,F8,0.24900072813034058,436
+logit homo,Cardiomyocyte,F9,-0.5457965731620789,436
+logit homo,Cardiomyocyte,F10,-0.11223863810300827,436
+logit homo,Cardiomyocyte,F11,1.0144429206848145,436
+logit homo,Cardiomyocyte,F12,0.4741995632648468,436
+logit homo,Cardiomyocyte,F13,0.08908892422914505,436
+logit homo,Mammary epithelial cell,F1,-0.8955292701721191,434
+logit homo,Mammary epithelial cell,F2,0.4101106822490692,434
+logit homo,Mammary epithelial cell,F3,0.03457443043589592,434
+logit homo,Mammary epithelial cell,F4,0.3022216856479645,434
+logit homo,Mammary epithelial cell,F5,0.03698335960507393,434
+logit homo,Mammary epithelial cell,F6,0.570895254611969,434
+logit homo,Mammary epithelial cell,F7,-0.7661715149879456,434
+logit homo,Mammary epithelial cell,F8,0.7243752479553223,434
+logit homo,Mammary epithelial cell,F9,1.6184207201004028,434
+logit homo,Mammary epithelial cell,F10,0.5536710619926453,434
+logit homo,Mammary epithelial cell,F11,-0.546479344367981,434
+logit homo,Mammary epithelial cell,F12,1.4933403730392456,434
+logit homo,Mammary epithelial cell,F13,0.40948712825775146,434
+logit homo,Dendritic cell,F1,-0.9088199734687805,368
+logit homo,Dendritic cell,F2,-0.08572935312986374,368
+logit homo,Dendritic cell,F3,0.12913253903388977,368
+logit homo,Dendritic cell,F4,-0.45104101300239563,368
+logit homo,Dendritic cell,F5,0.2757996618747711,368
+logit homo,Dendritic cell,F6,-0.1014731377363205,368
+logit homo,Dendritic cell,F7,-0.5387322306632996,368
+logit homo,Dendritic cell,F8,-0.06725466996431351,368
+logit homo,Dendritic cell,F9,0.6368845701217651,368
+logit homo,Dendritic cell,F10,-0.07899675518274307,368
+logit homo,Dendritic cell,F11,0.38474389910697937,368
+logit homo,Dendritic cell,F12,-1.022892713546753,368
+logit homo,Dendritic cell,F13,-0.04535004869103432,368
+logit homo,Pericyte,F1,-0.7451051473617554,341
+logit homo,Pericyte,F2,-0.5575278997421265,341
+logit homo,Pericyte,F3,-0.3168017864227295,341
+logit homo,Pericyte,F4,0.4189940392971039,341
+logit homo,Pericyte,F5,0.5758633613586426,341
+logit homo,Pericyte,F6,0.12885677814483643,341
+logit homo,Pericyte,F7,-0.8869139552116394,341
+logit homo,Pericyte,F8,0.025514857843518257,341
+logit homo,Pericyte,F9,-0.8183217644691467,341
+logit homo,Pericyte,F10,-0.6740198135375977,341
+logit homo,Pericyte,F11,0.13124293088912964,341
+logit homo,Pericyte,F12,1.4134846925735474,341
+logit homo,Pericyte,F13,0.10150304436683655,341
+logit homo,Respiratory epithelial cell,F1,-0.2378212958574295,320
+logit homo,Respiratory epithelial cell,F2,-0.251547634601593,320
+logit homo,Respiratory epithelial cell,F3,-0.09988470375537872,320
+logit homo,Respiratory epithelial cell,F4,0.2632179260253906,320
+logit homo,Respiratory epithelial cell,F5,-0.6896231770515442,320
+logit homo,Respiratory epithelial cell,F6,0.1306191384792328,320
+logit homo,Respiratory epithelial cell,F7,0.13054123520851135,320
+logit homo,Respiratory epithelial cell,F8,0.32260748744010925,320
+logit homo,Respiratory epithelial cell,F9,0.12843243777751923,320
+logit homo,Respiratory epithelial cell,F10,0.01587923802435398,320
+logit homo,Respiratory epithelial cell,F11,1.7526664733886719,320
+logit homo,Respiratory epithelial cell,F12,0.028445761650800705,320
+logit homo,Respiratory epithelial cell,F13,0.5921351909637451,320
+logit homo,Secretory cell,F1,-0.8655708432197571,309
+logit homo,Secretory cell,F2,0.5690011382102966,309
+logit homo,Secretory cell,F3,-1.2424967288970947,309
+logit homo,Secretory cell,F4,1.3562887907028198,309
+logit homo,Secretory cell,F5,-0.6177804470062256,309
+logit homo,Secretory cell,F6,0.08993514627218246,309
+logit homo,Secretory cell,F7,0.9175447821617126,309
+logit homo,Secretory cell,F8,-2.2345833778381348,309
+logit homo,Secretory cell,F9,2.788844585418701,309
+logit homo,Secretory cell,F10,1.991441011428833,309
+logit homo,Secretory cell,F11,-0.668296217918396,309
+logit homo,Secretory cell,F12,1.4188436269760132,309
+logit homo,Secretory cell,F13,-0.2375221848487854,309
+logit homo,Chondrocyte,F1,-0.8360595107078552,256
+logit homo,Chondrocyte,F2,-0.09878863394260406,256
+logit homo,Chondrocyte,F3,-0.7410409450531006,256
+logit homo,Chondrocyte,F4,-0.37773072719573975,256
+logit homo,Chondrocyte,F5,-0.18055246770381927,256
+logit homo,Chondrocyte,F6,0.4435582756996155,256
+logit homo,Chondrocyte,F7,-0.22010992467403412,256
+logit homo,Chondrocyte,F8,0.6720433235168457,256
+logit homo,Chondrocyte,F9,-0.7813000082969666,256
+logit homo,Chondrocyte,F10,-0.5679942965507507,256
+logit homo,Chondrocyte,F11,-0.25249019265174866,256
+logit homo,Chondrocyte,F12,2.111456871032715,256
+logit homo,Chondrocyte,F13,-0.25019940733909607,256
+logit homo,Specialized endothelial cell,F1,-0.8481798768043518,239
+logit homo,Specialized endothelial cell,F2,-0.4977229833602905,239
+logit homo,Specialized endothelial cell,F3,0.2563231289386749,239
+logit homo,Specialized endothelial cell,F4,2.1850831508636475,239
+logit homo,Specialized endothelial cell,F5,1.0211488008499146,239
+logit homo,Specialized endothelial cell,F6,0.13220931589603424,239
+logit homo,Specialized endothelial cell,F7,-0.6602139472961426,239
+logit homo,Specialized endothelial cell,F8,-0.49486884474754333,239
+logit homo,Specialized endothelial cell,F9,-1.2955467700958252,239
+logit homo,Specialized endothelial cell,F10,-0.7258684635162354,239
+logit homo,Specialized endothelial cell,F11,0.5422086119651794,239
+logit homo,Specialized endothelial cell,F12,0.5101534724235535,239
+logit homo,Specialized endothelial cell,F13,-0.22548982501029968,239
+logit homo,Pancreatic ductal cell,F1,-0.8115347623825073,226
+logit homo,Pancreatic ductal cell,F2,0.04824575036764145,226
+logit homo,Pancreatic ductal cell,F3,-0.3310374617576599,226
+logit homo,Pancreatic ductal cell,F4,0.4043998718261719,226
+logit homo,Pancreatic ductal cell,F5,-0.5496872663497925,226
+logit homo,Pancreatic ductal cell,F6,0.5713897943496704,226
+logit homo,Pancreatic ductal cell,F7,0.36780375242233276,226
+logit homo,Pancreatic ductal cell,F8,-0.5571679472923279,226
+logit homo,Pancreatic ductal cell,F9,0.6227120757102966,226
+logit homo,Pancreatic ductal cell,F10,1.1854478120803833,226
+logit homo,Pancreatic ductal cell,F11,-0.17860984802246094,226
+logit homo,Pancreatic ductal cell,F12,1.0288861989974976,226
+logit homo,Pancreatic ductal cell,F13,0.5904046297073364,226
+logit homo,Oligodendrocyte precursor,F1,-0.13245825469493866,204
+logit homo,Oligodendrocyte precursor,F2,1.1011433601379395,204
+logit homo,Oligodendrocyte precursor,F3,0.2735350430011749,204
+logit homo,Oligodendrocyte precursor,F4,-0.2525878846645355,204
+logit homo,Oligodendrocyte precursor,F5,0.9347892999649048,204
+logit homo,Oligodendrocyte precursor,F6,0.5085800290107727,204
+logit homo,Oligodendrocyte precursor,F7,2.7678496837615967,204
+logit homo,Oligodendrocyte precursor,F8,1.4872652292251587,204
+logit homo,Oligodendrocyte precursor,F9,-1.0853220224380493,204
+logit homo,Oligodendrocyte precursor,F10,0.7887793779373169,204
+logit homo,Oligodendrocyte precursor,F11,-0.4978494942188263,204
+logit homo,Oligodendrocyte precursor,F12,1.0857642889022827,204
+logit homo,Oligodendrocyte precursor,F13,0.048768285661935806,204
+logit homo,Hematopoietic progenitor,F1,-0.6211977601051331,157
+logit homo,Hematopoietic progenitor,F2,-0.026285769417881966,157
+logit homo,Hematopoietic progenitor,F3,0.44099247455596924,157
+logit homo,Hematopoietic progenitor,F4,-0.10233496129512787,157
+logit homo,Hematopoietic progenitor,F5,0.16137473285198212,157
+logit homo,Hematopoietic progenitor,F6,0.053612273186445236,157
+logit homo,Hematopoietic progenitor,F7,0.35886597633361816,157
+logit homo,Hematopoietic progenitor,F8,-0.2656979560852051,157
+logit homo,Hematopoietic progenitor,F9,0.46152982115745544,157
+logit homo,Hematopoietic progenitor,F10,-0.22770878672599792,157
+logit homo,Hematopoietic progenitor,F11,0.9198604226112366,157
+logit homo,Hematopoietic progenitor,F12,-0.7496160268783569,157
+logit homo,Hematopoietic progenitor,F13,0.1940956562757492,157
+logit homo,Alveolar epithelial cell,F1,-0.7137908339500427,156
+logit homo,Alveolar epithelial cell,F2,0.13989399373531342,156
+logit homo,Alveolar epithelial cell,F3,0.05085913836956024,156
+logit homo,Alveolar epithelial cell,F4,0.5879951119422913,156
+logit homo,Alveolar epithelial cell,F5,-0.34505224227905273,156
+logit homo,Alveolar epithelial cell,F6,0.11814834922552109,156
+logit homo,Alveolar epithelial cell,F7,0.03618583083152771,156
+logit homo,Alveolar epithelial cell,F8,0.020069893449544907,156
+logit homo,Alveolar epithelial cell,F9,0.19461743533611298,156
+logit homo,Alveolar epithelial cell,F10,0.6178629398345947,156
+logit homo,Alveolar epithelial cell,F11,0.34521397948265076,156
+logit homo,Alveolar epithelial cell,F12,0.6994560360908508,156
+logit homo,Alveolar epithelial cell,F13,0.7749733328819275,156
+logit homo,Kidney tubular cell,F1,-0.3739076852798462,140
+logit homo,Kidney tubular cell,F2,0.012709852308034897,140
+logit homo,Kidney tubular cell,F3,-0.23032474517822266,140
+logit homo,Kidney tubular cell,F4,0.7258766889572144,140
+logit homo,Kidney tubular cell,F5,-0.5257063508033752,140
+logit homo,Kidney tubular cell,F6,0.23348505795001984,140
+logit homo,Kidney tubular cell,F7,0.5074795484542847,140
+logit homo,Kidney tubular cell,F8,-0.2008156031370163,140
+logit homo,Kidney tubular cell,F9,-0.02515152096748352,140
+logit homo,Kidney tubular cell,F10,0.5899927616119385,140
+logit homo,Kidney tubular cell,F11,1.3335760831832886,140
+logit homo,Kidney tubular cell,F12,-0.06944243609905243,140
+logit homo,Kidney tubular cell,F13,0.7272875308990479,140
+logit homo,Neuroepithelial cell,F1,-0.09293420612812042,117
+logit homo,Neuroepithelial cell,F2,-0.2548023760318756,117
+logit homo,Neuroepithelial cell,F3,0.017416391521692276,117
+logit homo,Neuroepithelial cell,F4,0.2114046812057495,117
+logit homo,Neuroepithelial cell,F5,-0.572231113910675,117
+logit homo,Neuroepithelial cell,F6,0.16921097040176392,117
+logit homo,Neuroepithelial cell,F7,0.1683087944984436,117
+logit homo,Neuroepithelial cell,F8,0.615199863910675,117
+logit homo,Neuroepithelial cell,F9,-0.17972292006015778,117
+logit homo,Neuroepithelial cell,F10,0.020563911646604538,117
+logit homo,Neuroepithelial cell,F11,2.0639522075653076,117
+logit homo,Neuroepithelial cell,F12,-0.018862349912524223,117
+logit homo,Neuroepithelial cell,F13,0.6078053712844849,117
+logit homo,Enteroendocrine cell,F1,-0.2638110816478729,108
+logit homo,Enteroendocrine cell,F2,0.060200128704309464,108
+logit homo,Enteroendocrine cell,F3,-0.17306213080883026,108
+logit homo,Enteroendocrine cell,F4,0.3952636122703552,108
+logit homo,Enteroendocrine cell,F5,-0.2698478400707245,108
+logit homo,Enteroendocrine cell,F6,0.5491921901702881,108
+logit homo,Enteroendocrine cell,F7,0.34868258237838745,108
+logit homo,Enteroendocrine cell,F8,-0.5442214608192444,108
+logit homo,Enteroendocrine cell,F9,0.704669713973999,108
+logit homo,Enteroendocrine cell,F10,0.6204112768173218,108
+logit homo,Enteroendocrine cell,F11,1.115975260734558,108
+logit homo,Enteroendocrine cell,F12,0.37243029475212097,108
+logit homo,Enteroendocrine cell,F13,0.5267376899719238,108
+logit homo,Airway epithelial cell,F1,-0.6802994012832642,102
+logit homo,Airway epithelial cell,F2,0.008729442954063416,102
+logit homo,Airway epithelial cell,F3,-0.16925975680351257,102
+logit homo,Airway epithelial cell,F4,0.2873174548149109,102
+logit homo,Airway epithelial cell,F5,-0.48301446437835693,102
+logit homo,Airway epithelial cell,F6,0.29861947894096375,102
+logit homo,Airway epithelial cell,F7,0.0645526573061943,102
+logit homo,Airway epithelial cell,F8,0.11220693588256836,102
+logit homo,Airway epithelial cell,F9,0.6700909733772278,102
+logit homo,Airway epithelial cell,F10,0.6852831244468689,102
+logit homo,Airway epithelial cell,F11,0.17093245685100555,102
+logit homo,Airway epithelial cell,F12,0.9548894762992859,102
+logit homo,Airway epithelial cell,F13,0.6289987564086914,102
+logit homo,Lymphatic endothelial cell,F1,-0.8631379008293152,91
+logit homo,Lymphatic endothelial cell,F2,-0.3985864520072937,91
+logit homo,Lymphatic endothelial cell,F3,0.11327044665813446,91
+logit homo,Lymphatic endothelial cell,F4,1.0729398727416992,91
+logit homo,Lymphatic endothelial cell,F5,0.4182651937007904,91
+logit homo,Lymphatic endothelial cell,F6,0.29831549525260925,91
+logit homo,Lymphatic endothelial cell,F7,-0.29628071188926697,91
+logit homo,Lymphatic endothelial cell,F8,-0.4081231355667114,91
+logit homo,Lymphatic endothelial cell,F9,-1.192212700843811,91
+logit homo,Lymphatic endothelial cell,F10,-0.5051460862159729,91
+logit homo,Lymphatic endothelial cell,F11,0.41926687955856323,91
+logit homo,Lymphatic endothelial cell,F12,0.7548069953918457,91
+logit homo,Lymphatic endothelial cell,F13,-0.0573575422167778,91
+logit homo,Kidney glomerular cell,F1,-0.380296915769577,77
+logit homo,Kidney glomerular cell,F2,-0.2143082320690155,77
+logit homo,Kidney glomerular cell,F3,-0.11242726445198059,77
+logit homo,Kidney glomerular cell,F4,-0.08452794700860977,77
+logit homo,Kidney glomerular cell,F5,-0.5524431467056274,77
+logit homo,Kidney glomerular cell,F6,0.08762015402317047,77
+logit homo,Kidney glomerular cell,F7,0.3002658188343048,77
+logit homo,Kidney glomerular cell,F8,-0.07067114859819412,77
+logit homo,Kidney glomerular cell,F9,-0.416471004486084,77
+logit homo,Kidney glomerular cell,F10,0.02703031897544861,77
+logit homo,Kidney glomerular cell,F11,1.2984328269958496,77
+logit homo,Kidney glomerular cell,F12,0.4813639521598816,77
+logit homo,Kidney glomerular cell,F13,0.2639714479446411,77
+logit homo,Neural stem cell,F1,-0.17672811448574066,63
+logit homo,Neural stem cell,F2,1.4072712659835815,63
+logit homo,Neural stem cell,F3,0.9074662923812866,63
+logit homo,Neural stem cell,F4,-0.21387533843517303,63
+logit homo,Neural stem cell,F5,1.4882104396820068,63
+logit homo,Neural stem cell,F6,0.5854476094245911,63
+logit homo,Neural stem cell,F7,3.07688570022583,63
+logit homo,Neural stem cell,F8,1.754934310913086,63
+logit homo,Neural stem cell,F9,-0.054854799062013626,63
+logit homo,Neural stem cell,F10,0.014470374211668968,63
+logit homo,Neural stem cell,F11,-1.1189277172088623,63
+logit homo,Neural stem cell,F12,1.3214305639266968,63
+logit homo,Neural stem cell,F13,-0.6335175633430481,63
+logit homo,Other glial cell,F1,-0.36507993936538696,55
+logit homo,Other glial cell,F2,0.37235966324806213,55
+logit homo,Other glial cell,F3,0.5391340255737305,55
+logit homo,Other glial cell,F4,-0.11866838485002518,55
+logit homo,Other glial cell,F5,0.09145142138004303,55
+logit homo,Other glial cell,F6,0.23154011368751526,55
+logit homo,Other glial cell,F7,1.403630256652832,55
+logit homo,Other glial cell,F8,0.6390687823295593,55
+logit homo,Other glial cell,F9,-0.6932991743087769,55
+logit homo,Other glial cell,F10,0.9975141882896423,55
+logit homo,Other glial cell,F11,0.6171993017196655,55
+logit homo,Other glial cell,F12,0.6639899015426636,55
+logit homo,Other glial cell,F13,0.8184213042259216,55
+logit homo,Pancreatic stellate cell,F1,-0.9200824499130249,40
+logit homo,Pancreatic stellate cell,F2,-0.6500110030174255,40
+logit homo,Pancreatic stellate cell,F3,-0.4439263939857483,40
+logit homo,Pancreatic stellate cell,F4,-1.9394067525863647,40
+logit homo,Pancreatic stellate cell,F5,-0.9497234225273132,40
+logit homo,Pancreatic stellate cell,F6,-0.27661794424057007,40
+logit homo,Pancreatic stellate cell,F7,0.45073986053466797,40
+logit homo,Pancreatic stellate cell,F8,-1.2600053548812866,40
+logit homo,Pancreatic stellate cell,F9,-1.0559974908828735,40
+logit homo,Pancreatic stellate cell,F10,-0.2545791268348694,40
+logit homo,Pancreatic stellate cell,F11,-0.36592379212379456,40
+logit homo,Pancreatic stellate cell,F12,1.9248853921890259,40
+logit homo,Pancreatic stellate cell,F13,-0.2833494544029236,40
+logit homo,Lung neuroendocrine cell,F1,-0.44139495491981506,3
+logit homo,Lung neuroendocrine cell,F2,0.24120740592479706,3
+logit homo,Lung neuroendocrine cell,F3,0.384598046541214,3
+logit homo,Lung neuroendocrine cell,F4,-0.2594052851200104,3
+logit homo,Lung neuroendocrine cell,F5,1.2437447309494019,3
+logit homo,Lung neuroendocrine cell,F6,1.154732346534729,3
+logit homo,Lung neuroendocrine cell,F7,0.16721679270267487,3
+logit homo,Lung neuroendocrine cell,F8,0.22177700698375702,3
+logit homo,Lung neuroendocrine cell,F9,-0.2750433385372162,3
+logit homo,Lung neuroendocrine cell,F10,0.2910389006137848,3
+logit homo,Lung neuroendocrine cell,F11,-0.17612235248088837,3
+logit homo,Lung neuroendocrine cell,F12,0.40944841504096985,3
+logit homo,Lung neuroendocrine cell,F13,1.7495192289352417,3
+PSI homo,Cortical excitatory neuron,F1,1.3135329484939575,30868
+PSI homo,Cortical excitatory neuron,F2,-0.8832167387008667,30868
+PSI homo,Cortical excitatory neuron,F3,0.19608961045742035,30868
+PSI homo,Cortical excitatory neuron,F4,-0.41153085231781006,30868
+PSI homo,Cortical excitatory neuron,F5,0.1682380884885788,30868
+PSI homo,Cortical excitatory neuron,F6,-1.1886234283447266,30868
+PSI homo,Cortical excitatory neuron,F7,0.11204106360673904,30868
+PSI homo,Inhibitory neuron,F1,1.0727291107177734,17259
+PSI homo,Inhibitory neuron,F2,1.8216670751571655,17259
+PSI homo,Inhibitory neuron,F3,-0.23198187351226807,17259
+PSI homo,Inhibitory neuron,F4,1.1513572931289673,17259
+PSI homo,Inhibitory neuron,F5,-0.23732306063175201,17259
+PSI homo,Inhibitory neuron,F6,-1.0261822938919067,17259
+PSI homo,Inhibitory neuron,F7,-0.4920714497566223,17259
+PSI homo,Microglia,F1,-0.6696839928627014,12042
+PSI homo,Microglia,F2,0.7822929620742798,12042
+PSI homo,Microglia,F3,1.3591296672821045,12042
+PSI homo,Microglia,F4,-1.153876543045044,12042
+PSI homo,Microglia,F5,-0.6032411456108093,12042
+PSI homo,Microglia,F6,0.921249508857727,12042
+PSI homo,Microglia,F7,-0.2912222146987915,12042
+PSI homo,B cell,F1,-0.6802612543106079,8620
+PSI homo,B cell,F2,0.37786775827407837,8620
+PSI homo,B cell,F3,-0.2229333370923996,8620
+PSI homo,B cell,F4,-1.082054853439331,8620
+PSI homo,B cell,F5,0.5629140734672546,8620
+PSI homo,B cell,F6,0.9358933568000793,8620
+PSI homo,B cell,F7,-0.4563432037830353,8620
+PSI homo,Skin epithelial cell,F1,-0.9872964024543762,7347
+PSI homo,Skin epithelial cell,F2,-0.5013432502746582,7347
+PSI homo,Skin epithelial cell,F3,-1.0942051410675049,7347
+PSI homo,Skin epithelial cell,F4,0.9590503573417664,7347
+PSI homo,Skin epithelial cell,F5,1.1004664897918701,7347
+PSI homo,Skin epithelial cell,F6,0.28110170364379883,7347
+PSI homo,Skin epithelial cell,F7,0.7372602820396423,7347
+PSI homo,Endothelial cell,F1,-0.6464788317680359,7044
+PSI homo,Endothelial cell,F2,-0.3431118428707123,7044
+PSI homo,Endothelial cell,F3,-0.6412643790245056,7044
+PSI homo,Endothelial cell,F4,-0.04046710580587387,7044
+PSI homo,Endothelial cell,F5,-1.0931124687194824,7044
+PSI homo,Endothelial cell,F6,0.8859971165657043,7044
+PSI homo,Endothelial cell,F7,-0.008257808163762093,7044
+PSI homo,Mesenchymal stem cell,F1,-0.9788818955421448,4755
+PSI homo,Mesenchymal stem cell,F2,-0.8912255167961121,4755
+PSI homo,Mesenchymal stem cell,F3,0.12510164082050323,4755
+PSI homo,Mesenchymal stem cell,F4,1.1099945306777954,4755
+PSI homo,Mesenchymal stem cell,F5,-1.6061244010925293,4755
+PSI homo,Mesenchymal stem cell,F6,0.3428684175014496,4755
+PSI homo,Mesenchymal stem cell,F7,0.6103090643882751,4755
+PSI homo,Fibroblast,F1,-0.930548906326294,4600
+PSI homo,Fibroblast,F2,-0.7793911099433899,4600
+PSI homo,Fibroblast,F3,0.06554477661848068,4600
+PSI homo,Fibroblast,F4,1.0159275531768799,4600
+PSI homo,Fibroblast,F5,-1.7295429706573486,4600
+PSI homo,Fibroblast,F6,0.42484983801841736,4600
+PSI homo,Fibroblast,F7,0.5286440253257751,4600
+PSI homo,Hippocampal neuron,F1,1.0193102359771729,4476
+PSI homo,Hippocampal neuron,F2,-0.9163886904716492,4476
+PSI homo,Hippocampal neuron,F3,0.8004546761512756,4476
+PSI homo,Hippocampal neuron,F4,0.20490282773971558,4476
+PSI homo,Hippocampal neuron,F5,0.21673086285591125,4476
+PSI homo,Hippocampal neuron,F6,-0.9608927965164185,4476
+PSI homo,Hippocampal neuron,F7,-0.5093272924423218,4476
+PSI homo,T cell,F1,-0.7184061408042908,3571
+PSI homo,T cell,F2,0.28540685772895813,3571
+PSI homo,T cell,F3,-0.37976333498954773,3571
+PSI homo,T cell,F4,-0.9640069603919983,3571
+PSI homo,T cell,F5,0.6327981948852539,3571
+PSI homo,T cell,F6,0.8739557266235352,3571
+PSI homo,T cell,F7,-0.3774714171886444,3571
+PSI homo,Intestinal epithelial cell,F1,-0.5796844959259033,3016
+PSI homo,Intestinal epithelial cell,F2,-0.14682963490486145,3016
+PSI homo,Intestinal epithelial cell,F3,-1.3972526788711548,3016
+PSI homo,Intestinal epithelial cell,F4,0.25424879789352417,3016
+PSI homo,Intestinal epithelial cell,F5,1.339785099029541,3016
+PSI homo,Intestinal epithelial cell,F6,0.8253237009048462,3016
+PSI homo,Intestinal epithelial cell,F7,-0.018349451944231987,3016
+PSI homo,T cell precursor,F1,-0.7471005916595459,3002
+PSI homo,T cell precursor,F2,0.3674355745315552,3002
+PSI homo,T cell precursor,F3,-0.09320884943008423,3002
+PSI homo,T cell precursor,F4,-0.8946521878242493,3002
+PSI homo,T cell precursor,F5,0.8271587491035461,3002
+PSI homo,T cell precursor,F6,0.7739459276199341,3002
+PSI homo,T cell precursor,F7,-0.3084802031517029,3002
+PSI homo,Granulocyte,F1,-0.38178756833076477,2860
+PSI homo,Granulocyte,F2,0.27209901809692383,2860
+PSI homo,Granulocyte,F3,-0.4731144309043884,2860
+PSI homo,Granulocyte,F4,-1.0105923414230347,2860
+PSI homo,Granulocyte,F5,0.16743594408035278,2860
+PSI homo,Granulocyte,F6,1.2438734769821167,2860
+PSI homo,Granulocyte,F7,-0.4232105314731598,2860
+PSI homo,Hematopoietic stem cell,F1,-0.9989388585090637,2748
+PSI homo,Hematopoietic stem cell,F2,0.6406184434890747,2748
+PSI homo,Hematopoietic stem cell,F3,1.511303186416626,2748
+PSI homo,Hematopoietic stem cell,F4,0.0900348573923111,2748
+PSI homo,Hematopoietic stem cell,F5,1.7959412336349487,2748
+PSI homo,Hematopoietic stem cell,F6,-0.024913687258958817,2748
+PSI homo,Hematopoietic stem cell,F7,0.6521124243736267,2748
+PSI homo,Other immune cell,F1,-0.649200439453125,2562
+PSI homo,Other immune cell,F2,0.23389343917369843,2562
+PSI homo,Other immune cell,F3,0.14919884502887726,2562
+PSI homo,Other immune cell,F4,-0.7496986389160156,2562
+PSI homo,Other immune cell,F5,0.24724143743515015,2562
+PSI homo,Other immune cell,F6,0.9190038442611694,2562
+PSI homo,Other immune cell,F7,-0.2084931582212448,2562
+PSI homo,Skeletal muscle cell,F1,-0.6488732099533081,2460
+PSI homo,Skeletal muscle cell,F2,-0.47215721011161804,2460
+PSI homo,Skeletal muscle cell,F3,-1.0801165103912354,2460
+PSI homo,Skeletal muscle cell,F4,0.25654396414756775,2460
+PSI homo,Skeletal muscle cell,F5,-0.8336615562438965,2460
+PSI homo,Skeletal muscle cell,F6,0.9408915638923645,2460
+PSI homo,Skeletal muscle cell,F7,-0.23410649597644806,2460
+PSI homo,Macrophage,F1,-0.7184225916862488,2129
+PSI homo,Macrophage,F2,0.29922422766685486,2129
+PSI homo,Macrophage,F3,0.04150356352329254,2129
+PSI homo,Macrophage,F4,-0.8174859285354614,2129
+PSI homo,Macrophage,F5,0.3296504318714142,2129
+PSI homo,Macrophage,F6,0.8770354986190796,2129
+PSI homo,Macrophage,F7,-0.33955103158950806,2129
+PSI homo,Smooth muscle cell,F1,-0.7951803207397461,2034
+PSI homo,Smooth muscle cell,F2,-0.29744231700897217,2034
+PSI homo,Smooth muscle cell,F3,-0.31908565759658813,2034
+PSI homo,Smooth muscle cell,F4,0.10869000107049942,2034
+PSI homo,Smooth muscle cell,F5,-1.3350657224655151,2034
+PSI homo,Smooth muscle cell,F6,0.6706272959709167,2034
+PSI homo,Smooth muscle cell,F7,0.2063288390636444,2034
+PSI homo,Pancreatic endocrine cell,F1,-0.43348228931427,1444
+PSI homo,Pancreatic endocrine cell,F2,-0.06571902334690094,1444
+PSI homo,Pancreatic endocrine cell,F3,-0.14248530566692352,1444
+PSI homo,Pancreatic endocrine cell,F4,0.8306330442428589,1444
+PSI homo,Pancreatic endocrine cell,F5,0.3924477994441986,1444
+PSI homo,Pancreatic endocrine cell,F6,0.19740664958953857,1444
+PSI homo,Pancreatic endocrine cell,F7,0.1889500916004181,1444
+PSI homo,Oligodendrocyte,F1,-0.41816967725753784,1360
+PSI homo,Oligodendrocyte,F2,0.3166930377483368,1360
+PSI homo,Oligodendrocyte,F3,1.0112688541412354,1360
+PSI homo,Oligodendrocyte,F4,0.9234919548034668,1360
+PSI homo,Oligodendrocyte,F5,-1.7493031024932861,1360
+PSI homo,Oligodendrocyte,F6,0.04055749624967575,1360
+PSI homo,Oligodendrocyte,F7,0.3879165053367615,1360
+PSI homo,Specialized intestinal cell,F1,-0.7612630128860474,1342
+PSI homo,Specialized intestinal cell,F2,-0.057401590049266815,1342
+PSI homo,Specialized intestinal cell,F3,-0.9148239493370056,1342
+PSI homo,Specialized intestinal cell,F4,0.7261070013046265,1342
+PSI homo,Specialized intestinal cell,F5,1.8675124645233154,1342
+PSI homo,Specialized intestinal cell,F6,0.44437840580940247,1342
+PSI homo,Specialized intestinal cell,F7,0.486972451210022,1342
+PSI homo,Monocyte,F1,-0.8909977078437805,1281
+PSI homo,Monocyte,F2,0.44576936960220337,1281
+PSI homo,Monocyte,F3,0.811920166015625,1281
+PSI homo,Monocyte,F4,-0.87358158826828,1281
+PSI homo,Monocyte,F5,0.0533561147749424,1281
+PSI homo,Monocyte,F6,0.6847919821739197,1281
+PSI homo,Monocyte,F7,-0.05718225985765457,1281
+PSI homo,Immune progenitor,F1,-0.9053272604942322,1204
+PSI homo,Immune progenitor,F2,0.45536676049232483,1204
+PSI homo,Immune progenitor,F3,0.6377794146537781,1204
+PSI homo,Immune progenitor,F4,-0.7527214884757996,1204
+PSI homo,Immune progenitor,F5,1.0701799392700195,1204
+PSI homo,Immune progenitor,F6,0.5432437062263489,1204
+PSI homo,Immune progenitor,F7,-0.03415128216147423,1204
+PSI homo,Basal epithelial cell,F1,-1.1185939311981201,1148
+PSI homo,Basal epithelial cell,F2,-0.7662124037742615,1148
+PSI homo,Basal epithelial cell,F3,-0.23739175498485565,1148
+PSI homo,Basal epithelial cell,F4,1.5260777473449707,1148
+PSI homo,Basal epithelial cell,F5,0.23547740280628204,1148
+PSI homo,Basal epithelial cell,F6,-0.0467473529279232,1148
+PSI homo,Basal epithelial cell,F7,1.2915687561035156,1148
+PSI homo,Urogenital epithelial cell,F1,-1.0768358707427979,1008
+PSI homo,Urogenital epithelial cell,F2,-0.34274569153785706,1008
+PSI homo,Urogenital epithelial cell,F3,-0.3779328763484955,1008
+PSI homo,Urogenital epithelial cell,F4,1.3150185346603394,1008
+PSI homo,Urogenital epithelial cell,F5,1.6327358484268188,1008
+PSI homo,Urogenital epithelial cell,F6,-0.10777055472135544,1008
+PSI homo,Urogenital epithelial cell,F7,1.3639265298843384,1008
+PSI homo,Epithelial stem cell,F1,-1.0429320335388184,938
+PSI homo,Epithelial stem cell,F2,0.15160799026489258,938
+PSI homo,Epithelial stem cell,F3,-0.3664869964122772,938
+PSI homo,Epithelial stem cell,F4,1.207409381866455,938
+PSI homo,Epithelial stem cell,F5,2.9984724521636963,938
+PSI homo,Epithelial stem cell,F6,-0.18602462112903595,938
+PSI homo,Epithelial stem cell,F7,1.3807446956634521,938
+PSI homo,Car3+ astrocyte,F1,1.2235058546066284,895
+PSI homo,Car3+ astrocyte,F2,-0.9131885766983032,895
+PSI homo,Car3+ astrocyte,F3,0.36075490713119507,895
+PSI homo,Car3+ astrocyte,F4,-0.21706467866897583,895
+PSI homo,Car3+ astrocyte,F5,0.20715968310832977,895
+PSI homo,Car3+ astrocyte,F6,-1.1822272539138794,895
+PSI homo,Car3+ astrocyte,F7,0.14457936584949493,895
+PSI homo,Kidney epithelial cell,F1,-0.37969672679901123,818
+PSI homo,Kidney epithelial cell,F2,-0.05593787506222725,818
+PSI homo,Kidney epithelial cell,F3,-0.9588596820831299,818
+PSI homo,Kidney epithelial cell,F4,0.026256784796714783,818
+PSI homo,Kidney epithelial cell,F5,0.18249906599521637,818
+PSI homo,Kidney epithelial cell,F6,1.0842914581298828,818
+PSI homo,Kidney epithelial cell,F7,-0.25758078694343567,818
+PSI homo,Hepatocyte,F1,-0.31816333532333374,723
+PSI homo,Hepatocyte,F2,-0.13567963242530823,723
+PSI homo,Hepatocyte,F3,-0.9627746939659119,723
+PSI homo,Hepatocyte,F4,0.21336820721626282,723
+PSI homo,Hepatocyte,F5,0.21665909886360168,723
+PSI homo,Hepatocyte,F6,1.1125779151916504,723
+PSI homo,Hepatocyte,F7,-0.20751556754112244,723
+PSI homo,Nk cell,F1,-0.7943062782287598,718
+PSI homo,Nk cell,F2,0.3826046288013458,718
+PSI homo,Nk cell,F3,-0.09856317937374115,718
+PSI homo,Nk cell,F4,-0.9713950157165527,718
+PSI homo,Nk cell,F5,0.708605945110321,718
+PSI homo,Nk cell,F6,0.7781417965888977,718
+PSI homo,Nk cell,F7,-0.3048233985900879,718
+PSI homo,Other neuron,F1,0.30114585161209106,602
+PSI homo,Other neuron,F2,-0.16977614164352417,602
+PSI homo,Other neuron,F3,-0.2919878363609314,602
+PSI homo,Other neuron,F4,0.24262429773807526,602
+PSI homo,Other neuron,F5,-0.2984313368797302,602
+PSI homo,Other neuron,F6,1.0358158349990845,602
+PSI homo,Other neuron,F7,-0.7145714163780212,602
+PSI homo,Cardiac stromal cell,F1,-0.8552113771438599,579
+PSI homo,Cardiac stromal cell,F2,-0.41047272086143494,579
+PSI homo,Cardiac stromal cell,F3,-0.24216191470623016,579
+PSI homo,Cardiac stromal cell,F4,0.46632346510887146,579
+PSI homo,Cardiac stromal cell,F5,-1.3184748888015747,579
+PSI homo,Cardiac stromal cell,F6,0.6020604968070984,579
+PSI homo,Cardiac stromal cell,F7,0.2573927938938141,579
+PSI homo,Astrocyte,F1,-0.2529291808605194,571
+PSI homo,Astrocyte,F2,-0.01723356544971466,571
+PSI homo,Astrocyte,F3,-0.006136247888207436,571
+PSI homo,Astrocyte,F4,0.8641939163208008,571
+PSI homo,Astrocyte,F5,-1.0370616912841797,571
+PSI homo,Astrocyte,F6,0.5381754040718079,571
+PSI homo,Astrocyte,F7,-0.11110865324735641,571
+PSI homo,Stromal cell,F1,-1.0308531522750854,545
+PSI homo,Stromal cell,F2,-0.9225629568099976,545
+PSI homo,Stromal cell,F3,0.2965468168258667,545
+PSI homo,Stromal cell,F4,1.2273690700531006,545
+PSI homo,Stromal cell,F5,-1.8165838718414307,545
+PSI homo,Stromal cell,F6,0.21398518979549408,545
+PSI homo,Stromal cell,F7,0.8670088648796082,545
+PSI homo,Bladder epithelial cell,F1,-1.0854144096374512,521
+PSI homo,Bladder epithelial cell,F2,-0.9261119365692139,521
+PSI homo,Bladder epithelial cell,F3,0.061658963561058044,521
+PSI homo,Bladder epithelial cell,F4,1.4835785627365112,521
+PSI homo,Bladder epithelial cell,F5,-1.5109374523162842,521
+PSI homo,Bladder epithelial cell,F6,0.14805902540683746,521
+PSI homo,Bladder epithelial cell,F7,0.9371286630630493,521
+PSI homo,Other epithelial cell,F1,-0.3098475933074951,499
+PSI homo,Other epithelial cell,F2,-0.13770103454589844,499
+PSI homo,Other epithelial cell,F3,-0.8111754655838013,499
+PSI homo,Other epithelial cell,F4,-0.02261080965399742,499
+PSI homo,Other epithelial cell,F5,0.30870282649993896,499
+PSI homo,Other epithelial cell,F6,1.1408227682113647,499
+PSI homo,Other epithelial cell,F7,-0.21814244985580444,499
+PSI homo,Pancreatic exocrine cell,F1,0.14762501418590546,484
+PSI homo,Pancreatic exocrine cell,F2,-0.018328430131077766,484
+PSI homo,Pancreatic exocrine cell,F3,-0.6257880926132202,484
+PSI homo,Pancreatic exocrine cell,F4,-0.012104104273021221,484
+PSI homo,Pancreatic exocrine cell,F5,0.05359812453389168,484
+PSI homo,Pancreatic exocrine cell,F6,1.5268990993499756,484
+PSI homo,Pancreatic exocrine cell,F7,-0.1321485936641693,484
+PSI homo,Cardiomyocyte,F1,-0.23112009465694427,436
+PSI homo,Cardiomyocyte,F2,-0.1606278419494629,436
+PSI homo,Cardiomyocyte,F3,-0.3255828022956848,436
+PSI homo,Cardiomyocyte,F4,0.33248692750930786,436
+PSI homo,Cardiomyocyte,F5,-0.505544126033783,436
+PSI homo,Cardiomyocyte,F6,0.7873905897140503,436
+PSI homo,Cardiomyocyte,F7,0.03743843361735344,436
+PSI homo,Mammary epithelial cell,F1,-1.0833724737167358,434
+PSI homo,Mammary epithelial cell,F2,-0.3182923197746277,434
+PSI homo,Mammary epithelial cell,F3,-0.23559005558490753,434
+PSI homo,Mammary epithelial cell,F4,1.2576583623886108,434
+PSI homo,Mammary epithelial cell,F5,1.3628950119018555,434
+PSI homo,Mammary epithelial cell,F6,-0.09479481726884842,434
+PSI homo,Mammary epithelial cell,F7,1.298222541809082,434
+PSI homo,Dendritic cell,F1,-0.8843307495117188,368
+PSI homo,Dendritic cell,F2,0.24439950287342072,368
+PSI homo,Dendritic cell,F3,0.2928082346916199,368
+PSI homo,Dendritic cell,F4,-0.7025356888771057,368
+PSI homo,Dendritic cell,F5,0.6639474630355835,368
+PSI homo,Dendritic cell,F6,0.6972325444221497,368
+PSI homo,Dendritic cell,F7,-0.3835725486278534,368
+PSI homo,Pericyte,F1,-0.7155349850654602,341
+PSI homo,Pericyte,F2,-0.5046105980873108,341
+PSI homo,Pericyte,F3,-0.29656732082366943,341
+PSI homo,Pericyte,F4,0.7347983121871948,341
+PSI homo,Pericyte,F5,-1.1397954225540161,341
+PSI homo,Pericyte,F6,0.46480628848075867,341
+PSI homo,Pericyte,F7,0.43052977323532104,341
+PSI homo,Respiratory epithelial cell,F1,-0.14149776101112366,320
+PSI homo,Respiratory epithelial cell,F2,-0.1605900079011917,320
+PSI homo,Respiratory epithelial cell,F3,-0.8647339940071106,320
+PSI homo,Respiratory epithelial cell,F4,0.0021218727342784405,320
+PSI homo,Respiratory epithelial cell,F5,0.1002521961927414,320
+PSI homo,Respiratory epithelial cell,F6,1.3024195432662964,320
+PSI homo,Respiratory epithelial cell,F7,-0.08804021775722504,320
+PSI homo,Secretory cell,F1,-0.934293270111084,309
+PSI homo,Secretory cell,F2,0.24629226326942444,309
+PSI homo,Secretory cell,F3,-0.2514193654060364,309
+PSI homo,Secretory cell,F4,1.07120680809021,309
+PSI homo,Secretory cell,F5,2.4626033306121826,309
+PSI homo,Secretory cell,F6,-0.23569579422473907,309
+PSI homo,Secretory cell,F7,2.011882781982422,309
+PSI homo,Chondrocyte,F1,-1.0058494806289673,256
+PSI homo,Chondrocyte,F2,-0.6916980743408203,256
+PSI homo,Chondrocyte,F3,0.08715923875570297,256
+PSI homo,Chondrocyte,F4,1.341575026512146,256
+PSI homo,Chondrocyte,F5,-1.5683406591415405,256
+PSI homo,Chondrocyte,F6,0.0917535126209259,256
+PSI homo,Chondrocyte,F7,1.2497974634170532,256
+PSI homo,Specialized endothelial cell,F1,-0.7488769888877869,239
+PSI homo,Specialized endothelial cell,F2,-0.33082225918769836,239
+PSI homo,Specialized endothelial cell,F3,-0.5382071733474731,239
+PSI homo,Specialized endothelial cell,F4,-0.16633857786655426,239
+PSI homo,Specialized endothelial cell,F5,-1.2311761379241943,239
+PSI homo,Specialized endothelial cell,F6,0.8445122241973877,239
+PSI homo,Specialized endothelial cell,F7,0.12541022896766663,239
+PSI homo,Pancreatic ductal cell,F1,-0.8575333952903748,226
+PSI homo,Pancreatic ductal cell,F2,-0.3544435203075409,226
+PSI homo,Pancreatic ductal cell,F3,-0.6729766130447388,226
+PSI homo,Pancreatic ductal cell,F4,0.7467113137245178,226
+PSI homo,Pancreatic ductal cell,F5,0.44283565878868103,226
+PSI homo,Pancreatic ductal cell,F6,0.308439701795578,226
+PSI homo,Pancreatic ductal cell,F7,0.5092999339103699,226
+PSI homo,Oligodendrocyte precursor,F1,-0.2265206277370453,204
+PSI homo,Oligodendrocyte precursor,F2,0.16058841347694397,204
+PSI homo,Oligodendrocyte precursor,F3,0.6122525930404663,204
+PSI homo,Oligodendrocyte precursor,F4,1.0934429168701172,204
+PSI homo,Oligodendrocyte precursor,F5,-1.2853389978408813,204
+PSI homo,Oligodendrocyte precursor,F6,-0.03617200255393982,204
+PSI homo,Oligodendrocyte precursor,F7,0.07358496636152267,204
+PSI homo,Hematopoietic progenitor,F1,-0.6024574041366577,157
+PSI homo,Hematopoietic progenitor,F2,0.24326054751873016,157
+PSI homo,Hematopoietic progenitor,F3,-0.14657437801361084,157
+PSI homo,Hematopoietic progenitor,F4,-0.5285515785217285,157
+PSI homo,Hematopoietic progenitor,F5,0.619666576385498,157
+PSI homo,Hematopoietic progenitor,F6,0.880946159362793,157
+PSI homo,Hematopoietic progenitor,F7,-0.3241375684738159,157
+PSI homo,Alveolar epithelial cell,F1,-0.7999793887138367,156
+PSI homo,Alveolar epithelial cell,F2,-0.2655869126319885,156
+PSI homo,Alveolar epithelial cell,F3,-0.7855027318000793,156
+PSI homo,Alveolar epithelial cell,F4,0.5267053246498108,156
+PSI homo,Alveolar epithelial cell,F5,0.1951196938753128,156
+PSI homo,Alveolar epithelial cell,F6,0.5667392611503601,156
+PSI homo,Alveolar epithelial cell,F7,0.11159265041351318,156
+PSI homo,Kidney tubular cell,F1,-0.25148478150367737,140
+PSI homo,Kidney tubular cell,F2,-0.04428412392735481,140
+PSI homo,Kidney tubular cell,F3,-0.805609941482544,140
+PSI homo,Kidney tubular cell,F4,-0.018404169008135796,140
+PSI homo,Kidney tubular cell,F5,0.060856640338897705,140
+PSI homo,Kidney tubular cell,F6,1.1959011554718018,140
+PSI homo,Kidney tubular cell,F7,-0.24762818217277527,140
+PSI homo,Neuroepithelial cell,F1,0.003085429547354579,117
+PSI homo,Neuroepithelial cell,F2,-0.20649591088294983,117
+PSI homo,Neuroepithelial cell,F3,-0.908763587474823,117
+PSI homo,Neuroepithelial cell,F4,0.012793327681720257,117
+PSI homo,Neuroepithelial cell,F5,-0.09251480549573898,117
+PSI homo,Neuroepithelial cell,F6,1.4613639116287231,117
+PSI homo,Neuroepithelial cell,F7,-0.27096909284591675,117
+PSI homo,Enteroendocrine cell,F1,-0.2200583815574646,108
+PSI homo,Enteroendocrine cell,F2,-0.1493961215019226,108
+PSI homo,Enteroendocrine cell,F3,-0.49305757880210876,108
+PSI homo,Enteroendocrine cell,F4,0.40713420510292053,108
+PSI homo,Enteroendocrine cell,F5,0.6879256367683411,108
+PSI homo,Enteroendocrine cell,F6,0.8849141597747803,108
+PSI homo,Enteroendocrine cell,F7,0.13470834493637085,108
+PSI homo,Airway epithelial cell,F1,-0.6896291375160217,102
+PSI homo,Airway epithelial cell,F2,-0.3614368140697479,102
+PSI homo,Airway epithelial cell,F3,-0.6625109910964966,102
+PSI homo,Airway epithelial cell,F4,0.671484649181366,102
+PSI homo,Airway epithelial cell,F5,0.5476717948913574,102
+PSI homo,Airway epithelial cell,F6,0.4561270773410797,102
+PSI homo,Airway epithelial cell,F7,0.5034240484237671,102
+PSI homo,Lymphatic endothelial cell,F1,-0.7488363981246948,91
+PSI homo,Lymphatic endothelial cell,F2,-0.3053555488586426,91
+PSI homo,Lymphatic endothelial cell,F3,-0.37756916880607605,91
+PSI homo,Lymphatic endothelial cell,F4,0.09811622649431229,91
+PSI homo,Lymphatic endothelial cell,F5,-1.183066725730896,91
+PSI homo,Lymphatic endothelial cell,F6,0.7569050788879395,91
+PSI homo,Lymphatic endothelial cell,F7,0.19221724569797516,91
+PSI homo,Kidney glomerular cell,F1,-0.33231306076049805,77
+PSI homo,Kidney glomerular cell,F2,-0.25221487879753113,77
+PSI homo,Kidney glomerular cell,F3,-0.54117751121521,77
+PSI homo,Kidney glomerular cell,F4,0.21665124595165253,77
+PSI homo,Kidney glomerular cell,F5,-0.5752779245376587,77
+PSI homo,Kidney glomerular cell,F6,1.082265853881836,77
+PSI homo,Kidney glomerular cell,F7,0.07365177571773529,77
+PSI homo,Neural stem cell,F1,-0.2933382987976074,63
+PSI homo,Neural stem cell,F2,0.5687657594680786,63
+PSI homo,Neural stem cell,F3,1.239835500717163,63
+PSI homo,Neural stem cell,F4,1.0685425996780396,63
+PSI homo,Neural stem cell,F5,-0.5017624497413635,63
+PSI homo,Neural stem cell,F6,-0.52740877866745,63
+PSI homo,Neural stem cell,F7,1.144585371017456,63
+PSI homo,Other glial cell,F1,-0.3279862701892853,55
+PSI homo,Other glial cell,F2,-0.18854565918445587,55
+PSI homo,Other glial cell,F3,-0.42347970604896545,55
+PSI homo,Other glial cell,F4,0.7171769142150879,55
+PSI homo,Other glial cell,F5,-0.45433905720710754,55
+PSI homo,Other glial cell,F6,0.7225459814071655,55
+PSI homo,Other glial cell,F7,-0.35156986117362976,55
+PSI homo,Pancreatic stellate cell,F1,-1.0196306705474854,40
+PSI homo,Pancreatic stellate cell,F2,-0.8841244578361511,40
+PSI homo,Pancreatic stellate cell,F3,0.2833412289619446,40
+PSI homo,Pancreatic stellate cell,F4,1.2530651092529297,40
+PSI homo,Pancreatic stellate cell,F5,-1.762072205543518,40
+PSI homo,Pancreatic stellate cell,F6,0.16403891146183014,40
+PSI homo,Pancreatic stellate cell,F7,0.9783788919448853,40
+PSI homo,Lung neuroendocrine cell,F1,-0.5817691683769226,3
+PSI homo,Lung neuroendocrine cell,F2,-0.2563515305519104,3
+PSI homo,Lung neuroendocrine cell,F3,-0.4791976511478424,3
+PSI homo,Lung neuroendocrine cell,F4,0.6708285212516785,3
+PSI homo,Lung neuroendocrine cell,F5,0.07712098211050034,3
+PSI homo,Lung neuroendocrine cell,F6,0.5230910181999207,3
+PSI homo,Lung neuroendocrine cell,F7,-0.7526476979255676,3
+PSI hetero q25,Cortical excitatory neuron,F1,1.3057352304458618,30868
+PSI hetero q25,Cortical excitatory neuron,F2,-0.9101976752281189,30868
+PSI hetero q25,Cortical excitatory neuron,F3,-0.19487206637859344,30868
+PSI hetero q25,Cortical excitatory neuron,F4,-0.01786894164979458,30868
+PSI hetero q25,Cortical excitatory neuron,F5,-0.07324102520942688,30868
+PSI hetero q25,Cortical excitatory neuron,F6,-0.9873455762863159,30868
+PSI hetero q25,Cortical excitatory neuron,F7,0.009958610869944096,30868
+PSI hetero q25,Inhibitory neuron,F1,1.1119921207427979,17259
+PSI hetero q25,Inhibitory neuron,F2,1.9766849279403687,17259
+PSI hetero q25,Inhibitory neuron,F3,0.4621207118034363,17259
+PSI hetero q25,Inhibitory neuron,F4,0.16979065537452698,17259
+PSI hetero q25,Inhibitory neuron,F5,0.18291909992694855,17259
+PSI hetero q25,Inhibitory neuron,F6,-0.928183913230896,17259
+PSI hetero q25,Inhibitory neuron,F7,0.07502532750368118,17259
+PSI hetero q25,Microglia,F1,-0.7138457894325256,12042
+PSI hetero q25,Microglia,F2,0.31794095039367676,12042
+PSI hetero q25,Microglia,F3,1.0192761421203613,12042
+PSI hetero q25,Microglia,F4,-1.64572012424469,12042
+PSI hetero q25,Microglia,F5,-0.446514755487442,12042
+PSI hetero q25,Microglia,F6,0.8499370813369751,12042
+PSI hetero q25,Microglia,F7,-0.5420836210250854,12042
+PSI hetero q25,B cell,F1,-0.6993077397346497,8620
+PSI hetero q25,B cell,F2,-0.10566294193267822,8620
+PSI hetero q25,B cell,F3,-0.412607878446579,8620
+PSI hetero q25,B cell,F4,-0.3124159276485443,8620
+PSI hetero q25,B cell,F5,-1.0815485715866089,8620
+PSI hetero q25,B cell,F6,0.8914427161216736,8620
+PSI hetero q25,B cell,F7,-0.7731408476829529,8620
+PSI hetero q25,Skin epithelial cell,F1,-0.9534872770309448,7347
+PSI hetero q25,Skin epithelial cell,F2,-0.19140782952308655,7347
+PSI hetero q25,Skin epithelial cell,F3,-0.25718382000923157,7347
+PSI hetero q25,Skin epithelial cell,F4,1.6373802423477173,7347
+PSI hetero q25,Skin epithelial cell,F5,-0.1162971630692482,7347
+PSI hetero q25,Skin epithelial cell,F6,0.061150312423706055,7347
+PSI hetero q25,Skin epithelial cell,F7,0.7465923428535461,7347
+PSI hetero q25,Endothelial cell,F1,-0.6803076267242432,7044
+PSI hetero q25,Endothelial cell,F2,-0.14297252893447876,7044
+PSI hetero q25,Endothelial cell,F3,-0.6146062612533569,7044
+PSI hetero q25,Endothelial cell,F4,-0.5454134941101074,7044
+PSI hetero q25,Endothelial cell,F5,0.9764846563339233,7044
+PSI hetero q25,Endothelial cell,F6,0.8186655044555664,7044
+PSI hetero q25,Endothelial cell,F7,-0.019641786813735962,7044
+PSI hetero q25,Mesenchymal stem cell,F1,-0.9787843823432922,4755
+PSI hetero q25,Mesenchymal stem cell,F2,-0.1961597204208374,4755
+PSI hetero q25,Mesenchymal stem cell,F3,-0.539764404296875,4755
+PSI hetero q25,Mesenchymal stem cell,F4,-0.11885342001914978,4755
+PSI hetero q25,Mesenchymal stem cell,F5,1.9823955297470093,4755
+PSI hetero q25,Mesenchymal stem cell,F6,0.08791540563106537,4755
+PSI hetero q25,Mesenchymal stem cell,F7,0.8800915479660034,4755
+PSI hetero q25,Fibroblast,F1,-0.9391342401504517,4600
+PSI hetero q25,Fibroblast,F2,-0.10062939673662186,4600
+PSI hetero q25,Fibroblast,F3,-0.44838953018188477,4600
+PSI hetero q25,Fibroblast,F4,-0.28946396708488464,4600
+PSI hetero q25,Fibroblast,F5,2.01835036277771,4600
+PSI hetero q25,Fibroblast,F6,0.17995920777320862,4600
+PSI hetero q25,Fibroblast,F7,0.8314892649650574,4600
+PSI hetero q25,Hippocampal neuron,F1,1.041760802268982,4476
+PSI hetero q25,Hippocampal neuron,F2,-0.7530768513679504,4476
+PSI hetero q25,Hippocampal neuron,F3,0.7867711782455444,4476
+PSI hetero q25,Hippocampal neuron,F4,0.6045225858688354,4476
+PSI hetero q25,Hippocampal neuron,F5,0.4438706934452057,4476
+PSI hetero q25,Hippocampal neuron,F6,-0.5041146278381348,4476
+PSI hetero q25,Hippocampal neuron,F7,-0.8541146516799927,4476
+PSI hetero q25,T cell,F1,-0.7314538359642029,3571
+PSI hetero q25,T cell,F2,-0.2200179398059845,3571
+PSI hetero q25,T cell,F3,-0.424153596162796,3571
+PSI hetero q25,T cell,F4,-0.10577429831027985,3571
+PSI hetero q25,T cell,F5,-1.019529938697815,3571
+PSI hetero q25,T cell,F6,0.7922313809394836,3571
+PSI hetero q25,T cell,F7,-0.6869316697120667,3571
+PSI hetero q25,Intestinal epithelial cell,F1,-0.5546159148216248,3016
+PSI hetero q25,Intestinal epithelial cell,F2,-0.01644519530236721,3016
+PSI hetero q25,Intestinal epithelial cell,F3,-0.6117417216300964,3016
+PSI hetero q25,Intestinal epithelial cell,F4,1.3399946689605713,3016
+PSI hetero q25,Intestinal epithelial cell,F5,-0.7270328402519226,3016
+PSI hetero q25,Intestinal epithelial cell,F6,0.8334508538246155,3016
+PSI hetero q25,Intestinal epithelial cell,F7,0.022536303848028183,3016
+PSI hetero q25,T cell precursor,F1,-0.7684375047683716,3002
+PSI hetero q25,T cell precursor,F2,-0.1550387144088745,3002
+PSI hetero q25,T cell precursor,F3,-0.2592526078224182,3002
+PSI hetero q25,T cell precursor,F4,-0.04395859315991402,3002
+PSI hetero q25,T cell precursor,F5,-1.22199547290802,3002
+PSI hetero q25,T cell precursor,F6,0.6287828683853149,3002
+PSI hetero q25,T cell precursor,F7,-0.5103544592857361,3002
+PSI hetero q25,Granulocyte,F1,-0.4300905168056488,2860
+PSI hetero q25,Granulocyte,F2,-0.19379878044128418,2860
+PSI hetero q25,Granulocyte,F3,-0.3506707549095154,2860
+PSI hetero q25,Granulocyte,F4,-0.46236616373062134,2860
+PSI hetero q25,Granulocyte,F5,-0.7116166353225708,2860
+PSI hetero q25,Granulocyte,F6,1.3513444662094116,2860
+PSI hetero q25,Granulocyte,F7,-0.7506625056266785,2860
+PSI hetero q25,Hematopoietic stem cell,F1,-0.9823905229568481,2748
+PSI hetero q25,Hematopoietic stem cell,F2,0.2746269702911377,2748
+PSI hetero q25,Hematopoietic stem cell,F3,0.6786313056945801,2748
+PSI hetero q25,Hematopoietic stem cell,F4,0.7432035207748413,2748
+PSI hetero q25,Hematopoietic stem cell,F5,-1.617495059967041,2748
+PSI hetero q25,Hematopoietic stem cell,F6,-0.365955650806427,2748
+PSI hetero q25,Hematopoietic stem cell,F7,0.767432451248169,2748
+PSI hetero q25,Other immune cell,F1,-0.6511762738227844,2562
+PSI hetero q25,Other immune cell,F2,-0.16248935461044312,2562
+PSI hetero q25,Other immune cell,F3,-0.0026769598480314016,2562
+PSI hetero q25,Other immune cell,F4,-0.3477347493171692,2562
+PSI hetero q25,Other immune cell,F5,-0.6383833885192871,2562
+PSI hetero q25,Other immune cell,F6,0.9008599519729614,2562
+PSI hetero q25,Other immune cell,F7,-0.4626288414001465,2562
+PSI hetero q25,Skeletal muscle cell,F1,-0.6782320141792297,2460
+PSI hetero q25,Skeletal muscle cell,F2,0.09798794239759445,2460
+PSI hetero q25,Skeletal muscle cell,F3,-1.0236629247665405,2460
+PSI hetero q25,Skeletal muscle cell,F4,0.10508560389280319,2460
+PSI hetero q25,Skeletal muscle cell,F5,1.0088173151016235,2460
+PSI hetero q25,Skeletal muscle cell,F6,0.8674398064613342,2460
+PSI hetero q25,Skeletal muscle cell,F7,-0.1734379231929779,2460
+PSI hetero q25,Macrophage,F1,-0.7108931541442871,2129
+PSI hetero q25,Macrophage,F2,-0.03900284692645073,2129
+PSI hetero q25,Macrophage,F3,-0.09688422083854675,2129
+PSI hetero q25,Macrophage,F4,-0.33576181530952454,2129
+PSI hetero q25,Macrophage,F5,-0.7524089813232422,2129
+PSI hetero q25,Macrophage,F6,0.8245726823806763,2129
+PSI hetero q25,Macrophage,F7,-0.5653557181358337,2129
+PSI hetero q25,Smooth muscle cell,F1,-0.8471949100494385,2034
+PSI hetero q25,Smooth muscle cell,F2,-0.08959474414587021,2034
+PSI hetero q25,Smooth muscle cell,F3,-0.37899160385131836,2034
+PSI hetero q25,Smooth muscle cell,F4,-0.7533481121063232,2034
+PSI hetero q25,Smooth muscle cell,F5,1.1804296970367432,2034
+PSI hetero q25,Smooth muscle cell,F6,0.47706782817840576,2034
+PSI hetero q25,Smooth muscle cell,F7,0.2712399661540985,2034
+PSI hetero q25,Pancreatic endocrine cell,F1,-0.3352716565132141,1444
+PSI hetero q25,Pancreatic endocrine cell,F2,0.26502835750579834,1444
+PSI hetero q25,Pancreatic endocrine cell,F3,0.24405811727046967,1444
+PSI hetero q25,Pancreatic endocrine cell,F4,0.7262330651283264,1444
+PSI hetero q25,Pancreatic endocrine cell,F5,0.17066383361816406,1444
+PSI hetero q25,Pancreatic endocrine cell,F6,0.13901732861995697,1444
+PSI hetero q25,Pancreatic endocrine cell,F7,0.37425312399864197,1444
+PSI hetero q25,Oligodendrocyte,F1,-0.3534455895423889,1360
+PSI hetero q25,Oligodendrocyte,F2,0.7381947040557861,1360
+PSI hetero q25,Oligodendrocyte,F3,1.6274921894073486,1360
+PSI hetero q25,Oligodendrocyte,F4,-1.0005112886428833,1360
+PSI hetero q25,Oligodendrocyte,F5,1.4287928342819214,1360
+PSI hetero q25,Oligodendrocyte,F6,-0.19006763398647308,1360
+PSI hetero q25,Oligodendrocyte,F7,0.8206371665000916,1360
+PSI hetero q25,Specialized intestinal cell,F1,-0.7401801347732544,1342
+PSI hetero q25,Specialized intestinal cell,F2,0.10938455164432526,1342
+PSI hetero q25,Specialized intestinal cell,F3,-0.1299993246793747,1342
+PSI hetero q25,Specialized intestinal cell,F4,1.7803384065628052,1342
+PSI hetero q25,Specialized intestinal cell,F5,-0.9833066463470459,1342
+PSI hetero q25,Specialized intestinal cell,F6,0.28781479597091675,1342
+PSI hetero q25,Specialized intestinal cell,F7,0.6434618830680847,1342
+PSI hetero q25,Monocyte,F1,-0.8953572511672974,1281
+PSI hetero q25,Monocyte,F2,-0.09087904542684555,1281
+PSI hetero q25,Monocyte,F3,0.4855346083641052,1281
+PSI hetero q25,Monocyte,F4,-0.7728979587554932,1281
+PSI hetero q25,Monocyte,F5,-0.7113196849822998,1281
+PSI hetero q25,Monocyte,F6,0.5337924361228943,1281
+PSI hetero q25,Monocyte,F7,-0.319315105676651,1281
+PSI hetero q25,Immune progenitor,F1,-0.8861606121063232,1204
+PSI hetero q25,Immune progenitor,F2,-0.1239992305636406,1204
+PSI hetero q25,Immune progenitor,F3,0.24392178654670715,1204
+PSI hetero q25,Immune progenitor,F4,0.04781673103570938,1204
+PSI hetero q25,Immune progenitor,F5,-1.3695833683013916,1204
+PSI hetero q25,Immune progenitor,F6,0.3637829124927521,1204
+PSI hetero q25,Immune progenitor,F7,-0.27668601274490356,1204
+PSI hetero q25,Basal epithelial cell,F1,-1.0703448057174683,1148
+PSI hetero q25,Basal epithelial cell,F2,-0.4629000425338745,1148
+PSI hetero q25,Basal epithelial cell,F3,0.04182890057563782,1148
+PSI hetero q25,Basal epithelial cell,F4,1.3927565813064575,1148
+PSI hetero q25,Basal epithelial cell,F5,0.7361885905265808,1148
+PSI hetero q25,Basal epithelial cell,F6,-0.32471904158592224,1148
+PSI hetero q25,Basal epithelial cell,F7,1.2704799175262451,1148
+PSI hetero q25,Urogenital epithelial cell,F1,-1.0154263973236084,1008
+PSI hetero q25,Urogenital epithelial cell,F2,-0.4294928014278412,1008
+PSI hetero q25,Urogenital epithelial cell,F3,0.6461753249168396,1008
+PSI hetero q25,Urogenital epithelial cell,F4,1.9731606245040894,1008
+PSI hetero q25,Urogenital epithelial cell,F5,-0.3985729217529297,1008
+PSI hetero q25,Urogenital epithelial cell,F6,-0.35680949687957764,1008
+PSI hetero q25,Urogenital epithelial cell,F7,1.196120262145996,1008
+PSI hetero q25,Epithelial stem cell,F1,-1.041083574295044,938
+PSI hetero q25,Epithelial stem cell,F2,0.12495088577270508,938
+PSI hetero q25,Epithelial stem cell,F3,0.5375537276268005,938
+PSI hetero q25,Epithelial stem cell,F4,2.609469175338745,938
+PSI hetero q25,Epithelial stem cell,F5,-1.807573676109314,938
+PSI hetero q25,Epithelial stem cell,F6,-0.5928366780281067,938
+PSI hetero q25,Epithelial stem cell,F7,1.6680936813354492,938
+PSI hetero q25,Car3+ astrocyte,F1,1.198197603225708,895
+PSI hetero q25,Car3+ astrocyte,F2,-1.0072327852249146,895
+PSI hetero q25,Car3+ astrocyte,F3,0.41717198491096497,895
+PSI hetero q25,Car3+ astrocyte,F4,0.3145524263381958,895
+PSI hetero q25,Car3+ astrocyte,F5,0.25414490699768066,895
+PSI hetero q25,Car3+ astrocyte,F6,-0.8073041439056396,895
+PSI hetero q25,Car3+ astrocyte,F7,-0.3929879367351532,895
+PSI hetero q25,Kidney epithelial cell,F1,-0.4000326693058014,818
+PSI hetero q25,Kidney epithelial cell,F2,0.15555481612682343,818
+PSI hetero q25,Kidney epithelial cell,F3,-0.3070896565914154,818
+PSI hetero q25,Kidney epithelial cell,F4,0.436807245016098,818
+PSI hetero q25,Kidney epithelial cell,F5,-0.00908452458679676,818
+PSI hetero q25,Kidney epithelial cell,F6,1.0802509784698486,818
+PSI hetero q25,Kidney epithelial cell,F7,-0.22275137901306152,818
+PSI hetero q25,Hepatocyte,F1,-0.32712700963020325,723
+PSI hetero q25,Hepatocyte,F2,0.17432402074337006,723
+PSI hetero q25,Hepatocyte,F3,-0.44896557927131653,723
+PSI hetero q25,Hepatocyte,F4,0.6152713894844055,723
+PSI hetero q25,Hepatocyte,F5,0.10224476456642151,723
+PSI hetero q25,Hepatocyte,F6,1.1788263320922852,723
+PSI hetero q25,Hepatocyte,F7,-0.18290100991725922,723
+PSI hetero q25,Nk cell,F1,-0.7919764518737793,718
+PSI hetero q25,Nk cell,F2,-0.20908813178539276,718
+PSI hetero q25,Nk cell,F3,-0.2029082328081131,718
+PSI hetero q25,Nk cell,F4,-0.12895141541957855,718
+PSI hetero q25,Nk cell,F5,-1.120105266571045,718
+PSI hetero q25,Nk cell,F6,0.6626121401786804,718
+PSI hetero q25,Nk cell,F7,-0.636353075504303,718
+PSI hetero q25,Other neuron,F1,0.3261551856994629,602
+PSI hetero q25,Other neuron,F2,0.28480035066604614,602
+PSI hetero q25,Other neuron,F3,-0.31882721185684204,602
+PSI hetero q25,Other neuron,F4,-0.0024038199335336685,602
+PSI hetero q25,Other neuron,F5,0.3531969487667084,602
+PSI hetero q25,Other neuron,F6,1.1370480060577393,602
+PSI hetero q25,Other neuron,F7,-0.27226561307907104,602
+PSI hetero q25,Cardiac stromal cell,F1,-0.8769415020942688,579
+PSI hetero q25,Cardiac stromal cell,F2,-0.008350399322807789,579
+PSI hetero q25,Cardiac stromal cell,F3,-0.35392165184020996,579
+PSI hetero q25,Cardiac stromal cell,F4,-0.41144850850105286,579
+PSI hetero q25,Cardiac stromal cell,F5,1.3609222173690796,579
+PSI hetero q25,Cardiac stromal cell,F6,0.40253251791000366,579
+PSI hetero q25,Cardiac stromal cell,F7,0.4162905514240265,579
+PSI hetero q25,Astrocyte,F1,-0.19235046207904816,571
+PSI hetero q25,Astrocyte,F2,0.7244964241981506,571
+PSI hetero q25,Astrocyte,F3,0.18559490144252777,571
+PSI hetero q25,Astrocyte,F4,-0.19153200089931488,571
+PSI hetero q25,Astrocyte,F5,1.100766897201538,571
+PSI hetero q25,Astrocyte,F6,0.4824461340904236,571
+PSI hetero q25,Astrocyte,F7,0.37632453441619873,571
+PSI hetero q25,Stromal cell,F1,-1.0076555013656616,545
+PSI hetero q25,Stromal cell,F2,-0.31175297498703003,545
+PSI hetero q25,Stromal cell,F3,-0.2619295120239258,545
+PSI hetero q25,Stromal cell,F4,-0.19776740670204163,545
+PSI hetero q25,Stromal cell,F5,2.183684825897217,545
+PSI hetero q25,Stromal cell,F6,-0.04121944680809975,545
+PSI hetero q25,Stromal cell,F7,1.0424866676330566,545
+PSI hetero q25,Bladder epithelial cell,F1,-1.0527980327606201,521
+PSI hetero q25,Bladder epithelial cell,F2,-0.22647975385189056,521
+PSI hetero q25,Bladder epithelial cell,F3,-0.2703559696674347,521
+PSI hetero q25,Bladder epithelial cell,F4,0.21538898348808289,521
+PSI hetero q25,Bladder epithelial cell,F5,2.1207334995269775,521
+PSI hetero q25,Bladder epithelial cell,F6,-0.10226466506719589,521
+PSI hetero q25,Bladder epithelial cell,F7,1.0915855169296265,521
+PSI hetero q25,Other epithelial cell,F1,-0.2953307628631592,499
+PSI hetero q25,Other epithelial cell,F2,-0.029643772169947624,499
+PSI hetero q25,Other epithelial cell,F3,-0.4030461311340332,499
+PSI hetero q25,Other epithelial cell,F4,0.3743323087692261,499
+PSI hetero q25,Other epithelial cell,F5,-0.12609760463237762,499
+PSI hetero q25,Other epithelial cell,F6,1.2792136669158936,499
+PSI hetero q25,Other epithelial cell,F7,-0.18474355340003967,499
+PSI hetero q25,Pancreatic exocrine cell,F1,0.11294655501842499,484
+PSI hetero q25,Pancreatic exocrine cell,F2,0.07511641830205917,484
+PSI hetero q25,Pancreatic exocrine cell,F3,-0.2663736045360565,484
+PSI hetero q25,Pancreatic exocrine cell,F4,0.16883420944213867,484
+PSI hetero q25,Pancreatic exocrine cell,F5,0.012220336124300957,484
+PSI hetero q25,Pancreatic exocrine cell,F6,1.8846709728240967,484
+PSI hetero q25,Pancreatic exocrine cell,F7,-0.012892650440335274,484
+PSI hetero q25,Cardiomyocyte,F1,-0.169855535030365,436
+PSI hetero q25,Cardiomyocyte,F2,0.06978209316730499,436
+PSI hetero q25,Cardiomyocyte,F3,-0.07066415995359421,436
+PSI hetero q25,Cardiomyocyte,F4,0.0360790491104126,436
+PSI hetero q25,Cardiomyocyte,F5,0.5595301985740662,436
+PSI hetero q25,Cardiomyocyte,F6,0.9059879183769226,436
+PSI hetero q25,Cardiomyocyte,F7,0.19123931229114532,436
+PSI hetero q25,Mammary epithelial cell,F1,-1.0074483156204224,434
+PSI hetero q25,Mammary epithelial cell,F2,-0.2880626916885376,434
+PSI hetero q25,Mammary epithelial cell,F3,0.5308889746665955,434
+PSI hetero q25,Mammary epithelial cell,F4,1.7529711723327637,434
+PSI hetero q25,Mammary epithelial cell,F5,-0.3118331730365753,434
+PSI hetero q25,Mammary epithelial cell,F6,-0.37448054552078247,434
+PSI hetero q25,Mammary epithelial cell,F7,1.1734615564346313,434
+PSI hetero q25,Dendritic cell,F1,-0.8686951994895935,368
+PSI hetero q25,Dendritic cell,F2,-0.011823231354355812,368
+PSI hetero q25,Dendritic cell,F3,-0.08594019711017609,368
+PSI hetero q25,Dendritic cell,F4,-0.060503337532281876,368
+PSI hetero q25,Dendritic cell,F5,-0.9923011064529419,368
+PSI hetero q25,Dendritic cell,F6,0.5199772119522095,368
+PSI hetero q25,Dendritic cell,F7,-0.5381361246109009,368
+PSI hetero q25,Pericyte,F1,-0.7204540371894836,341
+PSI hetero q25,Pericyte,F2,-0.1376725733280182,341
+PSI hetero q25,Pericyte,F3,-0.36333218216896057,341
+PSI hetero q25,Pericyte,F4,-0.1358279138803482,341
+PSI hetero q25,Pericyte,F5,1.3244858980178833,341
+PSI hetero q25,Pericyte,F6,0.30864718556404114,341
+PSI hetero q25,Pericyte,F7,0.6524801850318909,341
+PSI hetero q25,Respiratory epithelial cell,F1,-0.16908711194992065,320
+PSI hetero q25,Respiratory epithelial cell,F2,-0.0389443077147007,320
+PSI hetero q25,Respiratory epithelial cell,F3,-0.4691846966743469,320
+PSI hetero q25,Respiratory epithelial cell,F4,0.3075133264064789,320
+PSI hetero q25,Respiratory epithelial cell,F5,0.026143914088606834,320
+PSI hetero q25,Respiratory epithelial cell,F6,1.5106819868087769,320
+PSI hetero q25,Respiratory epithelial cell,F7,-0.04504185542464256,320
+PSI hetero q25,Secretory cell,F1,-0.971614420413971,309
+PSI hetero q25,Secretory cell,F2,-0.27956122159957886,309
+PSI hetero q25,Secretory cell,F3,1.1982877254486084,309
+PSI hetero q25,Secretory cell,F4,2.0145184993743896,309
+PSI hetero q25,Secretory cell,F5,-1.4656587839126587,309
+PSI hetero q25,Secretory cell,F6,-0.5733632445335388,309
+PSI hetero q25,Secretory cell,F7,2.0266098976135254,309
+PSI hetero q25,Chondrocyte,F1,-0.9875988960266113,256
+PSI hetero q25,Chondrocyte,F2,-0.31011730432510376,256
+PSI hetero q25,Chondrocyte,F3,0.33371129631996155,256
+PSI hetero q25,Chondrocyte,F4,0.02937314845621586,256
+PSI hetero q25,Chondrocyte,F5,2.01617693901062,256
+PSI hetero q25,Chondrocyte,F6,-0.10421332716941833,256
+PSI hetero q25,Chondrocyte,F7,1.188283920288086,256
+PSI hetero q25,Specialized endothelial cell,F1,-0.8076378703117371,239
+PSI hetero q25,Specialized endothelial cell,F2,-0.2968023121356964,239
+PSI hetero q25,Specialized endothelial cell,F3,-0.4105306565761566,239
+PSI hetero q25,Specialized endothelial cell,F4,-0.7681897282600403,239
+PSI hetero q25,Specialized endothelial cell,F5,1.0151867866516113,239
+PSI hetero q25,Specialized endothelial cell,F6,0.7239155769348145,239
+PSI hetero q25,Specialized endothelial cell,F7,0.06656584143638611,239
+PSI hetero q25,Pancreatic ductal cell,F1,-0.82560133934021,226
+PSI hetero q25,Pancreatic ductal cell,F2,0.003989364951848984,226
+PSI hetero q25,Pancreatic ductal cell,F3,-0.18265293538570404,226
+PSI hetero q25,Pancreatic ductal cell,F4,0.8912035226821899,226
+PSI hetero q25,Pancreatic ductal cell,F5,0.12050291895866394,226
+PSI hetero q25,Pancreatic ductal cell,F6,0.0703248381614685,226
+PSI hetero q25,Pancreatic ductal cell,F7,0.6842427849769592,226
+PSI hetero q25,Oligodendrocyte precursor,F1,-0.14519816637039185,204
+PSI hetero q25,Oligodendrocyte precursor,F2,0.8366795182228088,204
+PSI hetero q25,Oligodendrocyte precursor,F3,0.6074400544166565,204
+PSI hetero q25,Oligodendrocyte precursor,F4,-0.45790228247642517,204
+PSI hetero q25,Oligodendrocyte precursor,F5,1.213937759399414,204
+PSI hetero q25,Oligodendrocyte precursor,F6,-0.2728869616985321,204
+PSI hetero q25,Oligodendrocyte precursor,F7,0.7638878226280212,204
+PSI hetero q25,Hematopoietic progenitor,F1,-0.5633035898208618,157
+PSI hetero q25,Hematopoietic progenitor,F2,-0.0011718281311914325,157
+PSI hetero q25,Hematopoietic progenitor,F3,-0.21070067584514618,157
+PSI hetero q25,Hematopoietic progenitor,F4,0.08899521082639694,157
+PSI hetero q25,Hematopoietic progenitor,F5,-0.7515270113945007,157
+PSI hetero q25,Hematopoietic progenitor,F6,0.9045195579528809,157
+PSI hetero q25,Hematopoietic progenitor,F7,-0.4583915174007416,157
+PSI hetero q25,Alveolar epithelial cell,F1,-0.7141914367675781,156
+PSI hetero q25,Alveolar epithelial cell,F2,0.06143919751048088,156
+PSI hetero q25,Alveolar epithelial cell,F3,-0.18034349381923676,156
+PSI hetero q25,Alveolar epithelial cell,F4,0.7144761681556702,156
+PSI hetero q25,Alveolar epithelial cell,F5,0.2987087368965149,156
+PSI hetero q25,Alveolar epithelial cell,F6,0.4529489278793335,156
+PSI hetero q25,Alveolar epithelial cell,F7,0.08429599553346634,156
+PSI hetero q25,Kidney tubular cell,F1,-0.25810301303863525,140
+PSI hetero q25,Kidney tubular cell,F2,0.09031762182712555,140
+PSI hetero q25,Kidney tubular cell,F3,-0.21544137597084045,140
+PSI hetero q25,Kidney tubular cell,F4,0.2920011878013611,140
+PSI hetero q25,Kidney tubular cell,F5,0.05173267051577568,140
+PSI hetero q25,Kidney tubular cell,F6,1.2857017517089844,140
+PSI hetero q25,Kidney tubular cell,F7,-0.226091206073761,140
+PSI hetero q25,Neuroepithelial cell,F1,-0.011812740005552769,117
+PSI hetero q25,Neuroepithelial cell,F2,0.018179576843976974,117
+PSI hetero q25,Neuroepithelial cell,F3,-0.4772343635559082,117
+PSI hetero q25,Neuroepithelial cell,F4,0.22499291598796844,117
+PSI hetero q25,Neuroepithelial cell,F5,0.20078594982624054,117
+PSI hetero q25,Neuroepithelial cell,F6,1.748968482017517,117
+PSI hetero q25,Neuroepithelial cell,F7,-0.1916351318359375,117
+PSI hetero q25,Enteroendocrine cell,F1,-0.2324555516242981,108
+PSI hetero q25,Enteroendocrine cell,F2,0.021830439567565918,108
+PSI hetero q25,Enteroendocrine cell,F3,-0.18824179470539093,108
+PSI hetero q25,Enteroendocrine cell,F4,0.7295672297477722,108
+PSI hetero q25,Enteroendocrine cell,F5,-0.27805036306381226,108
+PSI hetero q25,Enteroendocrine cell,F6,0.9595001339912415,108
+PSI hetero q25,Enteroendocrine cell,F7,0.38221704959869385,108
+PSI hetero q25,Airway epithelial cell,F1,-0.6695590019226074,102
+PSI hetero q25,Airway epithelial cell,F2,-0.10223573446273804,102
+PSI hetero q25,Airway epithelial cell,F3,-0.04930192977190018,102
+PSI hetero q25,Airway epithelial cell,F4,0.9494400024414062,102
+PSI hetero q25,Airway epithelial cell,F5,0.04047039896249771,102
+PSI hetero q25,Airway epithelial cell,F6,0.28978511691093445,102
+PSI hetero q25,Airway epithelial cell,F7,0.6889635920524597,102
+PSI hetero q25,Lymphatic endothelial cell,F1,-0.8099029064178467,91
+PSI hetero q25,Lymphatic endothelial cell,F2,-0.1045318990945816,91
+PSI hetero q25,Lymphatic endothelial cell,F3,-0.28416287899017334,91
+PSI hetero q25,Lymphatic endothelial cell,F4,-0.5899699926376343,91
+PSI hetero q25,Lymphatic endothelial cell,F5,1.0587068796157837,91
+PSI hetero q25,Lymphatic endothelial cell,F6,0.5961204171180725,91
+PSI hetero q25,Lymphatic endothelial cell,F7,0.24758823215961456,91
+PSI hetero q25,Kidney glomerular cell,F1,-0.29000237584114075,77
+PSI hetero q25,Kidney glomerular cell,F2,-0.05844390019774437,77
+PSI hetero q25,Kidney glomerular cell,F3,-0.1854514330625534,77
+PSI hetero q25,Kidney glomerular cell,F4,0.04037821292877197,77
+PSI hetero q25,Kidney glomerular cell,F5,0.5480524301528931,77
+PSI hetero q25,Kidney glomerular cell,F6,1.2397154569625854,77
+PSI hetero q25,Kidney glomerular cell,F7,0.18776890635490417,77
+PSI hetero q25,Neural stem cell,F1,-0.31089314818382263,63
+PSI hetero q25,Neural stem cell,F2,0.6886020302772522,63
+PSI hetero q25,Neural stem cell,F3,1.2195452451705933,63
+PSI hetero q25,Neural stem cell,F4,-0.3159213066101074,63
+PSI hetero q25,Neural stem cell,F5,0.34780171513557434,63
+PSI hetero q25,Neural stem cell,F6,-0.9053855538368225,63
+PSI hetero q25,Neural stem cell,F7,1.7281029224395752,63
+PSI hetero q25,Other glial cell,F1,-0.2782633900642395,55
+PSI hetero q25,Other glial cell,F2,0.6476889252662659,55
+PSI hetero q25,Other glial cell,F3,-0.3381331264972687,55
+PSI hetero q25,Other glial cell,F4,0.26785075664520264,55
+PSI hetero q25,Other glial cell,F5,0.7228851914405823,55
+PSI hetero q25,Other glial cell,F6,0.6457056403160095,55
+PSI hetero q25,Other glial cell,F7,0.14607787132263184,55
+PSI hetero q25,Pancreatic stellate cell,F1,-1.0242301225662231,40
+PSI hetero q25,Pancreatic stellate cell,F2,-0.32170164585113525,40
+PSI hetero q25,Pancreatic stellate cell,F3,-0.22698263823986053,40
+PSI hetero q25,Pancreatic stellate cell,F4,-0.1901029646396637,40
+PSI hetero q25,Pancreatic stellate cell,F5,2.136209011077881,40
+PSI hetero q25,Pancreatic stellate cell,F6,-0.12059380859136581,40
+PSI hetero q25,Pancreatic stellate cell,F7,1.2440122365951538,40
+PSI hetero q25,Lung neuroendocrine cell,F1,-0.50857013463974,3
+PSI hetero q25,Lung neuroendocrine cell,F2,0.7333137392997742,3
+PSI hetero q25,Lung neuroendocrine cell,F3,-0.5832964181900024,3
+PSI hetero q25,Lung neuroendocrine cell,F4,0.6048809885978699,3
+PSI hetero q25,Lung neuroendocrine cell,F5,0.39650169014930725,3
+PSI hetero q25,Lung neuroendocrine cell,F6,0.20629818737506866,3
+PSI hetero q25,Lung neuroendocrine cell,F7,-0.13478879630565643,3

@@ -1,0 +1,4 @@
+fit_label,value_space,noise_model,lambda,se_floor,rank,obs_rmse,diag_taylor_loo_rmse,iso_row_taylor_loo_rmse,iso_row_taylor_elbo,g,source
+floor_0p01,psi,hetero,1000000.0,0.01,13,0.5386585593223572,37.95503616333008,3.1981560446863933,-34319246517.96494,1.0,subset10k_psi_iso_row_hetero_lambda1e6_allrows_scores.csv
+q25_floor,psi,hetero,100000.0,0.05218345299363136,7,0.3753453195095062,32.268211364746094,5.6899326503046,-5316578833.99434,1.0,subset10k_psi_hetero_q25_floor_iter5_lambda100000_iso_allrows_scores.csv
+median_floor,psi,hetero,30000.0,0.10093320161104202,6,0.3063346445560455,30.572710037231445,7.686138863502614,-1967894343.1384416,1.0,subset10k_psi_hetero_q50_floor_iter5_lambda30000_iso_allrows_scores.csv
