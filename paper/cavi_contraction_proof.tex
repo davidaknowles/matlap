@@ -1,0 +1,172 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+
+\newtheorem{theorem}{Theorem}
+
+\title{\textbf{Rigorous Contraction Analysis of the Variational Matrix Covariance Fixed-Point Map}}
+\author{\textbf{Technical Note}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note presents the corrected and complete mathematical proof establishing the conditions under which the coordinate ascent variational inference (CAVI) fixed-point mapping for the auxiliary matrix prior covariance acts as a strict contraction mapping. We resolve sign and dimensional errors present in previous formulations, providing a robust theoretical foundation for global convergence under a compact spectral set.
+\end{abstract}
+
+\section{Problem Setup and Notation}
+Consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ broken into row vectors $y_i \in \mathbb{R}^n$ for $i=1,\dots,m$, each associated with a known noise covariance matrix $S_i \succ 0$. Let $C \succ 0$ denote the prior row covariance matrix (corresponding to $Q/\lambda$ in the original variational formulation). 
+
+We define the posterior row covariance matrices $\Sigma_i(C)$ and mean vectors $\mu_i(C)$ conditioned on $C$ as follows:
+\begin{equation}
+\Sigma_i(C) := \left(S_i^{-1} + C^{-1}\right)^{-1},
+\end{equation}
+\begin{equation}
+\mu_i(C) := \Sigma_i(C) S_i^{-1} y_i.
+\end{equation}
+
+The aggregate expected second-moment matrix across all rows is given by:
+\begin{equation}
+\Psi(C) := \sum_{i=1}^m \left( \mu_i(C)\mu_i(C)^T + \Sigma_i(C)\right),
+\end{equation}
+and we define its spectral trace as $t(C) := \text{Tr}\big(\Psi(C)^{1/2}\big)$.
+
+Fixing the hyperparameters $a_0, b_0 > 0$, we define the dimension-adjusted scalar denominator $\beta := a_0 + mn - 1$ and the scale parameter function:
+\begin{equation}
+\alpha(C) := \frac{b_0 + t(C)}{\beta}.
+\end{equation}
+The principal fixed-point mapping under evaluation is defined as:
+\begin{equation}\label{eq:F-def}
+F(C) := \alpha(C)\,\Psi(C)^{1/2}.
+\end{equation}
+Our objective is to derive the explicit Fr\'echet derivative of $F(C)$ to determine the sufficient conditions under which a unique fixed point $C^* = F(C^*)$ exists.
+
+\section{Fr\'echet Derivatives of Core Components}
+Let $\Delta \in \mathbb{S}^n$ denote an arbitrary symmetric perturbation matrix of $C$. Utilizing standard matrix calculus rules for matrix inverses and the chain rule, the first-order Fr\'echet derivatives are given by:
+\begin{equation}\label{eq:dSigma}
+D\Sigma_i[\Delta] = \Sigma_i C^{-1} \Delta C^{-1} \Sigma_i,
+\end{equation}
+\begin{equation}
+D\mu_i[\Delta] = D\Sigma_i[\Delta] \, S_i^{-1} y_i.
+\end{equation}
+Consequently, by applying the product rule to the rank-one mean matrices, we obtain:
+\begin{equation}\label{eq:dPsi}
+D\Psi[\Delta] = \sum_{i=1}^m \big( D(\mu_i\mu_i^T)[\Delta] + D\Sigma_i[\Delta] \big),
+\end{equation}
+where the directional derivative of the mean outer product is:
+\begin{equation}
+D(\mu_i\mu_i^T)[\Delta] = D\mu_i[\Delta]\,\mu_i^T + \mu_i\,D\mu_i[\Delta]^T.
+\end{equation}
+
+\section{Norm Bounds for Intermediate Matrix Ingredients}
+To establish a clean operator bound, we evaluate all matrix quantities at the base point $C$ and define the following spectral ($\|\cdot\|_2$) and Frobenius ($\|\cdot\|_F$) norms:
+\begin{align*}
+\kappa &:= \|C^{-1}\|_2, \qquad \sigma_i := \|\Sigma_i\|_2, \\
+s_i    &:= \|S_i^{-1}\|_2, \qquad r_i := \|y_i\|_2.
+\end{align*}
+Applying submultiplicativity to equation~\eqref{eq:dSigma}, the Frobenius norm of $D\Sigma_i[\Delta]$ is bounded by:
+\begin{equation}\label{eq:dSigma-bound}
+\|D\Sigma_i[\Delta]\|_F \le (\kappa\,\sigma_i)^2 \|\Delta\|_F.
+\end{equation}
+Similarly, using the induced $\ell_2$-norm properties for vector multiplication, the perturbation of the mean vector satisfies:
+\begin{equation}\label{eq:dmu-bound}
+\|D\mu_i[\Delta]\|_2 \le (\kappa\,\sigma_i)^2\, s_i\,r_i\,\|\Delta\|_F.
+\end{equation}
+Invoking the triangle inequality and submultiplicativity on the product rule of the rank-one mean matrices yields:
+\begin{equation}\label{eq:dmm-bound}
+\left\|D(\mu_i\mu_i^T)[\Delta]\right\|_F \le 2\,\|\mu_i\|_2\,\|D\mu_i[\Delta]\|_2 \le 2\, (\sigma_i s_i r_i)\left(\kappa^2\sigma_i^2 s_i r_i\right)\|\Delta\|_F.
+\end{equation}
+Combining the bounds from equations~\eqref{eq:dSigma-bound} and~\eqref{eq:dmm-bound} via the triangl`e inequality across the summation in~\eqref{eq:dPsi}, we establish a direct Lipschitz bound for the derivative of the aggregate second-moment matrix:
+\begin{equation}\label{eq:Kf-def}
+\|D\Psi[\Delta]\|_F \le K_F(C)\,\|\Delta\|_F,
+\end{equation}
+where the coefficient function $K_F(C)$ isolates the non-linear configuration of $C$ as:
+\begin{equation}
+K_F(C) := \kappa^2 \sum_{i=1}^m \Big( \sigma_i^2 + 2\,\sigma_i^3 s_i^2 r_i^2 \Big).
+\end{equation}
+
+\section{Fr\'echet Derivative of the Matrix Square Root}
+For any symmetric positive definite matrix $A \succ 0$, the Fr\'echet derivative of its principal matrix square root satisfies Higham's classical bounding inequality:
+\begin{equation}\label{eq:sqrt-bound}
+\|D(A^{1/2})[H]\|_F \le \frac{1}{2\sqrt{\lambda_{\min}(A)}}\,\|H\|_F.
+\end{equation}
+Setting $A = \Psi(C)$ and the perturbation directional matrix $H = D\Psi[\Delta]$, we map equation~\eqref{eq:Kf-def} directly into the matrix square root derivative bound:
+\begin{equation}\label{eq:dPsisqrt}
+\|D\big(\Psi^{1/2}\big)[\Delta]\|_F \le \frac{K_F(C)}{2\sqrt{\lambda_{\min}(\Psi(C))}}\,\|\Delta\|_F.
+\end{equation}
+
+\section{Self-Mapping Conditions and Set Invariance}
+To invoke the Banach Fixed-Point Theorem on the compact spectral set $\mathcal{S} = \{C \in \mathbb{S}_{++}^n : c_{\min}I \preceq C \preceq c_{\max}I\}$, we must establish set invariance, $F(\mathcal{S}) \subseteq \mathcal{S}$. We achieve this by finding uniform spectral bounds for $F(C)$ given $C \in \mathcal{S}$.
+
+For any $C \in \mathcal{S}$, its inverse is bounded by $c_{\max}^{-1}I \preceq C^{-1} \preceq c_{\min}^{-1}I$. Let $s_{i,\min} := \lambda_{\min}(S_i^{-1})$ and $s_{i,\max} := \|S_i^{-1}\|_2$. The posterior covariance matrix $\Sigma_i(C)$ respects the bounds:
+\begin{equation}
+(s_{i,\max} + c_{\min}^{-1})^{-1}I \preceq \Sigma_i(C) \preceq (s_{i,\min} + c_{\max}^{-1})^{-1}I.
+\end{equation}
+We define the extreme bounds across all observations $i=1,\dots,m$:
+\begin{equation}
+\sigma_{\min}(c_{\min}) := \min_{i} (s_{i,\max} + c_{\min}^{-1})^{-1}, \quad \sigma_{\max}(c_{\max}) := \max_{i} (s_{i,\min} + c_{\max}^{-1})^{-1}.
+\end{equation}
+
+Next, we establish Loewner bounds for the aggregate second-moment matrix $\Psi(C)$. Because the rank-one term $\mu_i(C)\mu_i(C)^T \succeq 0$, a conservative lower bound is:
+\begin{equation}
+\Psi(C) \succeq \sum_{i=1}^m \Sigma_i(C) \succeq m \sigma_{\min}(c_{\min})I =: \psi_{\min}(c_{\min})I.
+\end{equation}
+For the upper bound, applying submultiplicativity yields $\|\mu_i(C)\|_2 \le \sigma_{\max}(c_{\max}) s_{i,\max} r_i$. Summing these contributions gives:
+\begin{equation}
+\Psi(C) \preceq \sum_{i=1}^m \left( \sigma_{\max}(c_{\max})^2 s_{i,\max}^2 r_i^2 + \sigma_{\max}(c_{\max}) \right)I =: \psi_{\max}(c_{\max})I.
+\end{equation}
+Taking the principal square root preserves the Loewner ordering, implying $\sqrt{\psi_{\min}(c_{\min})}I \preceq \Psi(C)^{1/2} \preceq \sqrt{\psi_{\max}(c_{\max})}I$. This yields matching constraints on the trace function: $n\sqrt{\psi_{\min}(c_{\min})} \le t(C) \le n\sqrt{\psi_{\max}(c_{\max})}$.
+
+Consequently, the scalar scaling factor $\alpha(C)$ is strictly trapped within $[\alpha_{\min}(c_{\min}), \alpha_{\max}(c_{\max})]$, where:
+\begin{equation}
+\alpha_{\min}(c_{\min}) := \frac{b_0 + n\sqrt{\psi_{\min}(c_{\min})}}{\beta}, \qquad \alpha_{\max}(c_{\max}) := \frac{b_0 + n\sqrt{\psi_{\max}(c_{\max})}}{\beta}.
+\end{equation}
+Synthesizing these elements, the eigenvalues of the mapped matrix $F(C) = \alpha(C)\Psi(C)^{1/2}$ satisfy:
+\begin{equation}
+\alpha_{\min}(c_{\min})\sqrt{\psi_{\min}(c_{\min})}I \preceq F(C) \preceq \alpha_{\max}(c_{\max})\sqrt{\psi_{\max}(c_{\max})}I.
+\end{equation}
+Therefore, the self-mapping property $F(\mathcal{S}) \subseteq \mathcal{S}$ holds true if the parameters satisfy the dual conditions:
+\begin{align}\label{eq:self-mapping-conds}
+\alpha_{\min}(c_{\min})\sqrt{\psi_{\min}(c_{\min})} &\ge c_{\min}, \\
+\alpha_{\max}(c_{\max})\sqrt{\psi_{\max}(c_{\max})} &\le c_{\max}.
+\end{align}
+
+\section{Lipschitz Bound and Contraction Mapping Theorem}
+We now compute the total Fr\'echet derivative of the fixed-point mapping $F(C) = \alpha(C)\,\Psi^{1/2}(C)$ using the product rule:
+\begin{equation}
+DF[\Delta] = D\alpha[\Delta]\,\Psi^{1/2} + \alpha\,D(\Psi^{1/2})[\Delta].
+\end{equation}
+Given $\alpha(C) = (b_0+t(C))/\beta$ where $t(C) = \text{Tr}(\Psi^{1/2}(C))$, the scalar derivative is strictly driven by the trace of the matrix square root derivative:
+\begin{equation}
+D\alpha[\Delta] = \frac{1}{\beta}\text{Tr}\big(D(\Psi^{1/2})[\Delta]\big).
+\end{equation}
+Applying the Cauchy-Schwarz trace inequality $|\text{Tr}(M)| \le \sqrt{n}\|M\|_F$ for $n \times n$ matrices to the trace term alongside equation~\eqref{eq:dPsisqrt} provides the exact scalar coefficient bound:
+\begin{equation}\label{eq:Dalpha-bound}
+|D\alpha[\Delta]| \le \frac{\sqrt{n}\,K_F(C)}{2\beta\sqrt{\lambda_{\min}(\Psi(C))}}\,\|\Delta\|_F.
+\end{equation}
+Taking the Frobenius norm of the total derivative $DF[\Delta]$ and utilizing the triangle inequality yields:
+\begin{equation}
+\|DF[\Delta]\|_F \le |D\alpha[\Delta]|\,\|\Psi^{1/2}\|_F + \alpha\,\|D(\Psi^{1/2})[\Delta]\|_F.
+\end{equation}
+Substituting the exact Frobenius identity for the principal matrix square root $\|\Psi^{1/2}\|_F = \sqrt{\text{Tr}(\Psi(C))}$ alongside equations~\eqref{eq:dPsisqrt} and~\eqref{eq:Dalpha-bound} leads to our final explicit Lipschitz bound:
+\begin{equation}\label{eq:L-bound}
+\|DF[\Delta]\|_F \le L(C)\|\Delta\|_F,
+\end{equation}
+where the local Lipschitz constant $L(C)$ is defined as:
+\begin{equation}
+L(C) := \frac{K_F(C)}{2\beta\sqrt{\lambda_{\min}(\Psi(C))}}\Big( b_0 + t(C) + \sqrt{n \text{Tr}(\Psi(C))} \Big).
+\end{equation}
+
+\begin{theorem}
+Let $\mathcal{S} = \{C \in \mathbb{S}_{++}^n : c_{\min}I \preceq C \preceq c_{\max}I\}$ define a compact spectral set. If the hyperparameters and observation bounds satisfy the self-mapping conditions~\eqref{eq:self-mapping-conds} and the contraction constraint:
+\begin{equation}
+\bar{L} := \sup_{C \in \mathcal{S}} L(C) < 1,
+\end{equation}
+then the mapping $F$ is a well-defined strict contraction on $\mathcal{S}$ with respect to the Frobenius norm. By the Banach Fixed-Point Theorem, $F$ admits a unique, globally stable fixed point $C^* \in \mathcal{S}$, and the iterative sequence $C_{t+1} = F(C_t)$ is guaranteed to converge to $C^*$ from any initial point $C_0 \in \mathcal{S}$.
+\end{theorem}
+
+\end{document}
