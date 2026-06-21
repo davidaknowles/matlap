@@ -44,35 +44,28 @@ We resolve both limitations simultaneously through an empirical Bayes framework.
 
 \subsection{Homoskedastic setup}
 
-We first consider a homoskedastic noise model. Assume we observe elements $\Omega \subseteq \{1,\ldots,m\}\times\{1,\ldots,n\}$ of a noisy data matrix $Y$. We aim to find a ``denoised'' low-rank matrix $X$ close to $Y$ (e.g., in squared error). The typical approach would be to represent $X=UV^T$ and optimize over $U$ and $V$, but this is non-convex and requires careful initialization. In the convex optimization/compressed sensing literature, a common alternative is to place a convex penalty directly on $X$ that encourages low-rank structure. The natural choice is the nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the sum of the singular values (SVs) of $X$. The loss is then, 
+We first consider a homoskedastic noise model. Assume we observe elements $\Omega \subseteq \{1,\ldots,m\}\times\{1,\ldots,n\}$ of a noisy data matrix $Y$. We aim to find a ``denoised'' low-rank matrix $X$ close to $Y$ (e.g., in squared error). The typical approach would be to represent $X=UV^T$ and optimize over $U$ and $V$, but this is non-convex and requires careful initialization. In the convex optimization/compressed sensing literature, a common alternative is to place a convex penalty directly on $X$ that encourages low-rank structure. The natural choice is the nuclear norm $\|X\|_* = \sum_i s_i(X)$, the sum of the singular values (SVs) $s$ of $X$. The loss is then, 
 \begin{equation} \label{eq:loss} \mathcal{L}(X) = \frac12 \sum_{ij} (Y_{ij}-X_{ij})^2 + \lambda \|X\|_*.
 \end{equation}
 In principle $\lambda$ can be selected by CV, but this is computationally expensive and requires arbitrary choices about the CV scheme (how many folds, how to select heldout entries, what metric to use). 
 
 Here, we ask whether Eq \ref{eq:loss} can be re-interpreted from an empirical Bayes viewpoint to enable automatic estimation of $\lambda$ from the data. The squared error loss can be interpreted as the (scaled) log pdf of a Gaussian likelihood, 
-\begin{align} Y_{ij} \mid X_{ij}, g &\sim \mathcal{N}(X_{ij}, g), \qquad (i,j)\in\Omega,
+\begin{align} Y_{ij} \mid X_{ij}, g &\sim \mathcal{N}(X_{ij}, \sigma^2), \qquad (i,j)\in\Omega,
 \end{align}
-where $g=\gamma^2$ is the noise variance. 
+where $\sigma^2$ is the noise variance. 
 %While it might be appealing to think of $g=1$, we will see it is preferable to think of $\lambda$ as absorbing $g$ 
-
-We consider the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution (NND), a matrix-variate generalization of the standard Laplace distribution,
+We consider the nuclear norm penalty as the negative log-prior of the recently characterized\cite{Segert2025-rk} \emph{nuclear norm distribution} (NND), a matrix-variate generalization of the standard Laplace distribution,
 \begin{equation} p(X \mid \eta) = \frac{1}{Z(\eta)} \exp\big(-\eta \|X\|_*\big)
 \end{equation}
 where the normalizing constant $Z(\eta)=(mn)! C / \eta^{mn}$, with $C$ the volume of the unit nuclear norm ball. 
-
-It has been shown that parameterizing this model with $\eta = \lambda/\sqrt{g}$ ensures that $P(X|g,\lambda)$ is unimodal. Larger noise weakens the effective penalty, while smaller noise strengthens it. 
-
-For the implemented version we use an inverse-gamma variance prior,
-\begin{equation} p(g) \propto g^{-(a_0+1)}\exp(-b_0/g),
-\end{equation}
-although the objective below separates the prior contribution so that another one-dimensional prior on $g$ can be substituted.
+\citet{Segert2025-rk} proved that parameterizing this model with $\eta = \lambda/\sigma$ ensures that $P(X|\sigma,\lambda)$ is unimodal. 
 
 \subsection{Limitations of full Bayesian inference for the NND}
 
-Seggert et al use Markov chain Monte Carlo (MCMC) to sample $X$, $g$ and $\lambda$ under this model. While statistically rigorous, the MCMC is computationally painful, requiring full SVDs at each iteration and tedious tuning to obtain reasonable mixing. We also explored a coordinate ascent variational inference (CAVI) approach using a lesser-known bound for the nuclear norm that introduces an auxiliary covariance parameter (see Appendix \ref{app:cavi}). While much more computationally efficient, the CAVI algorithm takes us back to a non-convex optimization problem (although possibly ``less'' non-convex than naive matrix factorization, we are able to show contraction to a single optimum under certain conditions, see Appendix \ref{app:contraction}). Even stochastic variational inference offers no panacea: any reasonable variational approximation immediately introduces the non-convexity we are trying to avoid. 
+\paragraph{Inference challenges.} \citet{Segert2025-rk} use Markov chain Monte Carlo (MCMC) to sample $X$, $g$ and $\lambda$ under this model. While statistically rigorous, the MCMC is computationally painful, requiring full SVDs at each iteration and tedious tuning to obtain reasonable mixing. We also explored a coordinate ascent variational inference (CAVI) approach using a lesser-known bound for the nuclear norm that introduces an auxiliary covariance parameter (see Appendix \ref{app:cavi}). Thehe CAVI algorithm is more computationally efficient, but takes us back to a non-convex optimization problem (although arguably with a better behaved optimization landscape than naive matrix factorization, e.g., we are able to show contraction to a single optimum under certain conditions, see Appendix \ref{app:contraction}). Even stochastic variational inference offers no panacea: any reasonable variational approximation immediately reintroduces the non-convexity we are trying to avoid. 
 
-Seggert showed that $X \sim NND(\eta)$ is equal in distribution to $X = U\sigma V$ where $U$ and $V$ are sampled uniformly from all orthonormal matrix, and, assuming (wlog) $m \ge n$, the joint density of the non-zero SVs $\sigma_1 > \sigma_2 > \dots > \sigma_n > 0$ is, 
-\begin{equation} p(\sigma_1, \dots, \sigma_n) \propto \prod_{i=1}^n \underbrace{ \sigma_i^{m-n} e^{-\eta \sigma_i}}_{\propto \, \mathrm{Gamma}(m-n+1,\,\eta)} \cdot \underbrace{\prod_{1 \le i < j \le n} (\sigma_i^2 - \sigma_j^2)}_{\text{repulsion term}}
+\paragraph{Prior behavior.} \citet{Segert2025-rk} showed that $X \sim NND(\eta)$ is equal in distribution to $X = U s V$ where $U$ and $V$ are sampled uniformly from the space of orthonormal matrices, and, assuming (without loss of generality) $m \ge n$, the joint density of the non-zero SVs $s_1 > s_2 > \dots > s_n > 0$ is, 
+\begin{equation} p(s_1, \dots, s_n) \propto \prod_{i=1}^n \underbrace{ s_i^{m-n} e^{-\eta s_i}}_{\propto \, \mathrm{Gamma}(m-n+1,\,\eta)} \cdot \underbrace{\prod_{1 \le i < j \le n} (s_i^2 - s_j^2)}_{\text{repulsion term}}
 \end{equation}
 This distribution on the SVs of $X$ is displeasing for $m > n$ since the shape $m-n+1 > 1$ means that the SVs are pushed\ \emph{away} from $0$! This is analogous to the Lasso, where optimization under the L1 penalty gives sparse solutions, but Bayesian inference under the analogous Laplace prior does not (motivating spike-and-slab priors, despite their fitting challenges). 
 
@@ -182,6 +175,11 @@ again with backtracking to enforce monotonic decrease of
 $\mathcal{J}(\mu,e^\ell)$.  Optimizing $\log g$ makes positivity automatic and
 keeps the variance update as a one-dimensional correction to the matrix
 proximal step.
+
+For the implemented version we use an inverse-gamma variance prior,
+\begin{equation} p(g) \propto g^{-(a_0+1)}\exp(-b_0/g),
+\end{equation}
+although the objective below separates the prior contribution so that another one-dimensional prior on $g$ can be substituted.
 
 \section{Recovered Posterior Covariance}
 
