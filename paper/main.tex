@@ -15,14 +15,10 @@
 \usepackage{xcolor}
 \usepackage{bm}
 
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue!60!black,
-    citecolor=green!50!black,
-    urlcolor=blue!60!black
+\hypersetup{ colorlinks=true, linkcolor=blue!60!black, citecolor=green!50!black, urlcolor=blue!60!black
 }
 
-\title{A convex Bayesian approach to low-rank matrix estimation with heteroscedastic noise}
+\title{Empirical Bayes-augmented convex matrix factorization, completion and denoising}
 \author{David A Knowles}
 \date{}
 
@@ -31,37 +27,182 @@
 \maketitle
 
 \begin{abstract}
-We present a convex Bayesian approach to low-rank matrix estimation under a heteroscedastic noise model. By utilizing the nuclear norm distribution we encourage low-rank structure directly on the data matrix without resorting to a non-convex factorization. To overcome the non-differentiability and non-separability of the prior, we exploit its variational representation using an auxiliary variable. This formulation allows us to develop a Coordinate Ascent Variational Inference (CAVI) algorithm that is strictly convex in all sub-updates, naturally estimates the global regularization parameter, and avoids the Neyman-Scott paradox by explicitly incorporating posterior uncertainty.
+Typical matrix factorization and completion models involve non-convex optimization, so that different initialization or small perturbations to the data can give grossly different solutions. An elegant alternative is to estimate an underlying low-rank ``clean'' data matrix by enforcing it have small nuclear norm (the convex envelope of matrix rank). This convex optimization problem can be efficiently solved using proximal gradient or Franke-Wolfe methods. However, choosing the regularization strength typically requires cross-validation, involving arbitrary choices (e.g., number of folds), randomness, and substantial computation. Here, we propose empirical Bayes approaches to selecting the regularization strengh, using the recently characterized nuclear norm distribution. We consider multiple noise models, including homoskedastic, known heteroskedastic, and a combination thereof. We present results on simulated data, genetic associations, and single-cell splicing patterns. 
 \end{abstract}
 
 \tableofcontents
 
 \section{Introduction}
 
-Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from recommender systems to single cell genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization, independent component analysis, and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices. Non-convexity has practical consequences: different random initializations or minor data perturbations can result in qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution (up to sign flips) via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no principled mechanism for selecting the rank of the solution.
+Low-rank matrix factorization is a workhorse of modern data analysis, underpinning methods ranging from recommender systems to single cell genomics. Yet the overwhelming majority of factorization approaches including non-negative matrix factorization, independent component analysis, and sparse Principal Component Analysis (PCA), optimize a non-convex objective over a product of factor matrices. Non-convexity has practical consequences: different random initializations or minor data perturbations can result in methods finding qualitatively different local minima, making results difficult to reproduce and the recovered factor structure ambiguous \citep{lee1999learning, cai2021}. Classical PCA is the notable exception, enjoying a globally optimal and unique solution (up to sign flips) via the singular value decomposition, but it cannot handle missing data or heteroskedastic noise, and it provides no internal mechanism for selecting the rank of the solution.
 
-Convex relaxations offer a principled escape from local minima. The nuclear norm, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing the data matrix \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. A practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme (i.e. how to choose heldout matrix elements). 
+Convex relaxations offer a principled escape from local minima. The nuclear norm, the convex envelope of matrix rank, yields a globally convex objective that implicitly encourages low-rank solutions without factorizing the data matrix \citep{recht2010guaranteed, candes2010power}. Solving the nuclear-norm-regularized problem produces a unique, reproducible answer regardless of initialization. A practical difficulty, however, is that the strength of the regularization must be chosen by the analyst. Cross-validation (CV) is the standard remedy, but it is computationally expensive and requires arbitrary choices about the CV scheme (e.g., the number of folds and how to choose heldout matrix elements). 
 
-We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a fully Bayesian model in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
+We resolve both limitations simultaneously through an empirical Bayes framework. By interpreting the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution and placing an uninformative Gamma hyperprior on the regularization strength $\lambda$, we obtain a Bayesian interpretation in which $\lambda$ is estimated from the data alongside the latent matrix $X$. Crucially, a naive maximum a posteriori (MAP) approach fails here due to the Neyman–Scott paradox: collapsing posterior uncertainty into a point estimate causes the effective nuclear norm to be underestimated, biasing $\lambda$ upward and over-shrinking the signal. We sidestep this by developing a Coordinate Ascent Variational Inference (CAVI) algorithm that maintains explicit posterior uncertainty over $X$, leading to well-calibrated automatic regularization without any cross-validation.
+
+\section{Model}
+
+\subsection{Homoskedastic setup}
+
+We first consider a homoskedastic noise model. Assume we observe elements $\Omega \subseteq \{1,\ldots,m\}\times\{1,\ldots,n\}$ of a noisy data matrix $Y$. We aim to find a ``denoised'' low-rank matrix $X$ close to $Y$ (e.g., in squared error). The typical approach would be to represent $X=UV^T$ and optimize over $U$ and $V$, but this is non-convex and requires careful initialization. In the convex optimization/compressed sensing literature, a common alternative is to place a convex penalty directly on $X$ that encourages low-rank structure. The natural choice is the nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the sum of the singular values (SVs) of $X$. The loss is then, 
+\begin{equation} \label{eq:loss} \mathcal{L}(X) = \frac12 \sum_{ij} (Y_{ij}-X_{ij})^2 + \lambda \|X\|_*.
+\end{equation}
+In principle $\lambda$ can be selected by CV, but this is computationally expensive and requires arbitrary choices about the CV scheme (how many folds, how to select heldout entries, what metric to use). 
+
+Here, we ask whether Eq \ref{eq:loss} can be re-interpreted from an empirical Bayes viewpoint to enable automatic estimation of $\lambda$ from the data. The squared error loss can be interpreted as the (scaled) log pdf of a Gaussian likelihood, 
+\begin{align} Y_{ij} \mid X_{ij}, g &\sim \mathcal{N}(X_{ij}, g), \qquad (i,j)\in\Omega,
+\end{align}
+where $g=\gamma^2$ is the noise variance. 
+%While it might be appealing to think of $g=1$, we will see it is preferable to think of $\lambda$ as absorbing $g$ 
+
+We consider the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution (NND), a matrix-variate generalization of the standard Laplace distribution,
+\begin{equation} p(X \mid \eta) = \frac{1}{Z(\eta)} \exp\big(-\eta \|X\|_*\big)
+\end{equation}
+where the normalizing constant $Z(\eta)=(mn)! C / \eta^{mn}$, with $C$ the volume of the unit nuclear norm ball. 
+
+It has been shown that parameterizing this model with $\eta = \lambda/\sqrt{g}$ ensures that $P(X|g,\lambda)$ is unimodal. Larger noise weakens the effective penalty, while smaller noise strengthens it. 
+
+For the implemented version we use an inverse-gamma variance prior,
+\begin{equation} p(g) \propto g^{-(a_0+1)}\exp(-b_0/g),
+\end{equation}
+although the objective below separates the prior contribution so that another one-dimensional prior on $g$ can be substituted.
+
+\subsection{Limitations of full Bayesian inference for the NND}
+
+Seggert et al use Markov chain Monte Carlo (MCMC) to sample $X$, $g$ and $\lambda$ under this model. While statistically rigorous, the MCMC is computationally painful, requiring full SVDs at each iteration and tedious tuning to obtain reasonable mixing. We also explored a coordinate ascent variational inference (CAVI) approach using a lesser-known bound for the nuclear norm that introduces an auxiliary covariance parameter (see Appendix \ref{app:cavi}). While much more computationally efficient, the CAVI algorithm takes us back to a non-convex optimization problem (although possibly ``less'' non-convex than naive matrix factorization, we are able to show contraction to a single optimum under certain conditions, see Appendix \ref{app:contraction}). Even stochastic variational inference offers no panacea: any reasonable variational approximation immediately introduces the non-convexity we are trying to avoid. 
+
+Seggert showed that $X \sim NND(\eta)$ is equal in distribution to $X = U\sigma V$ where $U$ and $V$ are sampled uniformly from all orthonormal matrix, and, assuming (wlog) $m \ge n$, the joint density of the non-zero SVs $\sigma_1 > \sigma_2 > \dots > \sigma_n > 0$ is, 
+\begin{equation} p(\sigma_1, \dots, \sigma_n) \propto \prod_{i=1}^n \underbrace{ \sigma_i^{m-n} e^{-\eta \sigma_i}}_{\propto \, \mathrm{Gamma}(m-n+1,\,\eta)} \cdot \underbrace{\prod_{1 \le i < j \le n} (\sigma_i^2 - \sigma_j^2)}_{\text{repulsion term}}
+\end{equation}
+This distribution on the SVs of $X$ is displeasing for $m > n$ since the shape $m-n+1 > 1$ means that the SVs are pushed\ \emph{away} from $0$! This is analogous to the Lasso, where optimization under the L1 penalty gives sparse solutions, but Bayesian inference under the analogous Laplace prior does not (motivating spike-and-slab priors, despite their fitting challenges). 
+
+Given this fundamental mismatch of full Bayesian inference with the NND model we instead explore a hybrid solution. We use the convex optimization machinery of proximal gradient to learn $X$. We then derive a closed form variational posterior approximation centered on this $X$ via a Taylor series expansion of the expected nuclear norm. This lets us learn the noise variance $g$ via maximum marginal likelihood (i.e. empirical Bayes). Given this updated $g$ we re-estimate $X$. We perform this inference across a grid of $\eta=\lambda/g$ values (since this is the effective regularization strength). We found that joint estimation of $\lambda$ and $g$ was unstable.
+
+\subsection{Approximating the marginal likelihood}
+
+We assume a row-factorized Gaussian approximation
+\begin{equation} q(X) = \prod_{i=1}^m \mathcal{N}(x_i\mid \mu_i,\Sigma_i),
+\end{equation}
+where $x_i$ is row $i$ of $X$. For fixed effective variances $v_{ij}$ and effective NND rate $\lambda_{\mathrm{eff}}$, the relevant part of the ELBO is
+\begin{align}    \mathcal{L}(\mu,\Sigma) &= -\frac{1}{2} \sum_{i=1}^m \left[ (y_i-\mu_i)^\top P_i (y_i-\mu_i)        +        \operatorname{tr}(P_i\Sigma_i)    \right]    +    \frac{1}{2}\sum_{i=1}^m \log|\Sigma_i| \notag\\ &\quad - \lambda_{\mathrm{eff}}\mathbb{E}_q\|X\|_* - \log Z(\lambda_{\mathrm{eff}}) + \mathrm{const}, \label{eq:pre-taylor-elbo}
+\end{align}
+where
+\begin{equation} P_i = \operatorname{diag} \left\{ \frac{1}{v_{ij}}:(i,j)\in\Omega \right\}
+\end{equation}
+and missing entries have precision zero.
+
+The difficulty is $\mathbb{E}_q\|X\|_*$.  Write
+$X=\mu+E$ with $\mathbb{E}_q(E)=0$ and
+$\mathbb{E}_q(E^\top E)=\sum_i\Sigma_i$.  Using the trace identity
+$\|X\|_*=\operatorname{tr}\{(X^\top X)^{1/2}\}$, define $f(A)=\operatorname{tr}(A^{1/2})$ where
+\begin{equation} A = X^\top X = \mu^\top\mu + \mu^\top E + E^\top\mu + E^\top E.
+\end{equation}
+Expanding $f(X^\top X)$ around $A_0=\mu^\top\mu$ and taking expectations, the
+linear terms $\mu^\top E+E^\top\mu$ vanish.  Keeping the dominant covariance
+term gives the matrix-delta approximation
+\begin{equation} \mathbb{E}_q\|X\|_* \approx \|\mu\|_* + \frac{1}{2} \operatorname{tr} \left[ (\mu^\top\mu+\epsilon I)^{-1/2} \sum_{i=1}^m \Sigma_i \right]. \label{eq:taylor-expected-nuc}
+\end{equation}
+The small ridge $\epsilon I$ stabilizes the inverse square root when $\mu$ is
+rank deficient.
+
+Substituting \eqref{eq:taylor-expected-nuc} into
+\eqref{eq:pre-taylor-elbo}, and defining
+\begin{equation} B(\mu) = (\mu^\top\mu+\epsilon I)^{-1/2},
+\end{equation}
+the terms involving a single row covariance become
+\begin{equation} \mathcal{L}_i(\Sigma_i) = \frac{1}{2}\log|\Sigma_i| - \frac{1}{2} \operatorname{tr} \left[ \{P_i+\lambda_{\mathrm{eff}}B(\mu)\}\Sigma_i \right] + \mathrm{const}.
+\end{equation}
+Taking a matrix derivative and setting it to zero gives
+\begin{equation} \Sigma_i^{-1} = P_i+\lambda_{\mathrm{eff}}B(\mu).
+\end{equation}
+Thus the Taylor row precision and covariance are
+\begin{align} A_i(\mu) &= P_i+\lambda_{\mathrm{eff}}B(\mu), \label{eq:taylor-row-precision}\\ \Sigma_i(\mu) &= A_i(\mu)^{-1}.
+\end{align}
+The covariance is dense in general; retaining only $\operatorname{diag}(\Sigma_i)$
+is a storage and scoring approximation, not a diagonal-covariance assumption.
+
+Because $\Sigma_i$ has a closed-form optimum given $\mu$, it can be substituted
+back into the Taylor ELBO.  The trace term collapses to a constant
+$-\frac{1}{2}\operatorname{tr}(I_n)$ per row, leaving the collapsed minimization
+score
+\begin{align} \mathcal{J}_{\mathrm{Taylor}}(\mu) &= \frac{1}{2} \sum_{(i,j)\in\Omega} \frac{(Y_{ij}-\mu_{ij})^2}{v_{ij}} + \lambda_{\mathrm{eff}}\|\mu\|_* + \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu)| \notag\\ &\quad - mn\log\lambda_{\mathrm{eff}} + \text{noise-normalization and noise-prior terms}. \label{eq:taylor-score}
+\end{align}
+Here we used $\log Z(\lambda_{\mathrm{eff}})=-mn\log\lambda_{\mathrm{eff}}+
+\mathrm{const}$, so $-\log Z(\lambda_{\mathrm{eff}})$ contributes
+$mn\log\lambda_{\mathrm{eff}}$ to the ELBO and
+$-mn\log\lambda_{\mathrm{eff}}$ to the minimization score.
+
+In principle, one might think to update $\mu$ using \eqref{eq:taylor-score}. However this is 1) computationally challenging at $O(nm^3)$ given the sum of log determinants terms 2) non-convex and 3) statistically ill-advised given the arguments above regarding the downsides of the full Bayesian model. 
+
+Instead, we use the convex proximal solution from \eqref{eq:common-prox} and
+evaluate \eqref{eq:taylor-row-precision}--\eqref{eq:taylor-score} at
+$\mu=\hat X$.  This preserves a convex and efficient matrix update while still
+using a posterior-uncertainty correction for scoring $\lambda$ and updating the
+scalar noise parameter.
+
+The same covariance gives an analytical leave-one-entry-out (LOO) score.  If
+$r_{ij}=\Sigma_i[j,j]/v_{ij}$, then for observed entries
+\begin{equation} \log p^{\mathrm{LOO}}(Y_{ij}) = -\frac{(Y_{ij}-\hat X_{ij})^2}{2v_{ij}(1-r_{ij})} -\frac{1}{2}\log(2\pi v_{ij}) +\frac{1}{2}\log(1-r_{ij}).
+\end{equation}
+The LOO score is the sum of these terms over $\Omega$.
+\section{Taylor Delta Objective}
+
+Let $\mu$ denote the variational posterior mean for $X$, and define
+\begin{equation} B(\mu) = \left(\mu^\top \mu + \epsilon I\right)^{-1/2}, \qquad D_i = \mathrm{diag}\!\left(\mathbf{1}\{(i,j)\in\Omega\}\right)_{j=1}^n .
+\end{equation}
+At fixed $(\mu,g)$ the row precision induced by the Taylor-delta approximation
+is
+\begin{equation} A_i(\mu,g) = \frac{1}{g}D_i + \frac{\lambda}{\sqrt{g}}B(\mu).
+\end{equation}
+Dropping constants independent of $(\mu,g)$, the collapsed minimization
+objective is
+\begin{align} \mathcal{J}(\mu,g) &= \frac{1}{2g} \sum_{(i,j)\in\Omega}(y_{ij}-\mu_{ij})^2 + \frac{1}{2}\sum_{i=1}^m \log |A_i(\mu,g)| \notag\\ &\quad + \frac{\lambda}{\sqrt{g}}\|\mu\|_* + \left(\frac{|\Omega|}{2} + \frac{mn}{2} + a_0 + 1\right)\log g + \frac{b_0}{g}. \label{eq:homoskedastic-objective}
+\end{align}
+The first $\log g$ term comes from the Gaussian likelihood, the second from the
+normalizing constant of the scaled nuclear-norm prior, and the final two terms
+from the inverse-gamma prior on $g$.
+
+\section{Optimization}
+
+The implementation optimizes $\mu$ and $g$ by alternating steps.  For a
+fixed variance $g$, split \eqref{eq:homoskedastic-objective} into a smooth part
+$h_g(\mu)$ and the nonsmooth nuclear-norm term
+$(\lambda/\sqrt{g})\|\mu\|_*$.  A proximal-gradient step is
+\begin{align} Z^{(t)} &= \mu^{(t)} - s_t\nabla h_g(\mu^{(t)}), \\ \mu^{(t+1)} &= \operatorname{SVT}_{s_t\lambda/\sqrt{g}}\!\left(Z^{(t)}\right),
+\end{align}
+where $\operatorname{SVT}_\tau$ soft-thresholds the singular values by $\tau$.
+The step size $s_t$ is selected by backtracking until
+$\mathcal{J}(\mu^{(t+1)},g)\leq\mathcal{J}(\mu^{(t)},g)$.
+
+After the mean update, the scalar variance parameter is updated on the
+unconstrained scale $\ell=\log g$:
+\begin{equation} \ell^{(t+1)} = \ell^{(t)} - r_t \frac{\partial}{\partial \ell} \mathcal{J}\!\left(\mu^{(t+1)}, e^{\ell^{(t)}}\right),
+\end{equation}
+again with backtracking to enforce monotonic decrease of
+$\mathcal{J}(\mu,e^\ell)$.  Optimizing $\log g$ makes positivity automatic and
+keeps the variance update as a one-dimensional correction to the matrix
+proximal step.
+
+\section{Recovered Posterior Covariance}
+
+At the final iterate, the row covariance approximation is recovered using the
+same Taylor precision:
+\begin{equation} \Sigma_i = \left[ \frac{1}{\hat g}D_i + \frac{\lambda}{\sqrt{\hat g}}B(\hat\mu) \right]^{-1}.
+\end{equation}
+The returned effective penalty is
+\begin{equation} \lambda_{\mathrm{eff}} = \frac{\lambda}{\sqrt{\hat g}},
+\end{equation}
+so downstream scoring code can reuse the same covariance and prior-variance
+interfaces as the known-variance Taylor approximation.
+
 
 \section{Convex Heteroscedastic Matrix Factorization}
 
 We consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ and a corresponding matrix of known standard errors $S \in \mathbb{R}^{m \times n}$, where $s_{ij}$ is the uncertainty associated with $Y_{ij}$. The likelihood of the latent true matrix $X$ is elementwise normal, 
-\begin{equation}
-    p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
+\begin{equation} p(Y \mid X) = \prod_{i=1}^m \prod_{j=1}^n \mathcal{N}\big(Y_{ij} \mid X_{ij}, s_{ij}^2\big)
 \end{equation}
 
-The typical approach would be to represent $X=UV^T$ and optimize over $U$ and $V$, but this is non-convex and requires careful initialization. In the convex optimization/compressed sensing literature, a common alternative is to place a convex penalty directly on $X$ that encourages low-rank structure. The natural choice is the nuclear norm $\|X\|_* = \sum_i \sigma_i(X)$, the sum of the singular values of $X$. The loss is then, 
-\begin{equation} \label{eq:loss}
-    \mathcal{L}(X) = \sum_{ij} \frac{(Y_{ij}-X_{ij})^2}{s_{ij}^2} + \lambda \|X\|_*.
-\end{equation}
-In principle $\lambda$ can be selected by CV, but this is computationally expensive and requires arbitrary choices about the CV scheme (how many folds, how to select heldout entries, what metric to use). 
 
-Here, we ask whether Eq \ref{eq:loss} can be re-interpreted from an empirical Bayes viewpoint to enable automatical estimation of $\lambda$ from the data. We consider the nuclear norm penalty as the negative log-prior of a \emph{nuclear norm} distribution (NND), a matrix-variate generalization of the standard Laplace distribution,
-\begin{equation}
-    p(X \mid \lambda) = \frac{1}{Z(\lambda)} \exp\big(-\lambda \|X\|_*\big)
-\end{equation}
-where the normalizing constant $Z(\lambda)=(mn)! C / \lambda^{mn}$ is the normalizing constant, with $C$ the volume of the unit nuclear norm ball. 
 
 This distribution encourages low-rank structure in $X$ by penalizing the sum of its singular values, and it is the natural matrix analogue of the Laplace distribution used in Lasso regression for sparsity. \citep{Segert2025-rk} characterized the NND: the nuclear norm is Gamma distributed, and $X$ can be generated by sampling a random orthogonal matrices $U$ and $V$, and a vector of singular values $\sigma$ drawn from a joint distribution (see Appendix~\ref{sec:nnd} for details). 
 
@@ -72,35 +213,27 @@ Here, we consider optimizing $\lambda$ but note that since the NND is a proper d
 Two Markov chain Monte Carlo (MCMC) approaches to inference under the NND have been proposed\citep{Segert2025-rk}. Here, we explore variational inference (VI) as an alternative. VI can have advantages in terms of computational efficiency, ease of convergence monitoring, and providing a structured approximation to the posterior that can be used for downstream uncertainty quantification. 
 
 The evidence lower bound (ELBO) is,
-\begin{equation}
-    \mathcal{L} = \mathbb{E}_{q(X)}[\log p(Y \mid X)] + \mathbb{E}_{q(X)}[\log p(X \mid \lambda)] - \mathbb{E}_{q(X)}[\log q(X)],
-    \end{equation}
+\begin{equation} \mathcal{L} = \mathbb{E}_{q(X)}[\log p(Y \mid X)] + \mathbb{E}_{q(X)}[\log p(X \mid \lambda)] - \mathbb{E}_{q(X)}[\log q(X)], \end{equation}
 where $q(X)$ is the variational distribution approximating the true posterior $p(X \mid Y, \lambda)$. The challenge is the second term which includes the term $-\lambda\mathbb{E}_{q(X)}[\|X\|_*]$. Our key insight is to leverage the fact that the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
-\begin{equation}
-    \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
+\begin{equation} \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
 \end{equation}
 Augmenting the optimization with $Q$ and applying Jensen's inequality gives a tractable bound on the nuclear norm term of the ELBO: 
-\begin{equation}
-    \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \lambda \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \lambda \mathrm{Tr}(Q).
+\begin{equation} \mathbb{E}_{q}[-\lambda \|X\|_*] \ge -\frac12 \lambda \mathrm{Tr}\!\left(\mathbb{E}_{q}[X^T X]\, Q^{-1}\right) - \frac12 \lambda \mathrm{Tr}(Q).
 \end{equation}
 and naturally results in $q(X)$ factorizing over rows of $X$. Given the symmetry of the nuclear norm, there is an alternative representation with $Q \in \mathbb{S}_{++}^m$ and $X^T Q^{-1} X$, which would result in a column-wise factorization of $q(X)$. The choice between these is a matter of computational convenience: the row factorization is more efficient when $m \gg n$ and the column factorization is more efficient when $n \gg m$. 
 
 \paragraph{Update for $q(X)$.} Given $Q$ and $\lambda$, the posterior for each row $x_i$ is a multivariate Gaussian, i.e. $q(X) = \prod_{i=1}^m \mathcal{N}(x_i \mid \mu_i, \Sigma_i)$, with mean and covariance given by
-\begin{align}
-    \Sigma_i &= \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}, \qquad
-    \mu_i = \Sigma_i \left( S_i^{-1} y_i \right)
+\begin{align} \Sigma_i &= \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}, \qquad \mu_i = \Sigma_i \left( S_i^{-1} y_i \right)
 \end{align}
 where $S_i = \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ is the known noise variance matrix for row $i$. The auxiliary matrix $Q$ induces correlation across the columns of $X$, even though the noise $S_i$ is diagonal. 
 
 \paragraph{Update for Auxiliary Matrix $Q$.} Let $\Psi = \mathbb{E}_{q}[X^T X] = \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$. The value of $Q$ that tightly bounds the expectation is the matrix square root $Q^* = \Psi^{1/2}$. 
 
 \paragraph{Update for Hyperparameter $\lambda$.} Because $Z(\lambda) \propto \lambda^{-mn}$, the objective contributes $mn \log \lambda$. With a Gamma prior $p(\lambda) \propto \lambda^{a_0-1}e^{-b_0\lambda}$ and the variational bound term $-\lambda\,\mathrm{Tr}(Q)$, the $\lambda$-dependent objective is
-\begin{equation}
-    (a_0 + mn - 1)\log\lambda - (b_0 + \mathrm{Tr}(Q))\lambda,
+\begin{equation} (a_0 + mn - 1)\log\lambda - (b_0 + \mathrm{Tr}(Q))\lambda,
 \end{equation}
 which is strictly concave in $\lambda>0$ and has closed-form maximizer
-\begin{equation}
-    \lambda^* = \frac{a_0 + mn - 1}{b_0 + \mathrm{Tr}(Q)}.
+\begin{equation} \lambda^* = \frac{a_0 + mn - 1}{b_0 + \mathrm{Tr}(Q)}.
 \end{equation}
 
 \paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this with \texttt{matlap\_batched}, which processes rows in mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. With $B=64$ and $n=1{,}000$ this is approximately 256 MB versus 40 GB. The algorithm is otherwise identical to full CAVI (Section~\ref{sec:cavi}) and converges to the same solution.
@@ -108,11 +241,7 @@ which is strictly concave in $\lambda>0$ and has closed-form maximizer
 
 
 \paragraph{Evidence Lower Bound.} Convergence is monitored via the ELBO. Using the variational bound at the optimal $Q = \Psi^{1/2}$ and the normalizing constant $\log Z(\lambda) = -mn\log\lambda + \mathrm{const}$, the ELBO decomposes as
-\begin{align}
-    \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
-    \underbrace{- \lambda\,\mathrm{Tr}(Q) + mn\log\lambda}_{\text{prior on }X\text{ (lower bound)}} \notag\\
-    &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
-    + \underbrace{(a_0-1)\log\lambda - b_0\lambda}_{\text{Gamma prior on }\lambda}
+\begin{align} \mathcal{L} &= \underbrace{-\frac{1}{2}\sum_{(i,j)\in\mathcal{O}} \left[\frac{(y_{ij}-\mu_{ij})^2 + \Sigma_i[j,j]}{s_{ij}^2} + \log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}} \underbrace{- \lambda\,\mathrm{Tr}(Q) + mn\log\lambda}_{\text{prior on }X\text{ (lower bound)}} \notag\\ &\quad + \underbrace{\frac{1}{2}\sum_{i=1}^m\!\left[\log|\Sigma_i| + n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)} + \underbrace{(a_0-1)\log\lambda - b_0\lambda}_{\text{Gamma prior on }\lambda}
 \end{align}
 where $\mathcal{O}$ is the set of observed entries.
 
@@ -124,21 +253,8 @@ The full procedure is summarized in Algorithm 1.
 \Require Data $Y \in \mathbb{R}^{m \times n}$, Variances $S \in \mathbb{R}^{m \times n}$, Prior $a_0, b_0$.
 \State Initialize $\mu_i = y_i$ and $\Sigma_i = I_n$ for $i=1,\dots,m$.
 \State Initialize $\lambda = \frac{mn}{\|Y\|_*}$.
-\Repeat
-    \State \textbf{1. Estimate uncentered expected covariance:}
-    \State \quad $\Psi \gets \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$
-    \State \textbf{2. Update auxiliary matrix:}
-    \State \quad $Q \gets \Psi^{1/2}$
-    \State \textbf{3. Update regularization parameter:}
-    \State \quad $\lambda \gets \frac{a_0 + mn - 1}{b_0 + \text{Tr}(Q)}$
-    \State \textbf{4. Update latent matrix posterior row-by-row:}
-    \For{$i = 1, \dots, m$}
-        \State $S_i \gets \text{diag}(s_{i1}^2, \dots, s_{in}^2)$
-        \State $\Sigma_i \gets \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}$
-        \State $\mu_i \gets \Sigma_i S_i^{-1} y_i$
-    \EndFor
-\Until{ELBO converges}
-    \Ensure Posterior mean $M = [\mu_1, \dots, \mu_m]^T$, uncertainties $\{\Sigma_i\}_{i=1}^m$, optimized penalty $\lambda$.
+\Repeat \State \textbf{1. Estimate uncentered expected covariance:} \State \quad $\Psi \gets \sum_{i=1}^m (\mu_i \mu_i^T + \Sigma_i)$ \State \textbf{2. Update auxiliary matrix:} \State \quad $Q \gets \Psi^{1/2}$ \State \textbf{3. Update regularization parameter:} \State \quad $\lambda \gets \frac{a_0 + mn - 1}{b_0 + \text{Tr}(Q)}$ \State \textbf{4. Update latent matrix posterior row-by-row:} \For{$i = 1, \dots, m$} \State $S_i \gets \text{diag}(s_{i1}^2, \dots, s_{in}^2)$ \State $\Sigma_i \gets \left( S_i^{-1} + \lambda Q^{-1} \right)^{-1}$ \State $\mu_i \gets \Sigma_i S_i^{-1} y_i$ \EndFor
+\Until{ELBO converges} \Ensure Posterior mean $M = [\mu_1, \dots, \mu_m]^T$, uncertainties $\{\Sigma_i\}_{i=1}^m$, optimized penalty $\lambda$.
 \end{algorithmic}
 \end{algorithm}
 
@@ -146,20 +262,15 @@ The full procedure is summarized in Algorithm 1.
 
 \paragraph{Rényi $\alpha$-ELBO for $\lambda$ selection.}
 The standard ELBO lower-bounds $\log p(Y \mid \lambda)$ but is tight only when $q(X) = p(X \mid Y, \lambda)$. For the purpose of selecting $\lambda$, we exploit the Rényi $\alpha$-ELBO \citep{li2016renyi},
-\begin{equation}
-    \mathcal{L}_\alpha = \frac{1}{1-\alpha}\log \int q(X)^{\alpha}\, p(Y, X \mid \lambda)^{1-\alpha}\, dX, \quad 0 \le \alpha < 1,
+\begin{equation} \mathcal{L}_\alpha = \frac{1}{1-\alpha}\log \int q(X)^{\alpha}\, p(Y, X \mid \lambda)^{1-\alpha}\, dX, \quad 0 \le \alpha < 1,
 \end{equation}
 which satisfies $\mathcal{L}_\alpha \le \log p(Y \mid \lambda)$ and recovers the ELBO as $\alpha \to 1$; at $\alpha = 0$ it is the importance-weighted objective.
 
 For the low-rank-plus-isotropic model with diagonal posterior $q(x_{ij}) = \mathcal{N}(\mu_{ij},\sigma_{ij}^2)$, Gaussian likelihood $p(y_{ij}\mid x_{ij}) = \mathcal{N}(y_{ij}, s_{ij}^2)$, and prior marginal $p(x_{ij}) = \mathcal{N}(0,v_j(\lambda))$, the Rényi integral is a product of Gaussian factors and evaluates in closed form as a correction to the diagonal-Gaussian ELBO:
-\begin{equation} \label{eq:renyi-correction}
-    \mathcal{L}_\alpha = \mathcal{L} + \frac{1}{\beta}\sum_{(i,j) \in \mathcal{O}}
-    \left[\frac{\beta^2 f_{ij}^2}{2(1 - 2\beta\, g_{ij})} - \frac{1}{2}\log(1-2\beta\, g_{ij})\right],
+\begin{equation} \label{eq:renyi-correction} \mathcal{L}_\alpha = \mathcal{L} + \frac{1}{\beta}\sum_{(i,j) \in \mathcal{O}} \left[\frac{\beta^2 f_{ij}^2}{2(1 - 2\beta\, g_{ij})} - \frac{1}{2}\log(1-2\beta\, g_{ij})\right],
 \end{equation}
 where $\beta = 1-\alpha$,
-\begin{align}
-    f_{ij} &= \sigma_{ij}\!\left(\frac{y_{ij}-\mu_{ij}}{s_{ij}^2} - \frac{\mu_{ij}}{v_j(\lambda)}\right), \\
-    g_{ij} &= \tfrac12\!\left(1 - \frac{\sigma_{ij}^2}{s_{ij}^2} - \frac{\sigma_{ij}^2}{v_j(\lambda)}\right),
+\begin{align} f_{ij} &= \sigma_{ij}\!\left(\frac{y_{ij}-\mu_{ij}}{s_{ij}^2} - \frac{\mu_{ij}}{v_j(\lambda)}\right), \\ g_{ij} &= \tfrac12\!\left(1 - \frac{\sigma_{ij}^2}{s_{ij}^2} - \frac{\sigma_{ij}^2}{v_j(\lambda)}\right),
 \end{align}
 and the sum is over observed entries $\mathcal{O}$.  The correction vanishes as $\alpha\to 1$ (recovering $\mathcal{L}$) and is negative for $\alpha \in (0,1)$ (a tighter bound).  Crucially, $v_j(\lambda)$ depends on $\lambda$ through the low-rank-plus-isotropic parameterization, so $\mathcal{L}_\alpha$ is differentiable with respect to $\lambda$ and can be maximized by gradient-based search (e.g.\ BFGS on $\log\lambda$). In our implementation (\texttt{matlap\_iso\_renyi\_lambda}) we alternate between CAVI updates for the posterior $q$ at fixed $\lambda$ and a one-dimensional BFGS step to update $\lambda$ by maximizing \eqref{eq:renyi-correction}, providing a fully automatic, cross-validation-free procedure for joint posterior and regularization inference.
 
@@ -167,23 +278,19 @@ and the sum is over observed entries $\mathcal{O}$.  The correction vanishes as 
 The full CAVI algorithm stores the $m$ row covariance matrices $\{\Sigma_i\}$ explicitly, requiring $O(mn^2)$ memory—approximately 40 GB for a $10{,}000 \times 1{,}000$ matrix in 32-bit precision. We describe two families of extensions that reduce this to $O(mnr)$ or $O(mn)$ while preserving the key algorithmic properties.
 
 We restrict the variational family to a rank-$r$ \emph{factor subspace}. Instead of maintaining free row covariances $\Sigma_i \in \mathbb{S}_{++}^n$, we fix a shared loading matrix $V_r \in \mathbb{R}^{n \times r}$ with orthonormal columns and parameterise $x_i = V_r z_i$ where $z_i \in \mathbb{R}^r$. The variational posterior is
-\begin{equation}
-    q(z_i) = \mathcal{N}(z_i \mid \hat{z}_i,\; A_r^{(i)-1}), \qquad x_i = V_r z_i,
+\begin{equation} q(z_i) = \mathcal{N}(z_i \mid \hat{z}_i,\; A_r^{(i)-1}), \qquad x_i = V_r z_i,
 \end{equation}
 so that the implied row posterior is $\mathcal{N}(x_i|\mu_i, \Sigma_i)$ with $\mu_i = V_r \hat{z}_i$ and $\Sigma_i = V_r A_r^{(i)-1} V_r^\top$.
 
 \paragraph{Per-row update.}
 Let $p_i \in \mathbb{R}^n$ be the vector of observed precisions for row $i$ (i.e.\ $p_{ij} = 1/s_{ij}^2$ for observed entries, $0$ for missing). The $r \times r$ factor precision and factor mean are:
-\begin{align}
-    A_r^{(i)} &= \mathrm{diag}\!\left(\bar{\lambda}/d_r\right) + V_r^\top \mathrm{diag}(p_i) V_r, \\
-    \hat{z}_i  &= A_r^{(i)-1} \left(V_r^\top (p_i \odot y_i)\right),
+\begin{align} A_r^{(i)} &= \mathrm{diag}\!\left(\bar{\lambda}/d_r\right) + V_r^\top \mathrm{diag}(p_i) V_r, \\ \hat{z}_i  &= A_r^{(i)-1} \left(V_r^\top (p_i \odot y_i)\right),
 \end{align}
 where $d_r$ are the eigenvalues from the current $Q$ update (so $Q^{-1} = V_r\,\mathrm{diag}(1/d_r)\,V_r^\top$). Each $A_r^{(i)}$ is $r \times r$, so the Cholesky solve costs $O(nr + r^3)$ per row and $O(mnr)$ over all rows—an $n/r$-fold reduction from the full $O(mn^3)$.
 
 \paragraph{Q update in factor space.}
 We accumulate the expected second moment restricted to the factor subspace:
-\begin{equation}
-    \Psi_r = \sum_{i=1}^m \left(\hat{z}_i \hat{z}_i^\top + A_r^{(i)-1}\right) \in \mathbb{S}_{++}^r.
+\begin{equation} \Psi_r = \sum_{i=1}^m \left(\hat{z}_i \hat{z}_i^\top + A_r^{(i)-1}\right) \in \mathbb{S}_{++}^r.
 \end{equation}
 The eigendecomposition $\Psi_r = W_r\,\mathrm{diag}(d_r)\,W_r^\top$ gives the matrix square root $Q_r = W_r\,\mathrm{diag}(\sqrt{d_r})\,W_r^\top$, and the loading matrix is rotated: $V_r \leftarrow V_r W_r$. With this convention the $Q$ update diagonal is $d_r$, $\mathrm{Tr}(Q) = \sum_k \sqrt{d_{r,k}}$, and the ELBO entropy for row $i$ is $\frac{1}{2}\log|A_r^{(i)-1}| = -\frac{1}{2}\log|A_r^{(i)}|$.
 
@@ -200,24 +307,19 @@ Because $x_i$ lives in the column space of $V_r$, the entropy of $q(x_i)$ is com
 \label{sec:lowrank-woodbury}
 
 The factor-space CAVI restricts $Q$ to be rank-$r$, assigning zero prior precision to off-subspace directions and forcing all posterior mass onto $\mathrm{col}(V_r)$. We instead restrict $Q$ to a low-rank-plus-isotropic family,
-\begin{equation}
-    Q = V_r\,\mathrm{diag}(d_r)\,V_r^\top + \delta\,(I - V_r V_r^\top),
+\begin{equation} Q = V_r\,\mathrm{diag}(d_r)\,V_r^\top + \delta\,(I - V_r V_r^\top),
 \end{equation}
 where $\delta > 0$ is an additional \emph{variational} parameter—it has the same status as the in-subspace eigenvalues $d_{r,k}$, representing the off-subspace degrees of freedom of $Q$ and optimized by CAVI alongside them.
 
 \paragraph{Update for $\delta$.}
 With $Q^{-1} = V_r\,\mathrm{diag}(1/d_r)\,V_r^\top + \delta^{-1}(I - V_r V_r^\top)$, the nuclear-norm ELBO bound decomposes into independent in-subspace and off-subspace terms. The off-subspace contribution $-\tfrac{\bar\lambda}{2}[\mathrm{Tr}(\Psi_\perp)/\delta + (n-r)\delta]$ is minimised in closed form:
-\begin{equation}
-    \delta^* = \sqrt{\frac{\mathrm{Tr}(\Psi_\perp)}{n-r}}, \qquad
-    \mathrm{Tr}(\Psi_\perp) = \mathrm{Tr}(\Psi) - \mathrm{Tr}(\Psi_r),
+\begin{equation} \delta^* = \sqrt{\frac{\mathrm{Tr}(\Psi_\perp)}{n-r}}, \qquad \mathrm{Tr}(\Psi_\perp) = \mathrm{Tr}(\Psi) - \mathrm{Tr}(\Psi_r),
 \end{equation}
 where $\mathrm{Tr}(\Psi) = \sum_i(\|\mu_i\|^2 + \mathrm{Tr}(\Sigma_i))$ and $\mathrm{Tr}(\Psi_r) = \sum_k d_{r,k}^2$. This is the exact analogue of $d_{r,k}^* = \sqrt{[\Psi_r]_{kk}}$ for the in-subspace modes: $\delta^*$ is the RMS off-subspace eigenvalue of $\Psi$.
 
 \paragraph{Posterior updates.}
 We set $\gamma = \bar\lambda$ as the off-subspace prior precision—identical to what a plain isotropic Gaussian prior $p(x_i) = \mathcal{N}(0,\bar\lambda^{-1}I)$ would assign—decoupling the row-posterior update from $\delta$.  This prevents the self-reinforcing instability that arises when $\gamma = \bar\lambda/\delta$: small $\delta$ gives large $\gamma$ and hence large $\mathrm{Tr}(\Psi_\perp)$, which in turn increases $\delta^*$ and weakens the prior.  With $\gamma = \bar\lambda$ fixed, $\tilde{p}_{ij} = p_{ij} + \bar\lambda$ and $c_k = \bar\lambda/d_{r,k} - \bar\lambda = \bar\lambda(1/d_{r,k}-1)$.  Since the in-subspace eigenvalues $d_{r,k}$ are typically large ($d_{r,k} \gg 1$), we have $c_k < 0$; the posterior precision $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$ is nevertheless PD. The Woodbury identity gives
-\begin{align}
-    \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V_r\,\tilde{B}_i^{-1}\,V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\
-    \tilde{B}_i &= \mathrm{diag}(1/c_k) + V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V_r \;\in \mathbb{R}^{r\times r},
+\begin{align} \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V_r\,\tilde{B}_i^{-1}\,V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\ \tilde{B}_i &= \mathrm{diag}(1/c_k) + V_r^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V_r \;\in \mathbb{R}^{r\times r},
 \end{align}
 where $\tilde{B}_i$ is symmetric and invertible (since $\Lambda_i \succ 0$ implies $\det(\tilde{B}_i)\neq 0$ via the matrix determinant lemma), but need not be positive definite when $c_k < 0$; in practice we diagonalise $\tilde{B}_i = E\,\mathrm{diag}(\ell)\,E^\top$ via \texttt{eigh} rather than Cholesky. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V_r)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
 
@@ -226,18 +328,12 @@ $\mathrm{Tr}(\Psi_r)$ and $V_r$ are updated exactly as in Section~\ref{sec:lowra
 
 \paragraph{ELBO.}
 By the matrix determinant lemma applied to $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V_r\,\mathrm{diag}(c_k)\,V_r^\top$,
-\begin{equation}
-    \log|\Sigma_i| = -\sum_{k=1}^r \log|c_k| - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
+\begin{equation} \log|\Sigma_i| = -\sum_{k=1}^r \log|c_k| - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
 \end{equation}
 an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. Absolute values are required because $c_k < 0$ in the typical case ($\delta < d_{r,k}$); since $\Lambda_i \succ 0$, the signs of $\prod_k c_k$ and $\det(\tilde{B}_i)$ agree, so $|\det(\Sigma_i)| = (\prod_j \tilde{p}_j)^{-1} \cdot |\prod_k c_k|^{-1} \cdot |\det(\tilde{B}_i)|^{-1}$ is real and positive.
 
 The full ELBO evaluated at the optimal $Q$ (i.e.\ after substituting $\delta^*$) is
-\begin{align}
-    \mathcal{L}_{\mathrm{iso}} &=
-    \underbrace{-\frac{1}{2}\!\sum_{(i,j)\in\mathcal{O}}\!\left[\frac{(y_{ij}-\mu_{ij})^2+\Sigma_i[j,j]}{s_{ij}^2}+\log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}}
-    \underbrace{-\bar\lambda\,\mathrm{Tr}(Q)+mn\,\mathbb{E}_q[\log\lambda]}_{\text{nuclear-norm bound at }Q^*} \notag\\
-    &\quad+\underbrace{\frac{1}{2}\!\sum_{i=1}^m\!\left[\log|\Sigma_i|+n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)}
-    -\underbrace{\mathrm{KL}(q(\lambda)\|p(\lambda))}_{\text{KL for }\lambda}, \label{eq:elbo-iso}
+\begin{align} \mathcal{L}_{\mathrm{iso}} &= \underbrace{-\frac{1}{2}\!\sum_{(i,j)\in\mathcal{O}}\!\left[\frac{(y_{ij}-\mu_{ij})^2+\Sigma_i[j,j]}{s_{ij}^2}+\log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}} \underbrace{-\bar\lambda\,\mathrm{Tr}(Q)+mn\,\mathbb{E}_q[\log\lambda]}_{\text{nuclear-norm bound at }Q^*} \notag\\ &\quad+\underbrace{\frac{1}{2}\!\sum_{i=1}^m\!\left[\log|\Sigma_i|+n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)} -\underbrace{\mathrm{KL}(q(\lambda)\|p(\lambda))}_{\text{KL for }\lambda}, \label{eq:elbo-iso}
 \end{align}
 where $\mathrm{Tr}(Q)=\sum_k d_{r,k}+(n-r)\delta^*$.  This form is \emph{consistent}: the $b_N$ update $b_N=b_0+\mathrm{Tr}(Q)$ is the exact minimiser of~\eqref{eq:elbo-iso} with respect to $q(\lambda)$, and the $\delta^*$ update minimises the nuclear-norm bound for fixed $\Psi$.
 
@@ -255,8 +351,7 @@ A practically important consequence of the Bayesian formulation is that the orac
 
 \paragraph{Setup.}
 Let $X_{\mathrm{true}} \in \mathbb{R}^{m \times n}$ be a rank-$r$ matrix.  Each entry is independently observed with probability $f$; observed entries carry heteroscedastic Gaussian noise $y_{ij} = x_{ij} + \varepsilon_{ij}$, $\varepsilon_{ij} \sim \mathcal{N}(0, s_{ij}^2)$.  We use the noise-calibrated heuristic
-\begin{equation}
-  \bar\lambda \;=\; \frac{\sqrt{\max(m,n)}}{\sqrt{\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)}}, \label{eq:lambda-heuristic}
+\begin{equation} \bar\lambda \;=\; \frac{\sqrt{\max(m,n)}}{\sqrt{\operatorname{median}_{(i,j)\in\Omega}(1/s_{ij}^2)}}, \label{eq:lambda-heuristic}
 \end{equation}
 which estimates the typical noise singular-value scale of an $m\times n$ Gaussian matrix with the observed noise distribution (cf.\ the Marchenko--Pastur bulk edge $\approx (1+\sqrt{n/m})\,s\sqrt{m}$ in the homoscedastic case).
 
@@ -265,20 +360,16 @@ For a random Bernoulli$(f)$ mask applied to noise variances $\{s_{ij}^2\}$ drawn
 
 \paragraph{The oracle Bayesian regularisation is also independent of $f$.}
 In the factor representation, each latent row score $z_i \in \mathbb{R}^r$ has prior $z_{ik} \sim \mathcal{N}(0,\,d_{r,k}/\lambda)$.  The effective data precision for factor $k$ in row $i$ is
-\begin{equation}
-  \beta_k^{(i)} \;=\; \sum_j p_{ij}\,v_{kj}^2/s_{ij}^2 \;=\; f\,B_k^{(i)},
+\begin{equation} \beta_k^{(i)} \;=\; \sum_j p_{ij}\,v_{kj}^2/s_{ij}^2 \;=\; f\,B_k^{(i)},
 \end{equation}
 where $B_k^{(i)} = \sum_j v_{kj}^2/s_{ij}^2$ is the full-data precision (independent of $f$).  The posterior mean is $\hat z_{ik} = \gamma_{ik}\,z_{ik}^{\mathrm{true}} + \text{noise}$ with shrinkage $\gamma_{ik} = \beta_k^{(i)}/(\beta_k^{(i)} + \lambda/d_{r,k})$.  Setting $A = (z_{ik}^{\mathrm{true}})^2$, the MSE for factor $(i,k)$ is
-\begin{equation}
-  \mathrm{MSE}_{ik}(\gamma) \;=\; (1-\gamma)^2 A \;+\; \gamma^2/\beta_k^{(i)},
+\begin{equation} \mathrm{MSE}_{ik}(\gamma) \;=\; (1-\gamma)^2 A \;+\; \gamma^2/\beta_k^{(i)},
 \end{equation}
 which is minimised at $\gamma_{ik}^* = A\beta_k^{(i)}/(1 + A\beta_k^{(i)})$.  The corresponding optimal regularisation satisfies
-\begin{equation}
-  \frac{\lambda^*}{d_{r,k}} \;=\; \beta_k^{(i)}\,\frac{1-\gamma_{ik}^*}{\gamma_{ik}^*} \;=\; \beta_k^{(i)} \cdot \frac{1}{\beta_k^{(i)}\,A} \;=\; \frac{1}{(z_{ik}^{\mathrm{true}})^2}, \label{eq:lambda-opt}
+\begin{equation} \frac{\lambda^*}{d_{r,k}} \;=\; \beta_k^{(i)}\,\frac{1-\gamma_{ik}^*}{\gamma_{ik}^*} \;=\; \beta_k^{(i)} \cdot \frac{1}{\beta_k^{(i)}\,A} \;=\; \frac{1}{(z_{ik}^{\mathrm{true}})^2}, \label{eq:lambda-opt}
 \end{equation}
 since $\beta_k^{(i)}$ cancels exactly.  Critically, $f$ (which enters only through $\beta_k^{(i)} = f\,B_k^{(i)}$) also cancels.  The oracle $\lambda^*$ is therefore independent of both $f$ and the noise heteroscedasticity $\{s_{ij}^2\}$.  Since $\bar\lambda$ from~\eqref{eq:lambda-heuristic} is also independent of $f$, we have
-\begin{equation}
-  \frac{\lambda^*}{\bar\lambda} \;=\; \mathrm{const.,} \label{eq:invariance}
+\begin{equation} \frac{\lambda^*}{\bar\lambda} \;=\; \mathrm{const.,} \label{eq:invariance}
 \end{equation}
 independent of observation density.  Empirically we observe $\lambda^*/\bar\lambda \approx 0.74$ across densities from 2\% to 90\% observed (see Section~\ref{sec:experiments}).
 
@@ -326,8 +417,7 @@ A reference implementation is provided in the \texttt{matlap} Python package usi
 \label{sec:rsvd}
 
 For the gradient-based SVI comparators, the bottleneck is computing $\|X\|_* = \sum_i \sigma_i(X)$ via full SVD at each gradient step, costing $O(mn \min(m,n))$. We replace this with a rank-$r$ randomized SVD approximation:
-\begin{equation}
-    \|X\|_* \approx \sum_{k=1}^r \hat{\sigma}_k(X),
+\begin{equation} \|X\|_* \approx \sum_{k=1}^r \hat{\sigma}_k(X),
 \end{equation}
 where $\hat{\sigma}_1 \geq \dots \geq \hat{\sigma}_r$ are the top-$r$ singular values estimated by power-iteration randomized SVD \citep{halko2011finding}. The method forms a sketch $Y_\Omega = (XX^\top)^q X\Omega$ for a Gaussian random matrix $\Omega \in \mathbb{R}^{n \times (r+p)}$ with $p$ oversampling columns, then extracts approximate singular values from the resulting small matrix.
 
@@ -350,15 +440,13 @@ Two additional guide families reduce the SVI memory footprint to $O(mn)$ while c
 
 \paragraph{Shared column-factor guide (\texttt{matrix\_factor}).}
 A single factor matrix $F \in \mathbb{R}^{n \times k}$ is shared across all $m$ rows:
-\begin{equation}
-    q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F F^\top + \mathrm{diag}(\psi_i)\right),
+\begin{equation} q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F F^\top + \mathrm{diag}(\psi_i)\right),
 \end{equation}
 where $\psi_i \in \mathbb{R}^n$ is a per-row diagonal. This captures shared column-space correlations (as in matrix normal approximations) at $O(mn + nk)$ parameter cost—the same asymptotic order as a fully-factorised guide.
 
 \paragraph{Per-row low-rank guide (\texttt{row\_lowrank}).}
 Each row $i$ has its own low-rank factor $F_i \in \mathbb{R}^{n \times k}$:
-\begin{equation}
-    q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F_i F_i^\top + \mathrm{diag}(\psi_i)\right).
+\begin{equation} q(x_i) = \mathcal{N}\!\left(x_i \mid \mu_i,\; F_i F_i^\top + \mathrm{diag}(\psi_i)\right).
 \end{equation}
 At rank $k = 5$ this costs approximately 600 MB for $10{,}000 \times 1{,}000$, versus 40 GB for full row-MVN covariances.
 
@@ -367,59 +455,48 @@ Both guides are implemented using \texttt{numpyro}'s \texttt{LowRankMultivariate
 \section{Taylor series expansion for the nuclear norm expectation}
 
 Here we assume the row-factorized variational $q$ but approximate the expected nuclear norm via Taylor expansion. The Evidence Lower Bound (ELBO) is, 
-\begin{align}
-    \mathcal{L}(\bm{\mu}, \bm{\Sigma}) &= \sum_{i=1}^m \left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] - \lambda \mathbb{E}_q[\|\bm{X}\|_*] + \text{const.}
+\begin{align} \mathcal{L}(\bm{\mu}, \bm{\Sigma}) &= \sum_{i=1}^m \left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] - \lambda \mathbb{E}_q[\|\bm{X}\|_*] + \text{const.}
 \end{align}
 
 To circumvent the analytical intractability of $\mathbb{E}_q[\|\bm{X}\|_*]$ without resorting to the bound above, we apply a second-order matrix Taylor expansion (the Matrix Delta Method). 
 
 We rewrite the nuclear norm via the trace identity $\|\bm{X}\|_* = \text{Tr}\big((\bm{X}^T \bm{X})^{1/2}\big)$ and define the matrix function $f(\bm{A}) = \text{Tr}(\bm{A}^{1/2})$ over positive semi-definite matrices $\bm{A} = \bm{X}^T \bm{X}$. Decomposing $\bm{X} = \bm{\mu} + \bm{E}$, where $\mathbb{E}_q[\bm{E}] = \bm{0}$ and $\mathbb{E}_q[\bm{E}^T \bm{E}] = \sum_{i=1}^m \bm{\Sigma}_i \equiv \bm{\Sigma}_{\text{tot}}$, we have,
-\begin{equation}
-    \bm{X}^T \bm{X} = \bm{\mu}^T \bm{\mu} + \bm{\mu}^T \bm{E} + \bm{E}^T \bm{\mu} + \bm{E}^T \bm{E}
+\begin{equation} \bm{X}^T \bm{X} = \bm{\mu}^T \bm{\mu} + \bm{\mu}^T \bm{E} + \bm{E}^T \bm{\mu} + \bm{E}^T \bm{E}
 \end{equation}
 Expanding $f(\bm{X}^T \bm{X})$ in a multivariate Taylor series centered at the deterministic component $\bm{A}_0 = \bm{\mu}^T \bm{\mu}$, and taking the expectation under $q(\bm{X})$, the first-order perturbation vanishes since $\mathbb{E}_q[\bm{E}]=\bm{0}$. Evaluating the dominant remaining terms yields the deterministic surrogate,
-\begin{equation}
-    \mathbb{E}_q[\|\bm{X}\|_*] \approx \|\bm{\mu}\|_* + \frac{1}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \bm{\Sigma}_{\text{tot}} \right)
+\begin{equation} \mathbb{E}_q[\|\bm{X}\|_*] \approx \|\bm{\mu}\|_* + \frac{1}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \bm{\Sigma}_{\text{tot}} \right)
 \end{equation}
 Substituting this approximation back into the ELBO gives,
-\begin{align}
-    \mathcal{L}_{\text{delta}}(\bm{\mu}, \bm{\Sigma}) = \sum_{i=1}^m &\left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] \nonumber \\
-    &- \lambda \|\bm{\mu}\|_* - \frac{\lambda}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \sum_{i=1}^m \bm{\Sigma}_i \right)
+\begin{align} \mathcal{L}_{\text{delta}}(\bm{\mu}, \bm{\Sigma}) = \sum_{i=1}^m &\left[ -\frac{1}{2}(\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \frac{1}{2}\text{Tr}(\bm{S}_i^{-1}\bm{\Sigma}_i) + \frac{1}{2}\log|\bm{\Sigma}_i| \right] \nonumber \\ &- \lambda \|\bm{\mu}\|_* - \frac{\lambda}{2} \text{Tr}\left( (\bm{\mu}^T \bm{\mu})^{-1/2} \sum_{i=1}^m \bm{\Sigma}_i \right)
 \end{align}
 
 Isolating the objective with respect to a singular row covariance block $\bm{\Sigma}_i$ yields:
-\begin{equation}
-    \mathcal{L}_{\text{delta}}(\bm{\Sigma}_i) = \frac{1}{2} \log |\bm{\Sigma}_i| - \frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i \right)
+\begin{equation} \mathcal{L}_{\text{delta}}(\bm{\Sigma}_i) = \frac{1}{2} \log |\bm{\Sigma}_i| - \frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i \right)
 \end{equation}
 Taking the matrix derivative with respect to $\bm{\Sigma}_i$ and setting it to the zero matrix:
-\begin{equation}
-    \frac{\partial \mathcal{L}_{\text{delta}}}{\partial \bm{\Sigma}_i} = \frac{1}{2} \bm{\Sigma}_i^{-1} - \frac{1}{2} \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] = \bm{0}
+\begin{equation} \frac{\partial \mathcal{L}_{\text{delta}}}{\partial \bm{\Sigma}_i} = \frac{1}{2} \bm{\Sigma}_i^{-1} - \frac{1}{2} \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] = \bm{0}
 \end{equation}
 Solving for $\bm{\Sigma}_i$ reveals a closed-form solution,
-\begin{equation}
-    \bm{\Sigma}_i^* = \left( \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right)^{-1}
+\begin{equation} \bm{\Sigma}_i^* = \left( \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right)^{-1}
 \end{equation}
 
 \paragraph{Marginalization and the Collapsed Loss.} Because $\bm{\Sigma}_i^*$ is uniquely determined by $\bm{\mu}$, we can substitute this closed-form solution directly back into the surrogate ELBO. The trace terms collapse identically into a scalar constant:
-\begin{equation}
-    -\frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i^* \right) = -\frac{1}{2} \text{Tr}(\bm{I}_n) = -\frac{n}{2}
+\begin{equation} -\frac{1}{2} \text{Tr}\left( \left[ \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right] \bm{\Sigma}_i^* \right) = -\frac{1}{2} \text{Tr}(\bm{I}_n) = -\frac{n}{2}
 \end{equation}
 Omitting additive constants, this marginalization yields a fully collapsed loss function depending solely on the mean matrix $\bm{\mu}$:
-\begin{equation}
-    \mathcal{L}_{\text{collapsed}}(\bm{\mu}) = -\frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \lambda \|\bm{\mu}\|_* - \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right|
+\begin{equation} \mathcal{L}_{\text{collapsed}}(\bm{\mu}) = -\frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) - \lambda \|\bm{\mu}\|_* - \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right|
 \end{equation}
 
 \paragraph{Numerical Optimization Landscape.} The optimization of $\mathcal{L}_{\text{collapsed}}(\bm{\mu})$ splits into a smooth, non-linear regularized function $g(\bm{\mu})$ and a non-smooth convex penalty $h(\bm{\mu})$:
-\begin{align}
-    g(\bm{\mu}) &= \frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) + \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right| \\
-    h(\bm{\mu}) &= \lambda \|\bm{\mu}\|_*
+\begin{align} g(\bm{\mu}) &= \frac{1}{2} \sum_{i=1}^m (\bm{y}_i - \bm{\mu}_i)^T \bm{S}_i^{-1} (\bm{y}_i - \bm{\mu}_i) + \frac{1}{2} \sum_{i=1}^m \log \left| \bm{S}_i^{-1} + \lambda (\bm{\mu}^T \bm{\mu})^{-1/2} \right| \\ h(\bm{\mu}) &= \lambda \|\bm{\mu}\|_*
 \end{align}
 Given a learning rate $\eta$, optimization proceeds via proximal gradient steps where the non-smooth nuclear norm is solved exactly via Singular Value Soft-Thresholding ($\mathcal{S}_{\eta \lambda}$):
-\begin{align}
-    \tilde{\bm{\mu}}^{(t)} &= \bm{\mu}^{(t)} - \eta \nabla_{\bm{\mu}} g(\bm{\mu}^{(t)}) \\
-    \bm{\mu}^{(t+1)} &= \text{prox}_{\eta h}(\tilde{\bm{\mu}}^{(t)}) = \bm{U} \cdot \max(\bm{0}, \bm{D} - \eta \lambda) \cdot \bm{V}^T
+\begin{align} \tilde{\bm{\mu}}^{(t)} &= \bm{\mu}^{(t)} - \eta \nabla_{\bm{\mu}} g(\bm{\mu}^{(t)}) \\ \bm{\mu}^{(t+1)} &= \text{prox}_{\eta h}(\tilde{\bm{\mu}}^{(t)}) = \bm{U} \cdot \max(\bm{0}, \bm{D} - \eta \lambda) \cdot \bm{V}^T
 \end{align}
-where $\bm{U} \bm{D} \bm{V}^T = \text{SVD}(\tilde{\bm{\mu}}^{(t)})$. Once convergence is reached on $\bm{\mu}^*$, downstream uncertainty matrices $\bm{\Sigma}_i^*$ are recovered globally in a single deterministic pass.
+where $\bm{U} \bm{D} \bm{V}^T = \text{SVD}(\tilde{\bm{\mu}}^{(t)})$.
+The cost of one step has two components. First, the forward and backward pass through the smooth term $g$ must form $\bm{\mu}^T\bm{\mu}$, compute its inverse square root, and evaluate the row-wise log-determinants. For $m \ge n$, forming $\bm{\mu}^T\bm{\mu}$ costs $O(mn^2)$ and the dense eigendecomposition costs $O(n^3)$; a naive heteroscedastic implementation of the $m$ log-determinants costs up to $O(mn^3)$, with reverse-mode differentiation through these operations adding a constant-factor multiple of the same leading costs. Second, the proximal map requires singular-value soft-thresholding of an $m\times n$ matrix, which costs $O(mn^2)$ for a dense full SVD. Thus an exact implementation is dominated either by the smooth forward/backward pass or by the SVD, depending on how the log-determinants are structured and cached.
+
+Randomized or truncated SVD can reduce the proximal-map cost to roughly $O(mnr)$ for target rank $r \ll n$ (plus oversampling and power-iteration costs), but this only accelerates the SVT part of the iteration. The full step remains limited by the cost of differentiating $g$ unless the smooth objective is also approximated or restricted to a low-rank subspace. In that setting, randomized SVD is best viewed as a practical acceleration for low-rank iterates rather than a complete scaling solution for the collapsed objective. Once convergence is reached on $\bm{\mu}^*$, downstream uncertainty matrices $\bm{\Sigma}_i^*$ are recovered globally in a single deterministic pass.
 
 \subsection{Factor Analysis EM and Gradient Marginal Likelihood}
 \label{sec:faem}
@@ -431,38 +508,28 @@ We write $x_i = W_r z_i$ with isotropic prior $z_i \sim \mathcal{N}(0, \lambda^{
 
 \paragraph{Marginal log-likelihood.}
 Integrating out $z_i$ via the Woodbury identity gives, for each row $i$,
-\begin{equation}
-  \log p(y_i^\Omega \mid W_r, \lambda) = -\tfrac{1}{2}\!\left[
-    y_i^\top \Lambda_i y_i - \mathrm{rhs}_i^\top A_i^{-1} \mathrm{rhs}_i
-    - \textstyle\sum_{j\in\Omega_i} \log p_{ij} + \log|A_i| - r\log\lambda + |\Omega_i| \log 2\pi
-  \right],
-  \label{eq:marginal-ll}
+\begin{equation} \log p(y_i^\Omega \mid W_r, \lambda) = -\tfrac{1}{2}\!\left[ y_i^\top \Lambda_i y_i - \mathrm{rhs}_i^\top A_i^{-1} \mathrm{rhs}_i - \textstyle\sum_{j\in\Omega_i} \log p_{ij} + \log|A_i| - r\log\lambda + |\Omega_i| \log 2\pi \right], \label{eq:marginal-ll}
 \end{equation}
 where $\Lambda_i = \mathrm{diag}(p_i)$, $A_i = \lambda I_r + W_r^\top \Lambda_i W_r \in \mathbb{R}^{r \times r}$, and $\mathrm{rhs}_i = W_r^\top \Lambda_i y_i$.  Only the $r \times r$ matrix $A_i$ need be inverted per row.
 
 \paragraph{E-step.}
 The posterior over $z_i$ is $q(z_i) = \mathcal{N}(\hat{z}_i, A_i^{-1})$ with
-\begin{equation}
-  A_i = \lambda I_r + W_r^\top \Lambda_i W_r, \qquad \hat{z}_i = A_i^{-1} W_r^\top (p_i \odot y_i).
+\begin{equation} A_i = \lambda I_r + W_r^\top \Lambda_i W_r, \qquad \hat{z}_i = A_i^{-1} W_r^\top (p_i \odot y_i).
 \end{equation}
 The posterior second moment is $\mathbb{E}[z_i z_i^\top] = A_i^{-1} + \hat{z}_i \hat{z}_i^\top$ and the posterior mean of $x_i$ is $\mu_i = W_r \hat{z}_i$.
 
 \paragraph{FA EM M-step.}
 The expected complete-data log-likelihood decouples across rows of $W_r^\top$.  Setting the gradient for the $j$-th row $w_j^\top$ to zero yields the closed-form update
-\begin{equation}
-  w_j = \left(\sum_{i} p_{ij}\,\mathbb{E}[z_i z_i^\top]\right)^{-1} \!\sum_{i} p_{ij}\,y_{ij}\,\hat{z}_i,
-  \label{eq:faem-mstep}
+\begin{equation} w_j = \left(\sum_{i} p_{ij}\,\mathbb{E}[z_i z_i^\top]\right)^{-1} \!\sum_{i} p_{ij}\,y_{ij}\,\hat{z}_i, \label{eq:faem-mstep}
 \end{equation}
 a weighted least-squares problem with a unique solution.  The M-step for $\lambda$ is the Gamma posterior mean,
-\begin{equation}
-  \bar\lambda = \frac{a_0 + mr/2}{b_0 + \tfrac{1}{2}\sum_i \mathrm{Tr}\!\left(\mathbb{E}[z_i z_i^\top]\right)}.
+\begin{equation} \bar\lambda = \frac{a_0 + mr/2}{b_0 + \tfrac{1}{2}\sum_i \mathrm{Tr}\!\left(\mathbb{E}[z_i z_i^\top]\right)}.
 \end{equation}
 Per-iteration cost is $O(mnr + mr^3)$, identical to the low-rank CAVI.
 
 \paragraph{Gradient marginal likelihood.}
 As an alternative to EM, we directly maximise
-\begin{equation}
-  \mathcal{L}_{\mathrm{grad}}(W_r, \lambda) = \sum_i \log p(y_i^\Omega \mid W_r, \lambda) + (a_0 - 1)\log\lambda - b_0\lambda
+\begin{equation} \mathcal{L}_{\mathrm{grad}}(W_r, \lambda) = \sum_i \log p(y_i^\Omega \mid W_r, \lambda) + (a_0 - 1)\log\lambda - b_0\lambda
 \end{equation}
 with respect to $W_r$ and $\log\lambda$ using the Adam optimiser \citep{kingma2014adam}, with gradients computed by JAX autodiff through~\eqref{eq:marginal-ll}.
 
@@ -562,23 +629,14 @@ The key pattern is that \texttt{iso\_grid\_renyi} is essentially tied with \text
 Because the nuclear norm is absolutely homogeneous ($\|-X\|_* = \|X\|_*$) and the density is symmetric around the origin, the expectation of $X$ is exactly the zero matrix: $\mathbb{E}[X] = 0_{m \times n}$.
 
 Furthermore, because $\|X\|_*$ is invariant under left- and right-orthogonal transformations ($p(UXV^T) = p(X)$ for orthogonal $U, V$), the entries of $X$ are mutually uncorrelated. The covariance matrix of $\text{vec}(X)$ is spherical:
-\begin{equation}
-    \text{Cov}(\text{vec}(X)) = \frac{C_{m,n}}{\lambda^2} I_{mn}
+\begin{equation} \text{Cov}(\text{vec}(X)) = \frac{C_{m,n}}{\lambda^2} I_{mn}
 \end{equation}
 where $C_{m,n}$ is a dimensional constant.
 
 \subsection{Marginal Distribution of the Nuclear Norm}
 Transforming to generalized polar coordinates where the radius is $R = \|X\|_*$, the volume of the nuclear norm ball grows as $R^{mn}$. The surface area measure therefore scales as $R^{mn-1}$. Integrating out the directional components, the marginal density of the nuclear norm itself follows a Gamma distribution,
-\begin{equation}
-    \|X\|_* \sim \text{Gamma}(mn, \lambda).
+\begin{equation} \|X\|_* \sim \text{Gamma}(mn, \lambda).
 \end{equation}
 This yields the moments $\mathbb{E}[\|X\|_*] = \frac{mn}{\lambda}$ and $\text{Var}(\|X\|_*) = \frac{mn}{\lambda^2}$.
-
-\subsection{Joint Density of Singular Values}
-Assuming $m \ge n$, the change of variables to the Singular Value Decomposition (SVD) yields the joint density of the non-zero singular values $\sigma_1 > \sigma_2 > \dots > \sigma_n > 0$:
-\begin{equation}
-    p(\sigma_1, \dots, \sigma_n) \propto \prod_{i=1}^n \underbrace{ \sigma_i^{m-n} e^{-\lambda \sigma_i}}_{\propto \, \mathrm{Gamma}(\sigma_i,m-n+1,\,\lambda)} \cdot \underbrace{\prod_{1 \le i < j \le n} (\sigma_i^2 - \sigma_j^2)}_{\text{repulsion term}}
-\end{equation}
-This characterizes the singular values as a 1D Coulomb gas subject to a logarithmic pairwise repulsion. 
 
 \end{document}
