@@ -152,6 +152,12 @@ In some settings, we have a combination of known heteroskedastic noise and unkno
 
 For this variant, $\hat{X}=\mu$ and the noise variance $\sigma^2$ are coupled, so we update them by alternating steps. For the mean update we use the proximal gradient step Eq \eqref{eq:proxgrad}, with $\eta = \lambda/\sigma$, where $\sigma^2$ is the current noise variance estimate. After the mean update, the scalar variance is updated on the unconstrained scale $\ell=\log \sigma$ by a gradient step on the negative ELBO \eqref{eq:taylor-elbo}, again with backtracking to enforce monotonicity. 
 
+
+
+\printbibliography
+
+\section{Appendix}
+
 \subsection{Coordinate Ascent Variational Inference (CAVI)}
 
 Our key insight to enable CAVI is that the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
@@ -172,162 +178,5 @@ The auxiliary matrix $Q$ induces correlation across the columns of $X$.
 \paragraph{Update for NND rate $\lambda$.} In principle we could update $\lambda$ analytically under a conjugate Gamma prior. However, we generally find is it preferable to treat $\lambda$ as a hyperparameter and select it by maximizing the ELBO or LOO score over a grid of values.
 
 \paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this using mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. 
-
-\paragraph{Rényi $\alpha$-ELBO for $\lambda$ selection.}
-
-We consider the Rényi $\alpha$-ELBO \citep{li2016renyi},
-\begin{equation} \mathcal{L}_\alpha = \frac{1}{1-\alpha}\log \int q(X)^{\alpha}\, p(Y, X \mid \lambda)^{1-\alpha}\, dX, \quad 0 \le \alpha < 1,
-\end{equation}
-which satisfies $\mathcal{L}_\alpha \le \log p(Y \mid \lambda)$ and recovers the ELBO as $\alpha \to 1$; at $\alpha = 0$ it is the importance-weighted objective.
-
-For the low-rank-plus-isotropic model with diagonal posterior $q(x_{ij}) = \mathcal{N}(\mu_{ij},\sigma_{ij}^2)$, Gaussian likelihood $p(y_{ij}\mid x_{ij}) = \mathcal{N}(y_{ij}, s_{ij}^2)$, and prior marginal $p(x_{ij}) = \mathcal{N}(0,v_j(\lambda))$, the Rényi integral is a product of Gaussian factors and evaluates in closed form as a correction to the diagonal-Gaussian ELBO:
-\begin{equation} \label{eq:renyi-correction} \mathcal{L}_\alpha = \mathcal{L} + \frac{1}{\beta}\sum_{(i,j) \in \Omega} \left[\frac{\beta^2 f_{ij}^2}{2(1 - 2\beta\, g_{ij})} - \frac{1}{2}\log(1-2\beta\, g_{ij})\right],
-\end{equation}
-where $\beta = 1-\alpha$,
-\begin{align} f_{ij} = \sigma_{ij}\!\left(\frac{y_{ij}-\mu_{ij}}{s_{ij}^2} - \frac{\mu_{ij}}{v_j(\lambda)}\right), \qquad g_{ij} = \tfrac12\!\left(1 - \frac{\sigma_{ij}^2}{s_{ij}^2} - \frac{\sigma_{ij}^2}{v_j(\lambda)}\right),
-\end{align}
-and the sum is over observed entries $\Omega$.  The correction vanishes as $\alpha\to 1$ (recovering $\mathcal{L}$) and is negative for $\alpha \in (0,1)$ (a tighter bound).  Crucially, $v_j(\lambda)$ depends on $\lambda$ through the low-rank-plus-isotropic parameterization, so $\mathcal{L}_\alpha$ is differentiable with respect to $\lambda$ and can be maximized by gradient-based search (e.g.\ BFGS on $\log\lambda$). In our implementation (\texttt{matlap\_iso\_renyi\_lambda}) we alternate between CAVI updates for the posterior $q$ at fixed $\lambda$ and a one-dimensional BFGS step to update $\lambda$ by maximizing \eqref{eq:renyi-correction}, providing a fully automatic, cross-validation-free procedure for joint posterior and regularization inference.
-
-\subsection{Low-Rank-Plus-Isotropic CAVI via the Woodbury Identity}
-\label{sec:lowrank-woodbury}
-We avoid $O(mn^3)$ operations by restricting $Q$ to a low-rank-plus-isotropic family,
-\begin{equation} 
-    Q = V\,\mathrm{diag}(d)\,V^\top + \delta\,(I - V V^\top),
-\end{equation}
-where $\delta > 0$, $V \in \mathbb{R}^{n \times r}$ and $d \in \mathbb{R}^r$ are additional variational parameters. 
-
-\paragraph{Update for $\delta$.}
-With $Q^{-1} = V\,\mathrm{diag}(1/d)\,V^\top + \delta^{-1}(I - V V^\top)$, the nuclear-norm ELBO bound decomposes into independent in-subspace and off-subspace terms. The off-subspace contribution $-\tfrac{\bar\lambda}{2}[\mathrm{Tr}(\Psi_\perp)/\delta + (n-r)\delta]$ is minimised in closed form:
-\begin{equation} \delta^* = \sqrt{\frac{\mathrm{Tr}(\Psi_\perp)}{n-r}}, \qquad \mathrm{Tr}(\Psi_\perp) = \mathrm{Tr}(\Psi) - \mathrm{Tr}(\Psi_r),
-\end{equation}
-where $\mathrm{Tr}(\Psi) = \sum_i(\|\mu_i\|^2 + \mathrm{Tr}(\Sigma_i))$ and $\mathrm{Tr}(\Psi_r) = \sum_k d_{k}^2$. This is the exact analogue of $d_{k}^* = \sqrt{[\Psi]_{kk}}$ for the in-subspace modes: $\delta^*$ is the RMS off-subspace eigenvalue of $\Psi$.
-
-\paragraph{Posterior updates.}
-We set $\gamma = \bar\lambda$ as the off-subspace prior precision—identical to what a plain isotropic Gaussian prior $p(x_i) = \mathcal{N}(0,\bar\lambda^{-1}I)$ would assign—decoupling the row-posterior update from $\delta$.  This prevents the self-reinforcing instability that arises when $\gamma = \bar\lambda/\delta$: small $\delta$ gives large $\gamma$ and hence large $\mathrm{Tr}(\Psi_\perp)$, which in turn increases $\delta^*$ and weakens the prior.  With $\gamma = \bar\lambda$ fixed, $\tilde{p}_{ij} = p_{ij} + \bar\lambda$ and $c_k = \bar\lambda/d_{r,k} - \bar\lambda = \bar\lambda(1/d_{r,k}-1)$.  Since the in-subspace eigenvalues $d_{r,k}$ are typically large ($d_{r,k} \gg 1$), we have $c_k < 0$; the posterior precision $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V\,\mathrm{diag}(c_k)\,V^\top$ is nevertheless PD. The Woodbury identity gives
-\begin{align} \Sigma_i &= \mathrm{diag}(\tilde{p}_i^{-1}) - \mathrm{diag}(\tilde{p}_i^{-1})\,V\,\tilde{B}_i^{-1}\,V^\top\,\mathrm{diag}(\tilde{p}_i^{-1}), \\ \tilde{B}_i &= \mathrm{diag}(1/c_k) + V^\top\,\mathrm{diag}(\tilde{p}_i^{-1})\,V \;\in \mathbb{R}^{r\times r},
-\end{align}
-where $\tilde{B}_i$ is symmetric and invertible (since $\Lambda_i \succ 0$ implies $\det(\tilde{B}_i)\neq 0$ via the matrix determinant lemma), but need not be positive definite when $c_k < 0$; in practice we diagonalise $\tilde{B}_i = E\,\mathrm{diag}(\ell)\,E^\top$ via \texttt{eigh} rather than Cholesky. The posterior mean $\mu_i = \Sigma_i\,\mathrm{diag}(p_i)\,y_i$ follows the same structure and has components outside $\mathrm{col}(V)$, capturing signal not explained by the current factor subspace. $\mathrm{diag}(\Sigma_i)$ is extracted in $O(nr)$ without forming $\Sigma_i$ explicitly.
-
-\paragraph{$Q$ and $\delta$ updates.}
-$\mathrm{Tr}(\Psi_r)$ and $V$ are updated exactly as in Section~\ref{sec:lowrank-cavi}. $\mathrm{Tr}(\Psi)$ is accumulated in $O(mn)$ from $\|\mu_i\|^2$ and $\mathrm{diag}(\Sigma_i)$, giving $\mathrm{Tr}(\Psi_\perp)$ and thus $\delta^* = \sqrt{\mathrm{Tr}(\Psi_\perp)/(n-r)}$ in $O(n)$. $\mathrm{Tr}(Q) = \sum_k d_{r,k} + (n-r)\delta^*$. Note that $\gamma = \bar\lambda$ requires no separate update: it follows immediately from the current $\bar\lambda$.
-
-\paragraph{ELBO.}
-By the matrix determinant lemma applied to $\Lambda_i = \mathrm{diag}(\tilde{p}_i) + V\,\mathrm{diag}(c_k)\,V^\top$,
-\begin{equation} \log|\Sigma_i| = -\sum_{k=1}^r \log|c_k| - \log|\tilde{B}_i| - \sum_{j=1}^n \log(p_{ij}+\gamma),
-\end{equation}
-an $O(n + r^3)$ computation that accounts for the full $n$-dimensional entropy. Absolute values are required because $c_k < 0$ in the typical case ($\delta < d_{k}$); since $\Lambda_i \succ 0$, the signs of $\prod_k c_k$ and $\det(\tilde{B}_i)$ agree, so $|\det(\Sigma_i)| = (\prod_j \tilde{p}_j)^{-1} \cdot |\prod_k c_k|^{-1} \cdot |\det(\tilde{B}_i)|^{-1}$ is real and positive.
-
-The full ELBO evaluated at the optimal $Q$ (i.e.\ after substituting $\delta^*$) is
-\begin{align} \mathcal{L}_{\mathrm{iso}} &= \underbrace{-\frac{1}{2}\!\sum_{(i,j)\in \Omega}\!\left[\frac{(y_{ij}-\mu_{ij})^2+\Sigma_i[j,j]}{s_{ij}^2}+\log(2\pi s_{ij}^2)\right]}_{\text{log-likelihood}} \underbrace{-\bar\lambda\,\mathrm{Tr}(Q)+mn\,\log\lambda}_{\text{nuclear-norm bound at }Q^*} \notag\\ &\quad+\underbrace{\frac{1}{2}\!\sum_{i=1}^m\!\left[\log|\Sigma_i|+n(1+\log 2\pi)\right]}_{\text{entropy of }q(X)} , \label{eq:elbo-iso}
-\end{align}
-where $\mathrm{Tr}(Q)=\sum_k d_{k}+(n-r)\delta^*$.  
-
-\textbf{ELBO consistency note.}  One might instead use a Gaussian off-subspace prior $p(x^{\perp})\!=\!\mathcal{N}(0,\bar\lambda^{-1}I)$, which gives the prior term $-\tfrac{\bar\lambda}{2}\mathrm{Tr}(\Psi_\perp)+\tfrac{m(n-r)}{2}\log\lambda$.  At $\delta^*$ this equals $-\tfrac{\bar\lambda}{2}(n-r)\delta^{*2}$, whereas the nuclear-norm bound gives $-\bar\lambda(n-r)\delta^*$; the two coincide only when $\delta^*=2$.  Using the Gaussian ELBO while updating $\delta$ and $b_N$ via the nuclear-norm formulae creates an inconsistency that can break ELBO monotonicity for the $\delta$ and $\lambda$ sub-updates.  Equation~\eqref{eq:elbo-iso} avoids this by using the nuclear-norm bound uniformly.
-
-\section{Empirical Comparison}
-\label{sec:experiments}
-
-We benchmark all scalable methods on a synthetic matrix completion problem with $m=10{,}000$ rows, $n=1{,}000$ columns, true rank 15, heteroscedastic Gaussian noise ($\sigma_{ij} \sim \mathrm{Uniform}(0.5, 1.5)$), and 20\% of entries held out as a test set. We report test-set RMSE and wall-clock time on a NVIDIA RTX~3090 GPU, averaged over 3 seeds.
-
-\paragraph{Methods.}
-\texttt{proximal} and \texttt{proximal\_cv} solve the nuclear-norm penalised least-squares problem via FISTA (100 iterations); $\lambda$ is set by a heuristic or 5-fold entry-wise CV respectively.
-\texttt{matlap\_faem} and \texttt{matlap\_gradml} optimise the low-rank factor analysis marginal likelihood via EM and gradient descent (Adam) respectively, with automatic empirical-Bayes $\lambda$ (100/500 steps).
-\texttt{matlap\_lowrank} runs the rank-50 low-rank CAVI with automatic empirical-Bayes $\lambda$ (50 iterations).
-\texttt{matlap\_grid\_lowrank} runs the same low-rank CAVI on a 7-point log-spaced $\lambda$ grid with warm-started path (converged at each point), selecting by ELBO.
-\texttt{matlap\_grid\_lowrank\_iso\_elbo} and \texttt{matlap\_grid\_lowrank\_iso\_renyi} run the low-rank-plus-isotropic CAVI on the same grid, selecting by ELBO or Rényi $\alpha$-ELBO ($\alpha=0.5$) respectively.
-\texttt{matlap\_batched} runs exact full CAVI with batch size 64, automatic $\lambda$ (converged; $O(n^3)$ per row, so slow at $n=1{,}000$).
-\texttt{vi\_diagonal} runs SVI with a fully-factorised Gaussian guide and full SVD nuclear norm (200 steps).
-\texttt{vi\_diagonal\_approx}, \texttt{vi\_matrix\_factor}, and \texttt{vi\_row\_lowrank} use the rSVD nuclear norm approximation (rank 30) with structured guides (200 steps).
-\texttt{mcmc\_mala} runs the proximal MALA sampler (300 warm-up, 400 samples, heuristic fixed $\lambda$); \texttt{mcmc\_gibbs} runs the MALA+MH Gibbs sampler (same budget, $\lambda$ sampled jointly).
-All MCMC methods use a cold start ($\hat{X}_0 = Y$ with missing entries set to zero).
-
-\paragraph{Results.}
-
-\begin{table}[h]
-\centering
-\caption{Test-set RMSE and GPU runtime on a $10{,}000 \times 1{,}000$ rank-15 matrix, 3 seeds (NVIDIA RTX 3090).}
-\label{tab:benchmark}
-\begin{tabular}{lrrrl}
-\hline
-Method & RMSE & Time (s) & Converged & Notes \\
-\hline
-\texttt{matlap\_faem}                    & \textbf{0.081} & \textbf{3.6} & \checkmark & Best RMSE \\
-\texttt{matlap\_gradml}                  & 0.081 & 3.2  & \checkmark & \\
-\texttt{matlap\_grid\_lowrank}           & 0.099 & 2.4  & \checkmark & Fastest converged \\
-\texttt{matlap\_grid\_lowrank\_iso\_elbo} & 0.114 & 27   & --         & Iso; 50-iter budget \\
-\texttt{matlap\_grid\_lowrank\_iso\_renyi} & 0.124 & 27  & --         & Iso; Rényi scoring \\
-\texttt{proximal\_cv}                    & 0.105 & 121  & --         & 80$\times$ slower \\
-\texttt{proximal}                        & 0.123 & 23   & --         & Fixed $\lambda$ \\
-\texttt{matlap\_batched}                 & 0.153 & 184  & \checkmark & Exact; slow at $n=1{,}000$ \\
-\texttt{matlap\_lowrank}                 & 0.257 & 1.0  & \checkmark & Auto-$\lambda$ diverges \\
-\texttt{vi\_diagonal}                    & 0.242 & 42   & --         & 200 steps \\
-\texttt{vi\_matrix\_factor}              & 0.269 & 19   & --         & rSVD approx \\
-\texttt{vi\_row\_lowrank}                & 0.270 & 25   & --         & rSVD approx \\
-\texttt{vi\_diagonal\_approx}            & 0.397 & 11   & --         & rSVD approx \\
-\texttt{mcmc\_mala}                      & 0.258 & 250  & --         & Not converged in $T=700$ \\
-\texttt{mcmc\_gibbs}                     & 0.258 & 252  & --         & Not converged in $T=700$ \\
-\hline
-\end{tabular}
-\end{table}
-
-\paragraph{Discussion.}
-\texttt{matlap\_faem} and \texttt{matlap\_gradml} achieve the lowest RMSE (0.081), with runtimes under 10 s.
-Both optimise the exact marginal likelihood in the factor subspace rather than variational bounds, enabling reliable automatic $\lambda$ selection.
-\texttt{matlap\_grid\_lowrank} achieves the best efficiency trade-off (RMSE 0.099 in 1.5 s) by evaluating a warm-started regularisation path on a shared low-rank basis, avoiding the over-shrinkage of the automatic empirical-Bayes $\lambda$ in factor space (which inflates the effective regularisation by a factor of $n/r \approx 20$).
-
-The low-rank-plus-isotropic variants (\texttt{matlap\_grid\_lowrank\_iso\_*}) use the corrected $\gamma = \bar\lambda$ prior (Section~\ref{sec:lowrank-woodbury}) and the correct hybrid ELBO normaliser ($m r \mathbb{E}[\log\lambda]$ for the $r$-dimensional nuclear-norm subspace, $\tfrac{m(n-r)}{2}\mathbb{E}[\log\lambda]$ for the Gaussian off-subspace).  With the corrected ELBO the grid search selects an intermediate $\lambda \approx 158$ (previously it selected the grid maximum due to the monotonically increasing incorrect ELBO).  Neither iso variant converges within the 50-iteration budget used here (the per-iteration cost is $\sim 11\times$ higher than pure lowrank due to the off-subspace update); given the budget constraint, RMSE is 0.114 (ELBO scoring) and 0.124 (Rényi scoring), comparable to \texttt{proximal\_cv} (0.105).  With a longer iteration budget, the iso models are expected to match or improve on \texttt{matlap\_grid\_lowrank} since they are strictly more expressive.
-
-\texttt{matlap\_batched} converges to the exact full-CAVI solution (RMSE 0.153) but is slow at $n=1{,}000$ because each row requires an $O(n^3)$ Cholesky; it is intended for settings with moderate $n$ ($\lesssim 300$) where exact row posteriors are needed without the full $O(mn^2)$ memory.
-
-The SVI methods (\texttt{vi\_diagonal}, \texttt{vi\_matrix\_factor}, \texttt{vi\_row\_lowrank}) have not converged at 200 steps, and the rSVD nuclear-norm approximation introduces additional gradient noise in the \texttt{approx} variants.
-
-The MCMC samplers (\texttt{mcmc\_mala} and \texttt{mcmc\_gibbs}) obtain RMSE 0.258 after 700 total steps — comparable to a zero-signal predictor — indicating that neither chain mixes adequately at the scale of $mn = 10^7$ parameters within this budget. The 250 s per-run cost reflects $O(mn\min(m,n))$ SVD calls at every step; accelerating MCMC to competitive performance at this scale would require either subsampled SVD proposals or a different parameterisation (e.g.\ sampling in the low-rank factor subspace directly), and we leave this for future work.
-
-\subsection{Lambda Selection Study}
-\label{sec:lambda-study}
-
-We also compared $\lambda$-selection rules on a $500\times 100$ synthetic problem under two sweeps: varying true rank ($1,3,5,10,20,40$) and varying SNR ($0.1,0.3,1,3,10$), with 3 seeds per setting. Table~\ref{tab:lambda-study-summary} reports mean test RMSE averaged over each sweep.
-
-\begin{table}[h]
-\centering
-\caption{Mean test RMSE across the rank and SNR sweeps.}
-\label{tab:lambda-study-summary}
-\begin{tabular}{lrr}
-\hline
-Method & Rank sweep & SNR sweep \\
-\hline
-\texttt{proximal\_cv} & 0.467 & 0.314 \\
-\texttt{matlap\_grid} & 0.615 & 0.450 \\
-\texttt{lowrank\_cv} & 0.600 & 0.485 \\
-\texttt{lowrank\_grid} & 0.637 & 0.634 \\
-\texttt{iso\_cv} & 0.585 & 0.445 \\
-\texttt{iso\_grid\_renyi} & 0.585 & 0.446 \\
-\texttt{iso\_grid\_is} & 0.587 & 0.464 \\
-\texttt{iso\_grid\_loo} & 0.631 & 0.476 \\
-\hline
-\end{tabular}
-\end{table}
-
-The key pattern is that \texttt{iso\_grid\_renyi} is essentially tied with \texttt{iso\_cv} across both sweeps, while \texttt{iso\_grid\_is} (\(\alpha=0\)) is close but degrades at higher SNR and \texttt{iso\_grid\_loo} is too conservative. The ELBO-based grids (\texttt{matlap\_grid} and \texttt{lowrank\_grid}) remain systematically worse than CV.
-
-\printbibliography
-
-\section{Appendix}
-
-
-\subsection{Mean and Covariance}
-
-Because the nuclear norm is absolutely homogeneous ($\|-X\|_* = \|X\|_*$) and the density is symmetric around the origin, the expectation of $X$ is exactly the zero matrix: $\mathbb{E}[X] = 0_{m \times n}$.
-
-Furthermore, because $\|X\|_*$ is invariant under left- and right-orthogonal transformations ($p(UXV^T) = p(X)$ for orthogonal $U, V$), the entries of $X$ are mutually uncorrelated. The covariance matrix of $\text{vec}(X)$ is spherical:
-\begin{equation} \text{Cov}(\text{vec}(X)) = \frac{C_{m,n}}{\lambda^2} I_{mn}
-\end{equation}
-where $C_{m,n}$ is a dimensional constant.
-
-\subsection{Marginal Distribution of the Nuclear Norm}
-Transforming to generalized polar coordinates where the radius is $R = \|X\|_*$, the volume of the nuclear norm ball grows as $R^{mn}$. The surface area measure therefore scales as $R^{mn-1}$. Integrating out the directional components, the marginal density of the nuclear norm itself follows a Gamma distribution,
-\begin{equation} \|X\|_* \sim \text{Gamma}(mn, \lambda).
-\end{equation}
-This yields the moments $\mathbb{E}[\|X\|_*] = \frac{mn}{\lambda}$ and $\text{Var}(\|X\|_*) = \frac{mn}{\lambda^2}$.
 
 \end{document}
