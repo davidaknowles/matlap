@@ -19,6 +19,7 @@ This note presents the corrected and complete mathematical proof establishing th
 \end{abstract}
 
 \section{Problem Setup and Notation}
+
 Consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ broken into row vectors $y_i \in \mathbb{R}^n$ for $i=1,\dots,m$, each associated with a known noise covariance matrix $S_i \succ 0$. Let $C \succ 0$ denote the prior row covariance matrix (corresponding to $Q/\lambda$ in the original variational formulation). 
 
 We define the posterior row covariance matrices $\Sigma_i(C)$ and mean vectors $\mu_i(C)$ conditioned on $C$ as follows:
@@ -99,7 +100,6 @@ Setting $A = \Psi(C)$ and the perturbation directional matrix $H = D\Psi[\Delta]
 \|D\big(\Psi^{1/2}\big)[\Delta]\|_F \le \frac{K_F(C)}{2\sqrt{\lambda_{\min}(\Psi(C))}}\,\|\Delta\|_F.
 \end{equation}
 
-%%%%% NEWLY ADDED SECTION FOR SELF-MAPPING CONDITIONS %%%%%
 \section{Self-Mapping Conditions and Set Invariance}
 To invoke the Banach Fixed-Point Theorem on the compact spectral set $\mathcal{S} = \{C \in \mathbb{S}_{++}^n : c_{\min}I \preceq C \preceq c_{\max}I\}$, we must establish set invariance, $F(\mathcal{S}) \subseteq \mathcal{S}$. We achieve this by finding uniform spectral bounds for $F(C)$ given $C \in \mathcal{S}$.
 
