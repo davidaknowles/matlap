@@ -174,7 +174,8 @@ The auxiliary matrix $Q$ induces correlation across the columns of $X$.
 \paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this using mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. 
 
 \paragraph{Rényi $\alpha$-ELBO for $\lambda$ selection.}
-The standard ELBO lower-bounds $\log p(Y \mid \lambda)$ but is tight only when $q(X) = p(X \mid Y, \lambda)$. For the purpose of selecting $\lambda$, we exploit the Rényi $\alpha$-ELBO \citep{li2016renyi},
+
+We consider the Rényi $\alpha$-ELBO \citep{li2016renyi},
 \begin{equation} \mathcal{L}_\alpha = \frac{1}{1-\alpha}\log \int q(X)^{\alpha}\, p(Y, X \mid \lambda)^{1-\alpha}\, dX, \quad 0 \le \alpha < 1,
 \end{equation}
 which satisfies $\mathcal{L}_\alpha \le \log p(Y \mid \lambda)$ and recovers the ELBO as $\alpha \to 1$; at $\alpha = 0$ it is the importance-weighted objective.
