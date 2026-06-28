@@ -29,7 +29,7 @@
 \maketitle
 
 \begin{abstract}
-Typical matrix factorization and completion models involve non-convex optimization, so that different initialization or small perturbations to the data can give grossly different solutions. An elegant alternative is to estimate an underlying low-rank ``clean'' data matrix by enforcing it have small nuclear norm (the convex envelope of matrix rank). This convex optimization problem can be efficiently solved using proximal gradient or Franke-Wolfe methods. However, choosing the regularization strength typically requires cross-validation, involving arbitrary choices (e.g., number of folds), randomness, and substantial computation. Here, we propose empirical Bayes approaches to selecting the regularization strengh, using the recently characterized nuclear norm distribution. We consider multiple noise models, including homoskedastic, known heteroskedastic, and a combination thereof. We present results on simulated data, genetic associations, and single-cell splicing patterns. 
+Typical matrix factorization and completion models involve non-convex optimization, so that different initialization or small perturbations to the data can give grossly different solutions. An elegant alternative is to estimate an underlying low-rank ``clean'' data matrix by enforcing it have small nuclear norm (the convex envelope of matrix rank). This convex optimization problem can be efficiently solved using proximal gradient or Frank-Wolfe methods. However, choosing the regularization strength typically requires cross-validation, involving arbitrary choices (e.g., number of folds), randomness, and substantial computation. Here, we propose empirical Bayes approaches to selecting the regularization strength, using the recently characterized nuclear norm distribution. We consider multiple noise models, including homoskedastic, known heteroskedastic, and a combination thereof. We present results on simulated data, genetic associations, and single-cell splicing patterns. 
 \end{abstract}
 
 \tableofcontents
@@ -60,7 +60,7 @@ where $\operatorname{SVT}_\tau$ soft-thresholds the singular values by $\tau$.
 The step size $\alpha_t$ is selected by backtracking until
 $\mathcal{L}(X^{(t+1)})\leq\mathcal{L}(X^{(t)})$.
 
-\paragraph{Bayesian interpretation.} Here, we ask whether Eq \ref{eq:loss} can be re-interpreted from an (empirical) Bayesian viewpoint to enable automatic estimation of $\lambda$ from the data. The squared error loss can be interpreted as the (scaled) log pdf of a Gaussian likelihood, 
+\paragraph{Bayesian interpretation.} Here, we ask whether Eq.~\eqref{eq:loss} can be re-interpreted from an (empirical) Bayesian viewpoint to enable automatic estimation of $\lambda$ from the data. The squared error loss can be interpreted as the (scaled) log pdf of a Gaussian likelihood, 
 \begin{align} Y_{ij} \mid X_{ij}, \sigma &\sim \mathcal{N}(X_{ij}, \sigma^2), \qquad (i,j)\in\Omega,
 \end{align}
 where $\sigma^2$ is the noise variance. 
@@ -69,13 +69,13 @@ We consider the nuclear norm penalty as the negative log-pdf of the recently cha
 \begin{equation} p(X \mid \eta) = \frac{1}{Z(\eta)} \exp\big(-\eta \|X\|_*\big)
 \end{equation}
 where the normalizing constant $Z(\eta)=(mn)! C / \eta^{mn}$, with $C$ the volume of the unit nuclear norm ball. 
-\citet{Segert2025-rk} proved that setting the NND rate $\eta = \lambda/\sigma$ (and the prior on $\sigma^2$ being log-concave in $1/\sigma$) ensures that $P(X,\sigma|Y,\lambda)$ is unimodal.
+\citet{Segert2025-rk} proved that setting the NND rate $\eta = \lambda/\sigma$ (and the prior on $\sigma^2$ being log-concave in $1/\sigma$) ensures that $P(X,\sigma\mid Y,\lambda)$ is unimodal.
 
 \subsection{Limitations of full Bayesian inference for the NND}
 
-\paragraph{Inference challenges.} \citet{Segert2025-rk} use Markov chain Monte Carlo (MCMC) to sample $X$, $g$ and $\lambda$ under this model. While statistically rigorous, the MCMC is computationally painful, requiring full SVDs at each iteration and tedious tuning to obtain reasonable mixing. We also explored a coordinate ascent variational inference (CAVI) approach using a lesser-known bound for the nuclear norm that introduces an auxiliary covariance parameter (see Appendix \ref{app:cavi}). Thehe CAVI algorithm is more computationally efficient, but takes us back to a non-convex optimization problem (although arguably with a better behaved optimization landscape than naive matrix factorization, e.g., we are able to show contraction to a single optimum under certain conditions, see Appendix \ref{app:contraction}). Even stochastic variational inference offers no panacea: any reasonable variational approximation immediately reintroduces the non-convexity we are trying to avoid. 
+\paragraph{Inference challenges.} \citet{Segert2025-rk} use Markov chain Monte Carlo (MCMC) to sample $X$, $\sigma$ and $\lambda$ under this model. While statistically rigorous, the MCMC is computationally painful, requiring full SVDs at each iteration and tedious tuning to obtain reasonable mixing. We also explored a coordinate ascent variational inference (CAVI) approach using a lesser-known bound for the nuclear norm that introduces an auxiliary covariance parameter (see Appendix~\ref{app:cavi}). The CAVI algorithm is more computationally efficient, but takes us back to a non-convex optimization problem (although arguably with a better behaved optimization landscape than naive matrix factorization, e.g., we are able to show contraction to a single optimum under certain conditions, see Appendix~\ref{app:contraction}). Even stochastic variational inference offers no panacea: any reasonable variational approximation immediately reintroduces the non-convexity we are trying to avoid. 
 
-\paragraph{Prior behavior.} \citet{Segert2025-rk} showed that $X \sim NND(\eta)$ is equal in distribution to $X = U \text{diag}(s) V$ where $U$ and $V$ are sampled uniformly from the space of orthonormal matrices, and, assuming (without loss of generality) $m \ge n$, the joint density of the non-zero SVs $s_1 > s_2 > \dots > s_n > 0$ is, 
+\paragraph{Prior behavior.} \citet{Segert2025-rk} showed that $X \sim NND(\eta)$ is equal in distribution to $X = U \operatorname{diag}(s) V^\top$ where $U$ and $V$ are sampled uniformly from the space of orthonormal matrices, and, assuming (without loss of generality) $m \ge n$, the joint density of the non-zero SVs $s_1 > s_2 > \dots > s_n > 0$ is, 
 \begin{equation} p(s_1, \dots, s_n) \propto \prod_{i=1}^n \underbrace{ s_i^{m-n} e^{-\eta s_i}}_{\propto \, \mathrm{Gamma}(m-n+1,\,\eta)} \cdot \underbrace{\prod_{1 \le i < j \le n} (s_i^2 - s_j^2)}_{\text{repulsion term}}
 \label{eq:nnd-sv-distribution}
 \end{equation}
@@ -95,7 +95,7 @@ We note that we found that joint optimization of the approximate ELBO for $\lamb
 
 \subsection{Approximating the marginal likelihood with variational inference}
 
-We assume a row-factorized Gaussian approximation $ q(X) = \prod_{i=1}^m \mathcal{N}(x_i\mid \mu_i,\Sigma_i)$ where $x_i$ is row $i$ of $X$. To cover both the homoscedastic model here and the heteroscedastic models below, we introduce effective noise precisions $p_{ij}$, with $p_{ij} = 1/\sigma^2$ for $(i,j)\in\Omega$ (for the homoscedastic case) and $0$ otherwise. The evidence lower bound (ELBO) is,
+We assume a row-factorized Gaussian approximation $ q(X) = \prod_{i=1}^m \mathcal{N}(x_i\mid \mu_i,\Sigma_i)$ where $x_i$ is row $i$ of $X$. To cover both the homoskedastic model here and the heteroskedastic models below, we introduce effective noise precisions $p_{ij}$, with $p_{ij} = 1/\sigma^2$ for $(i,j)\in\Omega$ (for the homoskedastic case) and $0$ otherwise. The evidence lower bound (ELBO) is,
 \begin{align} \mathcal{L}(\mu,\Sigma) &= -\frac{1}{2} \sum_{i=1}^m \left[ (y_i-\mu_i)^\top P_i (y_i-\mu_i) + \operatorname{tr}(P_i\Sigma_i) \right] + \frac{1}{2}\sum_{i=1}^m \log|\Sigma_i| + \frac12 \sum_{(i,j)\in\Omega}\log p_{ij} \notag\\ &\quad - \eta\mathbb{E}_q\|X\|_* - \log Z(\eta) + \mathrm{const}, \label{eq:full-elbo}
 \end{align}
 where $P_i = \text{diag}\{p_{i:}\}$ is the diagonal precision matrix for row $i$. The difficulty is $\mathbb{E}_q\|X\|_*$.  Write
@@ -124,7 +124,7 @@ $-\frac{1}{2}\operatorname{tr}(I_n)$ per row, leaving the collapsed ELBO,
 \end{align}
 Here we used that $\log Z(\eta)=-mn\log\eta+\mathrm{const}$.
 
-One might be tempted to fit $\mu$ by maximizing \eqref{eq:taylor-elbo}. However this is 1) computationally challenging at $O(nm^3)$ given the sum of log determinants terms 2) non-convex and 3) statistically ill-advised given the arguments above regarding the downsides of the full Bayesian model. 
+One might be tempted to fit $\mu$ by maximizing \eqref{eq:taylor-elbo}. However this is 1) computationally challenging at $O(mn^3)$ given the sum of log determinant terms 2) non-convex and 3) statistically ill-advised given the arguments above regarding the downsides of the full Bayesian model. 
 
 \subsection{Hutchinson--CG Approximation for Noise Updates}
 
@@ -133,22 +133,23 @@ $\sum_i\log|A_i|$.  Exact evaluation costs one dense Cholesky factorization
 per row.  For scalar noise updates we only need the derivative with respect to
 $\ell=\log \sigma$:
 \begin{equation} 
-    \frac{\partial}{\partial \ell} \log |A_i| = \operatorname{tr} \left(A_i^{-1}\frac{\partial A_i}{\partial \ell} \right). \approx \frac{1}{R} \sum_{r=1}^R z_{ir}^\top A_i^{-1} \frac{\partial A_i}{\partial \ell} z_{ir}.
+    \frac{\partial}{\partial \ell} \log |A_i| = \operatorname{tr} \left(A_i^{-1}\frac{\partial A_i}{\partial \ell} \right)
+    \approx \frac{1}{R} \sum_{r=1}^R z_{ir}^\top A_i^{-1} \frac{\partial A_i}{\partial \ell} z_{ir}.
 \end{equation}
 where $z_{ir}$ are $R$ (fixed) Hutchinson probes satisfying $\mathbb{E}(z_{ir}z_{ir}^\top)=I$. Each term requires solving
 \begin{equation} 
-    A_i x_{ir} = \frac{\partial A_i}{\partial \ell}z_{ir},
+    A_i u_{ir} = \frac{\partial A_i}{\partial \ell}z_{ir},
 \end{equation}
-which can be done by conjugate gradients using only matrix-vector products
+which can be done by conjugate gradients (CG) using only matrix-vector products
 \begin{equation} 
-    x \mapsto \operatorname{diag}\{p_{ij}(\sigma)\}x + \eta B(\hat X)x.
+    v \mapsto \operatorname{diag}\{p_{ij}(\sigma)\}v + \eta B(\hat X)v.
 \end{equation}
 The solves are independent across rows and probes and can be vectorized.  We keep the same probes fixed across outer iterations and warm start each CG solve from the previous solution for the same row/probe, reducing stochastic jitter in the scalar trajectory for $\sigma$.
 
 \subsection{Optimization}
 
 For the implemented version we use an inverse-gamma variance prior,
-\begin{equation} p(\sigma) \propto \sigma^{-(a_0+1)}\exp(-b_0/\sigma),
+\begin{equation} p(\sigma^2) \propto (\sigma^2)^{-(a_0+1)}\exp(-b_0/\sigma^2),
 \end{equation}
 although the objective separates the prior contribution so that another one-dimensional prior on $\sigma$ can be substituted. Ideally this should be log-concave in $1/\sigma$ to ensure unimodality of the posterior.
 
@@ -164,20 +165,20 @@ Here, we consider known standard errors $\Delta \in \mathbb{R}^{m \times n}$, wh
 \begin{align}
 Y_{ij} \mid X_{ij}, \delta_{ij} &\sim \mathcal{N}(X_{ij}, \delta_{ij}^2), \qquad (i,j)\in\Omega.
 \end{align}
-In the notation of Eq \eqref{eq:full-elbo}, the precision $p_{ij} = 1/\delta_{ij}^2$ for $(i,j)\in\Omega$ and $0$ otherwise. The proximal gradient update is the same as in the homoskedastic case, but with a weighted squared error loss. The ELBO is also the same with the appropriate precision terms. Since the noise is known, there is no noise variance to update, so the only hyperparameter is $\lambda$, which is scored by ELBO or LOO over a grid of possible values. 
+In the notation of Eq \eqref{eq:full-elbo}, the precision $p_{ij} = 1/\delta_{ij}^2$ for $(i,j)\in\Omega$ and $0$ otherwise. The proximal gradient update is the same as in the homoskedastic case, but with a weighted squared error loss. The ELBO is also the same with the appropriate precision terms. Since the noise is known, there is no noise variance to update, so the only hyperparameter is the NND rate $\eta$, which is scored by ELBO or LOO over a grid of possible values. 
 
 \subsection{Unknown homoskedastic plus known heteroskedastic noise}
 
 In some settings, we have a combination of known heteroskedastic noise and unknown homoskedastic noise. For example, in single-cell RNA-seq data, we might model the observed counts as subject to both count noise (known heteroskedastic) and other technical noise (unknown homoskedastic). In this setting, the effective precision is $p_{ij} = 1/(\delta_{ij}^2 + \sigma^2)$ for $(i,j)\in\Omega$ and $0$ otherwise. 
 
-For this variant, $\hat{X}=\mu$ and the noise variance $\sigma^2$ are coupled, so we update them by alternating steps. For the mean update we use the proximal gradient step Eq \eqref{eq:proxgrad}, with $\eta = \lambda/\sigma$, where $\sigma^2$ is the current noise variance estimate. After the mean update, the scalar variance is updated on the unconstrained scale $\ell=\log \sigma$ by a gradient step on the negative ELBO \eqref{eq:taylor-elbo}, again with backtracking to enforce monotonicity. 
+For this variant, $\hat{X}=\mu$ and the noise variance $\sigma^2$ are coupled, so we update them by alternating steps. For the mean update we use the proximal gradient step Eq \eqref{eq:proxgrad} with the current fixed effective rate $\eta$. After the mean update, the scalar standard deviation is updated on the unconstrained scale $\ell=\log \sigma$ by a gradient step on the negative ELBO \eqref{eq:taylor-elbo}, again with backtracking to enforce monotonicity. A base rate $\lambda=\eta\sigma$ can be reported after fitting if desired.
 
 
 \printbibliography
 
 \section{Appendix}
 
-\subsection{Coordinate Ascent Variational Inference (CAVI)}
+\subsection{Coordinate Ascent Variational Inference (CAVI)} \label{app:cavi}
 
 Our key insight to enable CAVI is that the nuclear norm can be expressed as a minimization over an auxiliary symmetric positive definite matrix $Q \in \mathbb{S}_{++}^n$,
 \begin{equation} \|X\|_* = \min_{Q \succ 0} \frac{1}{2} \text{Tr}(X Q^{-1} X^T) + \frac{1}{2} \text{Tr}(Q).
@@ -198,23 +199,18 @@ The auxiliary matrix $Q$ induces correlation across the columns of $X$.
 
 \paragraph{Batched implementation.} For settings where $n$ is moderate (e.g.\ $n \lesssim 300$) but $m$ is large, the bottleneck of full CAVI is the simultaneous storage of all $m$ row covariances $\Sigma_i \in \mathbb{S}_{++}^n$. We address this using mini-batches of size $B$. Each batch computes $\Sigma_i$ via Cholesky, immediately extracts $\mathrm{diag}(\Sigma_i)$ (needed for the ELBO) and the batch's contribution to $\Psi = \sum_i (\mu_i\mu_i^\top + \Sigma_i)$, then discards the full $\Sigma_i$ before moving to the next batch. Peak memory is $O(Bn^2 + mn)$ rather than $O(mn^2)$. 
 
-\subsection{Problem Setup and Notation}
+\subsection{CAVI convergence theory} \label{app:contraction}
 
-Consider a setting where we observe a matrix $Y \in \mathbb{R}^{m \times n}$ broken into row vectors $y_i \in \mathbb{R}^n$ for $i=1,\dots,m$, each associated with a known noise covariance matrix $S_i \succ 0$. Let $C \succ 0$ denote the prior row covariance matrix (corresponding to $Q/\lambda$ in the original variational formulation). 
-
-We define the posterior row covariance matrices $\Sigma_i(C)$ and mean vectors $\mu_i(C)$ conditioned on $C$ as follows:
+For the convergence argument, assume a fully observed Gaussian row likelihood with row noise covariance $S_i \succ 0$.  In terms of $C:=Q/\lambda$, the CAVI updates for $\Sigma_i(C)$ and mean vectors $\mu_i(C)$ are
 \begin{equation}
-\Sigma_i(C) := \left(S_i^{-1} + C^{-1}\right)^{-1},
-\end{equation}
-\begin{equation}
+\Sigma_i(C) := \left(S_i^{-1} + C^{-1}\right)^{-1}, \qquad
 \mu_i(C) := \Sigma_i(C) S_i^{-1} y_i.
 \end{equation}
-
-The aggregate expected second-moment matrix across all rows is given by:
+Define the aggregate second moment
 \begin{equation}
-\Psi(C) := \sum_{i=1}^m \left( \mu_i(C)\mu_i(C)^T + \Sigma_i(C)\right),
+\Psi(C) := \sum_{i=1}^m \left\{\mu_i(C)\mu_i(C)^T + \Sigma_i(C)\right\}.
 \end{equation}
-and we define its spectral trace as $t(C) := \text{Tr}\big(\Psi(C)^{1/2}\big)$.
+Let $t(C) := \text{Tr}\big(\Psi(C)^{1/2}\big)$.
 
 Fixing the hyperparameters $a_0, b_0 > 0$, we define the dimension-adjusted scalar denominator $\beta := a_0 + mn - 1$ and the scale parameter function:
 \begin{equation}
@@ -243,7 +239,7 @@ where the directional derivative of the mean outer product is:
 D(\mu_i\mu_i^T)[\Delta] = D\mu_i[\Delta]\,\mu_i^T + \mu_i\,D\mu_i[\Delta]^T.
 \end{equation}
 
-\section{Norm Bounds for Intermediate Matrix Ingredients}
+\subsection{Norm Bounds for Intermediate Matrix Ingredients}
 To establish a clean operator bound, we evaluate all matrix quantities at the base point $C$ and define the following spectral ($\|\cdot\|_2$) and Frobenius ($\|\cdot\|_F$) norms:
 \begin{align*}
 \kappa &:= \|C^{-1}\|_2, \qquad \sigma_i := \|\Sigma_i\|_2, \\
@@ -280,7 +276,7 @@ Setting $A = \Psi(C)$ and the perturbation directional matrix $H = D\Psi[\Delta]
 \|D\big(\Psi^{1/2}\big)[\Delta]\|_F \le \frac{K_F(C)}{2\sqrt{\lambda_{\min}(\Psi(C))}}\,\|\Delta\|_F.
 \end{equation}
 
-\section{Self-Mapping Conditions and Set Invariance}
+\subsection{Self-Mapping Conditions and Set Invariance}
 To invoke the Banach Fixed-Point Theorem on the compact spectral set $\mathcal{S} = \{C \in \mathbb{S}_{++}^n : c_{\min}I \preceq C \preceq c_{\max}I\}$, we must establish set invariance, $F(\mathcal{S}) \subseteq \mathcal{S}$. We achieve this by finding uniform spectral bounds for $F(C)$ given $C \in \mathcal{S}$.
 
 For any $C \in \mathcal{S}$, its inverse is bounded by $c_{\max}^{-1}I \preceq C^{-1} \preceq c_{\min}^{-1}I$. Let $s_{i,\min} := \lambda_{\min}(S_i^{-1})$ and $s_{i,\max} := \|S_i^{-1}\|_2$. The posterior covariance matrix $\Sigma_i(C)$ respects the bounds:
